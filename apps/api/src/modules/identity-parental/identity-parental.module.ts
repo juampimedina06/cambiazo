@@ -16,11 +16,17 @@ import { CheckStudentConsentUseCase } from './application/use-cases/check-studen
 import { GetParentalConsentAuditUseCase } from './application/use-cases/get-parental-consent-audit.use-case.js';
 import { OnboardingController } from './infrastructure/http/onboarding.controller.js';
 import { ConsentsController } from './infrastructure/http/consents.controller.js';
+import { SPENDING_LIMITS_REPOSITORY } from './domain/ports/spending-limits.repository.port.js';
+import { InMemorySpendingLimitsRepository } from './infrastructure/persistence/in-memory-spending-limits.repository.js';
+import { UpdateSpendingLimitsUseCase } from './application/use-cases/update-spending-limits.use-case.js';
+import { GetSpendingLimitsUseCase } from './application/use-cases/get-spending-limits.use-case.js';
+import { ParentalControlsService } from './application/services/parental-controls.service.js';
+import { ParentalControlsController } from './infrastructure/http/parental-controls.controller.js';
 import { TenantsModule } from '../tenants/tenants.module.js';
 
 @Module({
   imports: [forwardRef(() => TenantsModule)],
-  controllers: [OnboardingController, ConsentsController],
+  controllers: [OnboardingController, ConsentsController, ParentalControlsController],
   providers: [
     {
       provide: USER_REPOSITORY,
@@ -35,6 +41,10 @@ import { TenantsModule } from '../tenants/tenants.module.js';
       useClass: InMemoryParentalConsentRepository,
     },
     {
+      provide: SPENDING_LIMITS_REPOSITORY,
+      useClass: InMemorySpendingLimitsRepository,
+    },
+    {
       provide: USER_PROVISIONING_PORT,
       useClass: UserProvisioningAdapter,
     },
@@ -45,6 +55,7 @@ import { TenantsModule } from '../tenants/tenants.module.js';
     InMemoryUserRepository,
     InMemoryParentStudentLinkRepository,
     InMemoryParentalConsentRepository,
+    InMemorySpendingLimitsRepository,
     UserProvisioningAdapter,
     StudentCounterAdapter,
     RegisterFamilyUseCase,
@@ -52,21 +63,30 @@ import { TenantsModule } from '../tenants/tenants.module.js';
     RevokeParentalConsentUseCase,
     CheckStudentConsentUseCase,
     GetParentalConsentAuditUseCase,
+    UpdateSpendingLimitsUseCase,
+    GetSpendingLimitsUseCase,
+    ParentalControlsService,
   ],
   exports: [
     USER_REPOSITORY,
     PARENT_STUDENT_LINK_REPOSITORY,
     PARENTAL_CONSENT_REPOSITORY,
+    SPENDING_LIMITS_REPOSITORY,
     USER_PROVISIONING_PORT,
     STUDENT_COUNTER_PORT,
     InMemoryUserRepository,
     InMemoryParentStudentLinkRepository,
     InMemoryParentalConsentRepository,
+    InMemorySpendingLimitsRepository,
     CheckStudentConsentUseCase,
     GrantParentalConsentUseCase,
     RevokeParentalConsentUseCase,
     RegisterFamilyUseCase,
     GetParentalConsentAuditUseCase,
+    UpdateSpendingLimitsUseCase,
+    GetSpendingLimitsUseCase,
+    ParentalControlsService,
   ],
 })
 export class IdentityParentalModule {}
+

@@ -31,9 +31,10 @@ export const RevokeParentalConsentSchema = z.object({
 });
 
 export const SpendingLimitsSchema = z.object({
-  studentId: z.string().uuid(),
+  studentId: z.string().uuid().optional(),
   dailyLimitCents: z.number().int().nonnegative(),
   weeklyLimitCents: z.number().int().nonnegative(),
   blockedCategories: z.array(ProductCategorySchema),
   isPaused: z.boolean(),
 });
+

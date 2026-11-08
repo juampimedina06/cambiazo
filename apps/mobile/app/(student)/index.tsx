@@ -21,6 +21,10 @@ export default function StudentHomeScreen() {
   const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
   const institutionName = authState.institution?.name || 'Colegio Manuel Belgrano';
 
+  const spendingLimits = student ? mockApiClient.getSpendingLimits(student.id) : null;
+  const isPaused = spendingLimits?.isPaused ?? false;
+  const dailyLimitCents = spendingLimits?.dailyLimitCents ?? (student?.dailyLimitCents ?? 200000);
+
   // Money formatting helper (Pesos Reales 1 a 1, ARS, NO tokens/coins)
   const balanceArs = ((student?.balanceArsCents ?? 450000) / 100).toLocaleString('es-AR', {
     minimumFractionDigits: 0,
@@ -32,16 +36,15 @@ export default function StudentHomeScreen() {
     maximumFractionDigits: 0,
   });
 
-  const dailyLimitArs = ((student?.dailyLimitCents ?? 200000) / 100).toLocaleString('es-AR', {
+  const dailyLimitArs = (dailyLimitCents / 100).toLocaleString('es-AR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
 
   // Calculate daily limit progress percentage
-  const spentRatio = Math.min(
-    1,
-    (student?.dailySpentCents ?? 50000) / (student?.dailyLimitCents ?? 200000)
-  );
+  const spentRatio = Math.min(1, (student?.dailySpentCents ?? 50000) / Math.max(1, dailyLimitCents));
+
+  const recentPurchases = student ? mockApiClient.getPurchases(student.id).slice(0, 3) : [];
 
   return (
     <ScrollView
@@ -57,9 +60,22 @@ export default function StudentHomeScreen() {
         communityPoints={student?.communityPoints ?? 120}
       />
 
+      {/* Paused Account Alert */}
+      {isPaused && (
+        <View style={styles.pausedBanner} testID="banner-student-account-paused">
+          <Text style={styles.pausedIcon}>⏸️</Text>
+          <View style={styles.pausedTextWrapper}>
+            <Text style={styles.pausedTitle}>Cuenta Pausada por tu Tutor</Text>
+            <Text style={styles.pausedSubtitle}>
+              Los pagos en el recreo están temporalmente pausados. Pedile a tu tutor que reactive tu cuenta desde su panel.
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* 2. SUPERFICIE CENTRAL LIMPIA: Saldo gigante en pesos + barra + Botón QR */}
       <View style={styles.walletSurface} testID="student-wallet-surface">
-        <Text style={styles.walletLabel}>Tu Saldo Disponible</Text>
+        <Text style={styles.walletLabel}>Tu Saldo Disponible en Kiosco</Text>
         <Text style={styles.walletBalance} testID="student-balance-text">
           ${balanceArs}
         </Text>
@@ -77,16 +93,26 @@ export default function StudentHomeScreen() {
           </View>
         </View>
 
-        {/* Protagonist touch button (min 54px height, rounded-2xl) */}
+        {/* Protagonist touch button (56px height, rounded-2xl) */}
         <Button
-          label="Pagar en Kiosco (QR)"
+          label={isPaused ? 'Pagos Pausados por Tutor' : 'Pagar en Kiosco (QR)'}
           onPress={() => {
-            // QR payment trigger
+            if (!isPaused) {
+              router.push('/(student)/pay-qr');
+            }
           }}
           variant="primary"
+          disabled={isPaused}
           style={styles.qrButton}
           testID="btn-pay-qr"
         />
+
+        {/* Prohibited Transfers/Withdrawals Rule */}
+        <View style={styles.prohibitedRuleBox} testID="rule-no-transfer-withdraw">
+          <Text style={styles.prohibitedRuleText}>
+            🔒 Saldo exclusivo para consumos escolares. Prohibido transferir saldo o retirar efectivo.
+          </Text>
+        </View>
       </View>
 
       {/* 3. SECCIÓN INFERIOR: Lista plana de últimos 3 consumos (NO CARD-IN-CARD, MAX 3 DATOS) */}
@@ -94,27 +120,26 @@ export default function StudentHomeScreen() {
         <Text style={styles.sectionTitle}>Últimos Consumos</Text>
 
         <View style={styles.flatListWrapper} testID="recent-consumptions-list">
-          <FlatListItem
-            icon="🥪"
-            title="Tostado de Jamón y Queso"
-            highlightValue="-$1.800"
-            valueType="neutral"
-            testID="item-consumption-1"
-          />
-          <FlatListItem
-            icon="🧃"
-            title="Jugo de Naranja 250ml"
-            highlightValue="-$900"
-            valueType="neutral"
-            testID="item-consumption-2"
-          />
-          <FlatListItem
-            icon="🍎"
-            title="Manzana Roja"
-            highlightValue="-$600"
-            valueType="neutral"
-            testID="item-consumption-3"
-          />
+          {recentPurchases.length === 0 ? (
+            <Text style={styles.emptyRecentText}>No registrás consumos recientes en el recreo.</Text>
+          ) : (
+            recentPurchases.map((purchase, index) => {
+              const amountFormatted = ((purchase.amountCents) / 100).toLocaleString('es-AR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              });
+              return (
+                <FlatListItem
+                  key={purchase.id || `rec-${index}`}
+                  icon={purchase.icon || '🛍️'}
+                  title={purchase.itemsSummary}
+                  highlightValue={`-$${amountFormatted}`}
+                  valueType="neutral"
+                  testID={`item-consumption-${index + 1}`}
+                />
+              );
+            })
+          )}
         </View>
       </View>
 
@@ -194,6 +219,48 @@ const styles = StyleSheet.create({
   },
   qrButton: {
     width: '100%',
+    minHeight: 56,
+  },
+  pausedBanner: {
+    flexDirection: 'row',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: colors.status.danger,
+    padding: 16,
+    borderRadius: 16,
+    gap: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  pausedIcon: {
+    fontSize: 26,
+  },
+  pausedTextWrapper: {
+    flex: 1,
+  },
+  pausedTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.status.danger,
+    marginBottom: 2,
+  },
+  pausedSubtitle: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    lineHeight: 16,
+  },
+  prohibitedRuleBox: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.background.divider,
+    width: '100%',
+  },
+  prohibitedRuleText: {
+    fontSize: 11,
+    color: colors.text.muted,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   recentSection: {
     marginTop: 28,
@@ -206,6 +273,11 @@ const styles = StyleSheet.create({
   },
   flatListWrapper: {
     // Flat on canvas, separated by dividers, zero nested cards
+  },
+  emptyRecentText: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    paddingVertical: 12,
   },
   footerNav: {
     marginTop: 32,

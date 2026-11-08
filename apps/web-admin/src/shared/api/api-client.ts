@@ -7,6 +7,14 @@ import {
   StudentRosterItem,
   InstitutionStatus,
   ConsentStatus,
+  CatalogProduct,
+  CreateCatalogProductInput,
+  ChargeQrRequestInput,
+  KioskWithdrawalRequestInput,
+  KioskSale,
+  KioskWithdrawal,
+  KioskLedgerBalance,
+  ProductCategory,
 } from './types';
 
 const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== 'false';
@@ -128,6 +136,152 @@ export class ApiClient {
       }
     );
     if (!res.ok) throw new Error('Failed to update parental consent');
+    return res.json();
+  }
+
+  // Kiosk Catalog Management
+  async getCatalogProducts(
+    institutionId?: string,
+    category?: ProductCategory
+  ): Promise<CatalogProduct[]> {
+    if (this.useMocks) {
+      return mockAdapter.getCatalogProducts(institutionId, category);
+    }
+    const params = new URLSearchParams();
+    if (institutionId) params.append('institutionId', institutionId);
+    if (category) params.append('category', category);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${this.baseUrl}/kiosk/products${query}`);
+    if (!res.ok) throw new Error('Failed to fetch catalog products');
+    return res.json();
+  }
+
+  async getCatalogProductById(id: string): Promise<CatalogProduct | null> {
+    if (this.useMocks) {
+      return mockAdapter.getCatalogProductById(id);
+    }
+    const res = await fetch(`${this.baseUrl}/kiosk/products/${id}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('Failed to fetch product');
+    return res.json();
+  }
+
+  async createCatalogProduct(
+    data: CreateCatalogProductInput
+  ): Promise<CatalogProduct> {
+    if (this.useMocks) {
+      return mockAdapter.createCatalogProduct(data);
+    }
+    const res = await fetch(`${this.baseUrl}/kiosk/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error creating product');
+    }
+    return res.json();
+  }
+
+  async updateCatalogProduct(
+    id: string,
+    data: Partial<CreateCatalogProductInput>
+  ): Promise<CatalogProduct> {
+    if (this.useMocks) {
+      return mockAdapter.updateCatalogProduct(id, data);
+    }
+    const res = await fetch(`${this.baseUrl}/kiosk/products/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update product');
+    return res.json();
+  }
+
+  async deleteCatalogProduct(id: string): Promise<boolean> {
+    if (this.useMocks) {
+      return mockAdapter.deleteCatalogProduct(id);
+    }
+    const res = await fetch(`${this.baseUrl}/kiosk/products/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete product');
+    return true;
+  }
+
+  // Kiosk Sales Monitor & POS Web Terminal
+  async getKioskSales(institutionId?: string): Promise<KioskSale[]> {
+    if (this.useMocks) {
+      return mockAdapter.getKioskSales(institutionId);
+    }
+    const query = institutionId ? `?institutionId=${institutionId}` : '';
+    const res = await fetch(`${this.baseUrl}/kiosk/sales${query}`);
+    if (!res.ok) throw new Error('Failed to fetch sales');
+    return res.json();
+  }
+
+  async processKioskCharge(
+    charge: ChargeQrRequestInput,
+    institutionId?: string
+  ): Promise<KioskSale> {
+    if (this.useMocks) {
+      return mockAdapter.processKioskCharge(charge, institutionId);
+    }
+    const res = await fetch(`${this.baseUrl}/kiosk/charge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(charge),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error processing kiosk charge');
+    }
+    return res.json();
+  }
+
+  // Kiosk Ledger Balance & Mercado Pago Withdrawals
+  async getKioskLedgerBalance(
+    institutionId?: string
+  ): Promise<KioskLedgerBalance> {
+    if (this.useMocks) {
+      return mockAdapter.getKioskLedgerBalance(institutionId);
+    }
+    const query = institutionId ? `?institutionId=${institutionId}` : '';
+    const res = await fetch(`${this.baseUrl}/kiosk/ledger-balance${query}`);
+    if (!res.ok) throw new Error('Failed to fetch kiosk balance');
+    return res.json();
+  }
+
+  async getKioskWithdrawals(
+    institutionId?: string
+  ): Promise<KioskWithdrawal[]> {
+    if (this.useMocks) {
+      return mockAdapter.getKioskWithdrawals(institutionId);
+    }
+    const query = institutionId ? `?institutionId=${institutionId}` : '';
+    const res = await fetch(`${this.baseUrl}/kiosk/withdrawals${query}`);
+    if (!res.ok) throw new Error('Failed to fetch withdrawals');
+    return res.json();
+  }
+
+  async requestKioskWithdrawal(
+    request: KioskWithdrawalRequestInput,
+    institutionId?: string
+  ): Promise<KioskWithdrawal> {
+    if (this.useMocks) {
+      return mockAdapter.requestKioskWithdrawal(request, institutionId);
+    }
+    const res = await fetch(`${this.baseUrl}/kiosk/withdrawals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error requesting withdrawal');
+    }
     return res.json();
   }
 }

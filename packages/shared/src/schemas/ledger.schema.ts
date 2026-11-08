@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProductCategorySchema } from '../enums.js';
+import { ProductCategorySchema, LedgerEntryDirectionSchema } from '../enums.js';
 
 export const TopUpPreferenceRequestSchema = z.object({
   studentId: z.string().uuid(),
@@ -24,6 +24,8 @@ export const CreateCatalogProductSchema = z.object({
   stock: z.number().int().nonnegative(),
   isActive: z.boolean().default(true),
 });
+
+export const UpdateCatalogProductSchema = CreateCatalogProductSchema.partial();
 
 export const CatalogProductSchema = CreateCatalogProductSchema.extend({
   id: z.string().uuid(),
@@ -54,3 +56,15 @@ export const KioskWithdrawalRequestSchema = z.object({
   mercadoPagoAliasOrCvu: z.string().min(6).max(50),
   idempotencyKey: z.string().min(8),
 });
+
+export const LedgerMovementDtoSchema = z.object({
+  id: z.string().uuid(),
+  transactionId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  accountType: z.string().optional(),
+  direction: LedgerEntryDirectionSchema,
+  amountCents: z.number().int().positive(),
+  description: z.string().optional(),
+  createdAt: z.string().datetime().or(z.date()),
+});
+

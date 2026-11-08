@@ -124,6 +124,35 @@ export default function ParentHomeScreen() {
         )}
       </View>
 
+      {/* PARENT QUICK CONTROLS & WALLET MANAGEMENT (Wave 2) */}
+      <View style={styles.controlsSection} testID="parent-quick-controls">
+        <Text style={styles.controlsSectionTitle}>Billetera Escolar y Seguridad</Text>
+        <Text style={styles.controlsSectionSubtitle}>
+          Gestioná el saldo 1 a 1, fijá topes de gasto por día y revisá compras en tiempo real.
+        </Text>
+
+        <View style={styles.controlsGrid}>
+          <Button
+            label="💳 Cargar Saldo 1 a 1"
+            onPress={() => router.push('/(parent)/wallet/top-up')}
+            variant="mint"
+            testID="btn-parent-topup"
+          />
+          <Button
+            label="⚙️ Límites y Controles"
+            onPress={() => router.push('/(parent)/controls/spending-limits')}
+            variant="primary"
+            testID="btn-parent-limits"
+          />
+          <Button
+            label="🔔 Alertas de Compra"
+            onPress={() => router.push('/(parent)/notifications')}
+            variant="secondary"
+            testID="btn-parent-notifications"
+          />
+        </View>
+      </View>
+
       {/* QUICK PREVIEW / SWITCH TO STUDENT VIEW */}
       <View style={styles.switchSection}>
         <Text style={styles.switchSectionTitle}>Simulador de Experiencia del Alumno</Text>
@@ -290,5 +319,26 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     lineHeight: 18,
     marginBottom: 8,
+  },
+  controlsSection: {
+    backgroundColor: colors.background.surface,
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 24,
+  },
+  controlsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  controlsSectionSubtitle: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  controlsGrid: {
+    gap: 12,
   },
 });

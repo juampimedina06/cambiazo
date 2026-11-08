@@ -1,11 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors } from '../../src/shared/theme/colors.js';
 import { Button } from '../../src/shared/ui/Button.js';
 import { Pill } from '../../src/shared/ui/Pill.js';
 import { LogoPencilC } from '../../src/shared/ui/LogoPencilC.js';
 
 export default function KioskHomeScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.container} testID="screen-kiosk-home">
       <View style={styles.header}>
@@ -22,7 +25,7 @@ export default function KioskHomeScreen() {
 
         <Button
           label="Escanear QR del Alumno"
-          onPress={() => {}}
+          onPress={() => router.push('/(kiosk)/pos')}
           variant="primary"
           testID="btn-kiosk-scan"
         />

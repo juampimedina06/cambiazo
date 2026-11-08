@@ -2,6 +2,10 @@ import {
   CreateInstitutionSchema,
   CreateInvitationSchema,
   InstitutionDtoSchema,
+  CreateCatalogProductSchema,
+  CatalogProductSchema,
+  ChargeQrRequestSchema,
+  KioskWithdrawalRequestSchema,
 } from '@cambiazo/shared';
 import {
   Institution,
@@ -11,7 +15,271 @@ import {
   StudentRosterItem,
   InstitutionStatus,
   ConsentStatus,
+  CatalogProduct,
+  CreateCatalogProductInput,
+  ChargeQrRequestInput,
+  KioskWithdrawalRequestInput,
+  KioskSale,
+  KioskWithdrawal,
+  KioskLedgerBalance,
+  ProductCategory,
 } from './types';
+
+export const DEFAULT_KIOSK_INSTITUTION_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+function generateUuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+const INITIAL_CATALOG_PRODUCTS: CatalogProduct[] = [
+  {
+    id: 'b1a2c3d4-0001-4000-8000-000000000001',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Alfajor de Arroz y Miel',
+    category: 'HEALTHY_SNACK',
+    priceCents: 120000, // $1.200 ARS
+    stock: 45,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0002-4000-8000-000000000002',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Barra de Cereal Frutos Rojos',
+    category: 'HEALTHY_SNACK',
+    priceCents: 90000, // $900 ARS
+    stock: 60,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0003-4000-8000-000000000003',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Agua Mineral sin Gas 500ml',
+    category: 'DRINK',
+    priceCents: 80000, // $800 ARS
+    stock: 80,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0004-4000-8000-000000000004',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Jugo de Naranja Natural 350ml',
+    category: 'DRINK',
+    priceCents: 150000, // $1.500 ARS
+    stock: 35,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0005-4000-8000-000000000005',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Alfajor Triple de Chocolate',
+    category: 'CANDY',
+    priceCents: 160000, // $1.600 ARS
+    stock: 50,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0006-4000-8000-000000000006',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Gomitas Frutales Ácidas 80g',
+    category: 'CANDY',
+    priceCents: 95000, // $950 ARS
+    stock: 40,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0007-4000-8000-000000000007',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Sándwich Tostado de Jamón y Queso',
+    category: 'HOT_MEAL',
+    priceCents: 280000, // $2.800 ARS
+    stock: 25,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0008-4000-8000-000000000008',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Empanada Criolla al Horno',
+    category: 'HOT_MEAL',
+    priceCents: 140000, // $1.400 ARS
+    stock: 30,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0009-4000-8000-000000000009',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Cuaderno Rayado A4 48 Hojas',
+    category: 'STATIONERY',
+    priceCents: 220000, // $2.200 ARS
+    stock: 20,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+  {
+    id: 'b1a2c3d4-0010-4000-8000-000000000010',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    name: 'Lapicera de Gel Azul 0.7mm',
+    category: 'STATIONERY',
+    priceCents: 75000, // $750 ARS
+    stock: 55,
+    isActive: true,
+    createdAt: '2026-02-01T08:00:00.000Z',
+  },
+];
+
+const INITIAL_SALES: KioskSale[] = [
+  {
+    id: 'sale-001',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    studentId: 'e2b3c4d5-1111-4000-8000-000000000001',
+    studentName: 'Mateo Rossi',
+    paymentCode: '482910',
+    items: [
+      {
+        productId: 'b1a2c3d4-0007-4000-8000-000000000007',
+        productName: 'Sándwich Tostado de Jamón y Queso',
+        category: 'HOT_MEAL',
+        quantity: 1,
+        unitPriceCents: 280000,
+        subtotalCents: 280000,
+      },
+      {
+        productId: 'b1a2c3d4-0004-4000-8000-000000000004',
+        productName: 'Jugo de Naranja Natural 350ml',
+        category: 'DRINK',
+        quantity: 1,
+        unitPriceCents: 150000,
+        subtotalCents: 150000,
+      },
+    ],
+    totalAmountCents: 430000, // $4.300 ARS
+    platformFeeCents: 0, // 0% platform fee
+    netAmountCents: 430000, // 100% net to kiosk
+    idempotencyKey: 'idem-sale-init-001',
+    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    status: 'COMPLETED',
+  },
+  {
+    id: 'sale-002',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    studentId: 'e2b3c4d5-4444-4000-8000-000000000004',
+    studentName: 'Valentina Benítez',
+    paymentCode: '719304',
+    items: [
+      {
+        productId: 'b1a2c3d4-0002-4000-8000-000000000002',
+        productName: 'Barra de Cereal Frutos Rojos',
+        category: 'HEALTHY_SNACK',
+        quantity: 2,
+        unitPriceCents: 90000,
+        subtotalCents: 180000,
+      },
+    ],
+    totalAmountCents: 180000, // $1.800 ARS
+    platformFeeCents: 0,
+    netAmountCents: 180000,
+    idempotencyKey: 'idem-sale-init-002',
+    createdAt: new Date(Date.now() - 28 * 60 * 1000).toISOString(),
+    status: 'COMPLETED',
+  },
+  {
+    id: 'sale-003',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    studentId: 'e2b3c4d5-3333-4000-8000-000000000003',
+    studentName: 'Joaquín Díaz',
+    paymentCode: '305912',
+    items: [
+      {
+        productId: 'b1a2c3d4-0001-4000-8000-000000000001',
+        productName: 'Alfajor de Arroz y Miel',
+        category: 'HEALTHY_SNACK',
+        quantity: 1,
+        unitPriceCents: 120000,
+        subtotalCents: 120000,
+      },
+      {
+        productId: 'b1a2c3d4-0003-4000-8000-000000000003',
+        productName: 'Agua Mineral sin Gas 500ml',
+        category: 'DRINK',
+        quantity: 1,
+        unitPriceCents: 80000,
+        subtotalCents: 80000,
+      },
+    ],
+    totalAmountCents: 200000, // $2.000 ARS
+    platformFeeCents: 0,
+    netAmountCents: 200000,
+    idempotencyKey: 'idem-sale-init-003',
+    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    status: 'COMPLETED',
+  },
+  {
+    id: 'sale-004',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    studentId: 'e2b3c4d5-2222-4000-8000-000000000002',
+    studentName: 'Lucía Fernández',
+    paymentCode: '859102',
+    items: [
+      {
+        productId: 'b1a2c3d4-0009-4000-8000-000000000009',
+        productName: 'Cuaderno Rayado A4 48 Hojas',
+        category: 'STATIONERY',
+        quantity: 1,
+        unitPriceCents: 220000,
+        subtotalCents: 220000,
+      },
+    ],
+    totalAmountCents: 220000, // $2.200 ARS
+    platformFeeCents: 0,
+    netAmountCents: 220000,
+    idempotencyKey: 'idem-sale-init-004',
+    createdAt: new Date(Date.now() - 75 * 60 * 1000).toISOString(),
+    status: 'COMPLETED',
+  },
+];
+
+const INITIAL_WITHDRAWALS: KioskWithdrawal[] = [
+  {
+    id: 'with-001',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    amountCents: 1500000, // $15.000 ARS
+    mercadoPagoAliasOrCvu: 'kiosco.belgrano.mp',
+    idempotencyKey: 'idem-with-init-001',
+    status: 'PROCESSED',
+    createdAt: '2026-03-05T17:30:00.000Z',
+    processedAt: '2026-03-05T17:31:12.000Z',
+  },
+  {
+    id: 'with-002',
+    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    amountCents: 2000000, // $20.000 ARS
+    mercadoPagoAliasOrCvu: '0000003100084920194821',
+    idempotencyKey: 'idem-with-init-002',
+    status: 'PROCESSED',
+    createdAt: '2026-03-02T11:00:00.000Z',
+    processedAt: '2026-03-02T11:01:45.000Z',
+  },
+];
+
+const HISTORICAL_BASE_SALES_CENTS = 14500000; // $145.000 ARS ledger historical sales
+
+let mockCatalogProducts: CatalogProduct[] = [...INITIAL_CATALOG_PRODUCTS];
+let mockSales: KioskSale[] = [...INITIAL_SALES];
+let mockWithdrawals: KioskWithdrawal[] = [...INITIAL_WITHDRAWALS];
 
 // Seeded Institutions (Super Admin view)
 let mockInstitutions: Institution[] = [
@@ -279,6 +547,249 @@ export const mockAdapter = {
     return { ...student };
   },
 
+  // Kiosk Catalog Management
+  async getCatalogProducts(
+    institutionId?: string,
+    category?: ProductCategory
+  ): Promise<CatalogProduct[]> {
+    let products = [...mockCatalogProducts];
+    if (institutionId) {
+      products = products.filter((p) => p.institutionId === institutionId);
+    }
+    if (category) {
+      products = products.filter((p) => p.category === category);
+    }
+    return products;
+  },
+
+  async getCatalogProductById(id: string): Promise<CatalogProduct | null> {
+    const product = mockCatalogProducts.find((p) => p.id === id);
+    return product ? { ...product } : null;
+  },
+
+  async createCatalogProduct(
+    input: CreateCatalogProductInput
+  ): Promise<CatalogProduct> {
+    const validated = CreateCatalogProductSchema.parse(input);
+
+    const newProduct: CatalogProduct = {
+      id: generateUuid(),
+      institutionId: validated.institutionId,
+      name: validated.name,
+      category: validated.category,
+      priceCents: validated.priceCents,
+      stock: validated.stock,
+      isActive: validated.isActive ?? true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    CatalogProductSchema.parse(newProduct);
+    mockCatalogProducts = [newProduct, ...mockCatalogProducts];
+    return newProduct;
+  },
+
+  async updateCatalogProduct(
+    id: string,
+    input: Partial<CreateCatalogProductInput>
+  ): Promise<CatalogProduct> {
+    const index = mockCatalogProducts.findIndex((p) => p.id === id);
+    if (index === -1) {
+      throw new Error(`Product with ID ${id} not found.`);
+    }
+
+    const current = mockCatalogProducts[index]!;
+    const updated: CatalogProduct = {
+      ...current,
+      ...input,
+      updatedAt: new Date().toISOString(),
+    };
+
+    CatalogProductSchema.parse(updated);
+    mockCatalogProducts[index] = updated;
+    return updated;
+  },
+
+  async deleteCatalogProduct(id: string): Promise<boolean> {
+    const initialLength = mockCatalogProducts.length;
+    mockCatalogProducts = mockCatalogProducts.filter((p) => p.id !== id);
+    return mockCatalogProducts.length < initialLength;
+  },
+
+  // Kiosk Sales Monitor & POS Web Terminal
+  async getKioskSales(institutionId?: string): Promise<KioskSale[]> {
+    if (institutionId) {
+      return mockSales.filter((s) => s.institutionId === institutionId);
+    }
+    return [...mockSales];
+  },
+
+  async processKioskCharge(
+    charge: ChargeQrRequestInput,
+    institutionId?: string
+  ): Promise<KioskSale> {
+    const validated = ChargeQrRequestSchema.parse(charge);
+    const targetInstitution = institutionId || DEFAULT_KIOSK_INSTITUTION_ID;
+
+    // Idempotency guarantee: check for already processed idempotencyKey
+    const existing = mockSales.find(
+      (s) => s.idempotencyKey === validated.idempotencyKey
+    );
+    if (existing) {
+      return { ...existing };
+    }
+
+    // Build items and verify stock
+    const saleItems: KioskSale['items'] = [];
+    for (const item of validated.items) {
+      const product = mockCatalogProducts.find((p) => p.id === item.productId);
+      if (!product) {
+        throw new Error(`Producto con ID ${item.productId} no encontrado.`);
+      }
+      if (product.stock < item.quantity) {
+        throw new Error(
+          `Stock insuficiente para "${product.name}". Disponible: ${product.stock}, solicitado: ${item.quantity}.`
+        );
+      }
+
+      // Deduct stock
+      product.stock -= item.quantity;
+
+      saleItems.push({
+        productId: product.id,
+        productName: product.name,
+        category: product.category,
+        quantity: item.quantity,
+        unitPriceCents: product.priceCents,
+        subtotalCents: product.priceCents * item.quantity,
+      });
+    }
+
+    const totalAmountCents = saleItems.reduce(
+      (sum, i) => sum + i.subtotalCents,
+      0
+    );
+
+    // Kiosk 0% platform fee rule
+    const platformFeeCents = 0;
+    const netAmountCents = totalAmountCents;
+
+    // Resolve student info if code matches student roster or generic
+    const matchedStudent = mockStudentsRoster.find(
+      (s) => s.studentDni.replace(/\D/g, '').endsWith(validated.paymentTokenOrCode)
+    );
+
+    const newSale: KioskSale = {
+      id: generateUuid(),
+      institutionId: targetInstitution,
+      studentId: matchedStudent?.studentId,
+      studentName: matchedStudent
+        ? matchedStudent.studentName
+        : `Alumno Código #${validated.paymentTokenOrCode}`,
+      paymentCode: validated.paymentTokenOrCode,
+      items: saleItems,
+      totalAmountCents,
+      platformFeeCents,
+      netAmountCents,
+      idempotencyKey: validated.idempotencyKey,
+      createdAt: new Date().toISOString(),
+      status: 'COMPLETED',
+    };
+
+    mockSales = [newSale, ...mockSales];
+    return newSale;
+  },
+
+  // Kiosk Ledger Balance & Mercado Pago Withdrawals
+  async getKioskLedgerBalance(
+    institutionId?: string
+  ): Promise<KioskLedgerBalance> {
+    const targetInstitution = institutionId || DEFAULT_KIOSK_INSTITUTION_ID;
+
+    const totalSalesCents =
+      HISTORICAL_BASE_SALES_CENTS +
+      mockSales
+        .filter(
+          (s) =>
+            s.institutionId === targetInstitution && s.status === 'COMPLETED'
+        )
+        .reduce((sum, s) => sum + s.totalAmountCents, 0);
+
+    const totalWithdrawnCents = mockWithdrawals
+      .filter(
+        (w) =>
+          w.institutionId === targetInstitution &&
+          (w.status === 'PROCESSED' || w.status === 'PENDING')
+      )
+      .reduce((sum, w) => sum + w.amountCents, 0);
+
+    const availableBalanceCents = Math.max(
+      0,
+      totalSalesCents - totalWithdrawnCents
+    );
+
+    return {
+      institutionId: targetInstitution,
+      totalSalesCents,
+      totalWithdrawnCents,
+      availableBalanceCents,
+      currency: 'ARS',
+      lastMovementAt: mockSales[0]?.createdAt || new Date().toISOString(),
+    };
+  },
+
+  async getKioskWithdrawals(
+    institutionId?: string
+  ): Promise<KioskWithdrawal[]> {
+    if (institutionId) {
+      return mockWithdrawals.filter((w) => w.institutionId === institutionId);
+    }
+    return [...mockWithdrawals];
+  },
+
+  async requestKioskWithdrawal(
+    request: KioskWithdrawalRequestInput,
+    institutionId?: string
+  ): Promise<KioskWithdrawal> {
+    const validated = KioskWithdrawalRequestSchema.parse(request);
+    const targetInstitution = institutionId || DEFAULT_KIOSK_INSTITUTION_ID;
+
+    // Idempotency check
+    const existing = mockWithdrawals.find(
+      (w) => w.idempotencyKey === validated.idempotencyKey
+    );
+    if (existing) {
+      return { ...existing };
+    }
+
+    // Verify balance from ledger
+    const balance = await this.getKioskLedgerBalance(targetInstitution);
+    if (validated.amountCents > balance.availableBalanceCents) {
+      const availableFormatted = new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+      }).format(balance.availableBalanceCents / 100);
+
+      throw new Error(
+        `Saldo insuficiente para retirar. Saldo disponible en libro mayor: ${availableFormatted}.`
+      );
+    }
+
+    const newWithdrawal: KioskWithdrawal = {
+      id: generateUuid(),
+      institutionId: targetInstitution,
+      amountCents: validated.amountCents,
+      mercadoPagoAliasOrCvu: validated.mercadoPagoAliasOrCvu,
+      idempotencyKey: validated.idempotencyKey,
+      status: 'PROCESSED',
+      createdAt: new Date().toISOString(),
+      processedAt: new Date().toISOString(),
+    };
+
+    mockWithdrawals = [newWithdrawal, ...mockWithdrawals];
+    return newWithdrawal;
+  },
+
   // Reset to initial seed (useful for unit tests)
   reset(): void {
     mockInstitutions = [
@@ -316,5 +827,12 @@ export const mockAdapter = {
         createdAt: '2026-02-01T11:00:00.000Z',
       },
     ];
+
+    mockCatalogProducts = INITIAL_CATALOG_PRODUCTS.map((p) => ({ ...p }));
+    mockSales = INITIAL_SALES.map((s) => ({
+      ...s,
+      items: s.items.map((i) => ({ ...i })),
+    }));
+    mockWithdrawals = INITIAL_WITHDRAWALS.map((w) => ({ ...w }));
   },
 };

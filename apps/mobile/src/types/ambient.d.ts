@@ -4,9 +4,16 @@ declare namespace JSX {
     props: any;
     key: any;
   }
+  interface IntrinsicAttributes {
+    key?: string | number | null | undefined;
+  }
   interface IntrinsicElements {
     [elemName: string]: any;
   }
+}
+
+declare namespace NodeJS {
+  type Timeout = any;
 }
 
 declare namespace React {

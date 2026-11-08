@@ -17,11 +17,13 @@ import {
   TopUpPreferenceRequestSchema,
   MercadoPagoWebhookPayloadSchema,
   CreateCatalogProductSchema,
+  UpdateCatalogProductSchema,
   CatalogProductSchema,
   QrPaymentTokenSchema,
   ChargeQrItemSchema,
   ChargeQrRequestSchema,
   KioskWithdrawalRequestSchema,
+  LedgerMovementDtoSchema,
 } from '../schemas/ledger.schema.js';
 
 import {
@@ -52,11 +54,14 @@ export type SpendingLimitsDto = z.infer<typeof SpendingLimitsSchema>;
 export type TopUpPreferenceRequestDto = z.infer<typeof TopUpPreferenceRequestSchema>;
 export type MercadoPagoWebhookPayloadDto = z.infer<typeof MercadoPagoWebhookPayloadSchema>;
 export type CreateCatalogProductDto = z.infer<typeof CreateCatalogProductSchema>;
+export type UpdateCatalogProductDto = z.infer<typeof UpdateCatalogProductSchema>;
 export type CatalogProductDto = z.infer<typeof CatalogProductSchema>;
 export type QrPaymentTokenDto = z.infer<typeof QrPaymentTokenSchema>;
 export type ChargeQrItemDto = z.infer<typeof ChargeQrItemSchema>;
 export type ChargeQrRequestDto = z.infer<typeof ChargeQrRequestSchema>;
 export type KioskWithdrawalRequestDto = z.infer<typeof KioskWithdrawalRequestSchema>;
+export type LedgerMovementDto = z.infer<typeof LedgerMovementDtoSchema>;
+
 
 // Community DTOs
 export type CreateExchangeItemDto = z.infer<typeof CreateExchangeItemSchema>;

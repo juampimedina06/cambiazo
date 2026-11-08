@@ -89,10 +89,15 @@ class AuthStore {
     if (s) {
       this.state = {
         ...this.state,
-        student: s,
+        student: { ...s },
       };
       this.notify();
     }
+  }
+
+  public refreshCurrentStudent() {
+    const studentId = this.state.student?.id || '22222222-2222-4222-8222-222222222222';
+    this.refreshStudentFromClient(studentId);
   }
 
   public logout() {
