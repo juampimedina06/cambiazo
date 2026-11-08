@@ -1,13 +1,33 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { LogoPencilC } from '@/shared/ui/LogoPencilC';
-import { Shield, Building2, ArrowLeft } from 'lucide-react';
+import { Shield, Building2, ArrowLeft, BarChart3 } from 'lucide-react';
 
 export default function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  const navItems = [
+    {
+      href: '/super-admin/institutions',
+      label: 'Instituciones Educativas',
+      icon: <Building2 size={18} />,
+      isActive: pathname.startsWith('/super-admin/institutions'),
+    },
+    {
+      href: '/super-admin/metrics',
+      label: 'Métricas Globales y Liquidación',
+      icon: <BarChart3 size={18} />,
+      isActive: pathname.startsWith('/super-admin/metrics'),
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-canvas">
       {/* Super Admin Topbar */}
@@ -35,6 +55,24 @@ export default function SuperAdminLayout({
               <span>Cambiar de Portal</span>
             </Link>
           </div>
+        </div>
+
+        {/* Tab Navigation Navigation */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-2 border-t border-slate-100">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+                item.isActive
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-text-secondary hover:text-text-primary hover:border-slate-300'
+              }`}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </Link>
+          ))}
         </div>
       </header>
 

@@ -13,9 +13,19 @@ import { WebhooksController } from './infrastructure/http/webhooks.controller.js
 import { KioskPayoutsController } from './infrastructure/http/kiosk-payouts.controller.js';
 import { IdentityParentalModule } from '../identity-parental/identity-parental.module.js';
 
+import { SAVINGS_GOAL_REPOSITORY } from './domain/ports/savings-goal.repository.port.js';
+import { InMemorySavingsGoalRepository } from './infrastructure/persistence/in-memory-savings-goal.repository.js';
+import { SavingsGoalService } from './application/services/savings-goal.service.js';
+import { SavingsGoalsController } from './infrastructure/http/savings-goals.controller.js';
+
 @Module({
   imports: [forwardRef(() => IdentityParentalModule)],
-  controllers: [WalletController, WebhooksController, KioskPayoutsController],
+  controllers: [
+    WalletController,
+    WebhooksController,
+    KioskPayoutsController,
+    SavingsGoalsController,
+  ],
   providers: [
     {
       provide: LEDGER_REPOSITORY,
@@ -25,9 +35,15 @@ import { IdentityParentalModule } from '../identity-parental/identity-parental.m
       provide: PAYMENT_GATEWAY,
       useClass: MercadoPagoMockGateway,
     },
+    {
+      provide: SAVINGS_GOAL_REPOSITORY,
+      useClass: InMemorySavingsGoalRepository,
+    },
     InMemoryLedgerRepository,
+    InMemorySavingsGoalRepository,
     MercadoPagoMockGateway,
     LedgerService,
+    SavingsGoalService,
     CreateTopUpPreferenceUseCase,
     HandleMpTopupWebhookUseCase,
     RequestKioskPayoutUseCase,
@@ -36,9 +52,12 @@ import { IdentityParentalModule } from '../identity-parental/identity-parental.m
   exports: [
     LEDGER_REPOSITORY,
     PAYMENT_GATEWAY,
+    SAVINGS_GOAL_REPOSITORY,
     InMemoryLedgerRepository,
+    InMemorySavingsGoalRepository,
     MercadoPagoMockGateway,
     LedgerService,
+    SavingsGoalService,
     CreateTopUpPreferenceUseCase,
     HandleMpTopupWebhookUseCase,
     RequestKioskPayoutUseCase,
@@ -46,3 +65,4 @@ import { IdentityParentalModule } from '../identity-parental/identity-parental.m
   ],
 })
 export class WalletLedgerModule {}
+

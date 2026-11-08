@@ -143,7 +143,26 @@ export default function StudentHomeScreen() {
         </View>
       </View>
 
-      {/* 4. RETURN TO PARENT PANEL (For developer/user testing flow) */}
+      {/* 4. MODULOS ESTUDIANTILES: METAS Y COMUNIDAD DE INTERCAMBIO */}
+      <View style={styles.modulesSection} testID="student-modules-section">
+        <Text style={styles.sectionTitle}>Comunidad y Educación Financiera</Text>
+        <View style={styles.modulesGrid}>
+          <Button
+            label="🐖 Mis Metas de Ahorro"
+            onPress={() => router.push('/(student)/wallet/savings-goals')}
+            variant="mint"
+            testID="btn-student-savings-goals"
+          />
+          <Button
+            label="🤝 Comunidad de Intercambio Escolar"
+            onPress={() => router.push('/(student)/community')}
+            variant="primary"
+            testID="btn-student-community"
+          />
+        </View>
+      </View>
+
+      {/* 5. RETURN TO PARENT PANEL (For developer/user testing flow) */}
       <View style={styles.footerNav}>
         <Button
           label="Volver al Panel Tutor"
@@ -278,6 +297,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     paddingVertical: 12,
+  },
+  modulesSection: {
+    marginTop: 28,
+  },
+  modulesGrid: {
+    gap: 12,
   },
   footerNav: {
     marginTop: 32,

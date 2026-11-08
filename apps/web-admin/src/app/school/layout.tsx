@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogoPencilC } from '@/shared/ui/LogoPencilC';
-import { School, Ticket, Users, ArrowLeft } from 'lucide-react';
+import { School, Ticket, Users, ArrowLeft, PackageCheck, Trophy, BarChart3 } from 'lucide-react';
 
 export default function SchoolLayout({
   children,
@@ -14,6 +14,24 @@ export default function SchoolLayout({
   const pathname = usePathname();
 
   const navItems = [
+    {
+      href: '/school/moderation',
+      label: 'Moderación y Punto de Entrega',
+      icon: <PackageCheck size={18} />,
+      isActive: pathname.startsWith('/school/moderation'),
+    },
+    {
+      href: '/school/rewards',
+      label: 'Recompensas y Ranking',
+      icon: <Trophy size={18} />,
+      isActive: pathname.startsWith('/school/rewards'),
+    },
+    {
+      href: '/school/reports',
+      label: 'Reportes y Métricas',
+      icon: <BarChart3 size={18} />,
+      isActive: pathname.startsWith('/school/reports'),
+    },
     {
       href: '/school/invitations',
       label: 'Códigos de Invitación',

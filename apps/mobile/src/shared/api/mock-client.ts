@@ -8,6 +8,15 @@ import {
   QrPaymentTokenSchema,
   ChargeQrRequestSchema,
   ProductCategorySchema,
+  ExchangeModeSchema,
+  ModerationStatusSchema,
+  CreateExchangeItemSchema,
+  SchoolRewardSchema,
+  RedeemRewardSchema,
+  LeaderboardEntryDtoSchema,
+  CategorySpendingBreakdownSchema,
+  WeeklyPurchaseItemDtoSchema,
+  WeeklyParentSummaryDtoSchema,
   type ValidateInviteCodeDto,
   type RegisterParentAndStudentDto,
   type GrantParentalConsentDto,
@@ -19,6 +28,15 @@ import {
   type CatalogProductDto,
   type ConsentStatus,
   type ProductCategory,
+  type ExchangeMode,
+  type ModerationStatus,
+  type CreateExchangeItemDto,
+  type SchoolRewardDto,
+  type RedeemRewardDto,
+  type LeaderboardEntryDto,
+  type CategorySpendingBreakdownDto,
+  type WeeklyPurchaseItemDto,
+  type WeeklyParentSummaryDto,
 } from '@cambiazo/shared';
 
 export type ValidateInviteCodeInput = ValidateInviteCodeDto;
@@ -107,6 +125,38 @@ export interface MockPurchase {
   kioskName: string;
 }
 
+export interface MockSavingsGoal {
+  id: string;
+  studentId: string;
+  title: string;
+  targetAmountCents: number;
+  savedAmountCents: number;
+  icon: string;
+  createdAt: string;
+}
+
+export interface MockExchangeItem {
+  id: string;
+  studentId: string;
+  institutionId: string;
+  studentAlias: string;
+  title: string;
+  description: string;
+  category: string;
+  mode: ExchangeMode;
+  status: ModerationStatus;
+  photoUrls: string[];
+  pickupLocation: string;
+  createdAt: string;
+}
+
+export interface MockBlockedAttempt {
+  id: string;
+  studentId: string;
+  reason: string;
+  timestamp: string;
+}
+
 export class MockMobileApiClient {
   private institutions: MockInstitution[] = [
     {
@@ -134,6 +184,10 @@ export class MockMobileApiClient {
   private activeQrTokens: Map<string, MockQrTokenRecord> = new Map();
   private purchases: MockPurchase[] = [];
   private idempotencyCache: Map<string, any> = new Map();
+  private savingsGoals: Map<string, MockSavingsGoal> = new Map();
+  private exchangeItems: Map<string, MockExchangeItem> = new Map();
+  private schoolRewards: Map<string, SchoolRewardDto> = new Map();
+  private blockedAttempts: MockBlockedAttempt[] = [];
 
   constructor() {
     this.seedDefaultData();
@@ -276,6 +330,19 @@ export class MockMobileApiClient {
         kioskName: 'Kiosco Central Belgrano',
       },
     ];
+
+    this.blockedAttempts = [
+      {
+        id: 'ba-1',
+        studentId: defaultStudentId,
+        reason: 'Intento de compra en categoría Golosinas (bloqueada por el tutor)',
+        timestamp: 'Ayer 15:30 hs',
+      },
+    ];
+
+    this.seedSavingsGoals();
+    this.seedExchangeItems();
+    this.seedSchoolRewards();
   }
 
   public resetToDefault() {
@@ -287,6 +354,10 @@ export class MockMobileApiClient {
     this.activeQrTokens.clear();
     this.purchases = [];
     this.idempotencyCache.clear();
+    this.savingsGoals.clear();
+    this.exchangeItems.clear();
+    this.schoolRewards.clear();
+    this.blockedAttempts = [];
     this.seedDefaultData();
   }
 
@@ -809,6 +880,7 @@ export class MockMobileApiClient {
 
     const limits = this.getSpendingLimits(student.id);
     if (limits.isPaused) {
+      this.recordBlockedAttempt(student.id, 'Cuenta pausada por el tutor');
       return {
         success: false,
         error: 'Cobro rechazado: La cuenta del alumno está pausada por el tutor.',
@@ -831,6 +903,7 @@ export class MockMobileApiClient {
 
       // Check category blocking
       if (limits.blockedCategories.includes(product.category)) {
+        this.recordBlockedAttempt(student.id, `Categoría '${product.category}' bloqueada por el tutor`);
         return {
           success: false,
           error: `Cobro rechazado: La categoría '${product.category}' se encuentra bloqueada por el tutor.`,
@@ -852,6 +925,7 @@ export class MockMobileApiClient {
     }
 
     if (student.dailySpentCents + totalCents > limits.dailyLimitCents) {
+      this.recordBlockedAttempt(student.id, 'Supera el límite diario escolar');
       const limitFormatted = (limits.dailyLimitCents / 100).toLocaleString('es-AR');
       return {
         success: false,
@@ -903,6 +977,506 @@ export class MockMobileApiClient {
       return [...this.purchases];
     }
     return this.purchases.filter((p) => p.studentId === studentId);
+  }
+
+  // --- Wave 3: Blocked Attempts & Weekly Summary for Parents ---
+
+  public recordBlockedAttempt(studentId: string, reason: string): void {
+    this.blockedAttempts.unshift({
+      id: `ba-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+      studentId,
+      reason,
+      timestamp: 'Hoy ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+    });
+  }
+
+  public getBlockedAttempts(studentId: string): MockBlockedAttempt[] {
+    return this.blockedAttempts.filter((b) => b.studentId === studentId);
+  }
+
+  public getWeeklyParentSummary(studentId: string): WeeklyParentSummaryDto {
+    const student = this.students.get(studentId) || this.students.get('22222222-2222-4222-8222-222222222222');
+    const studentIdToUse = student ? student.id : '22222222-2222-4222-8222-222222222222';
+
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const studentPurchases = this.purchases.filter((p) => p.studentId === studentIdToUse);
+
+    const recentPurchases: WeeklyPurchaseItemDto[] = studentPurchases.map((p, idx) => {
+      const id = p.id.includes('-') && p.id.length === 36
+        ? p.id
+        : `44444444-4444-4444-8444-${String(idx + 1).padStart(12, '0')}`;
+
+      const purchaseTime = new Date(now.getTime() - (idx + 1) * 3600 * 1000 * 6).toISOString();
+
+      return {
+        id,
+        productName: p.itemsSummary,
+        category: p.category,
+        amountCents: p.amountCents,
+        purchasedAt: purchaseTime,
+      };
+    });
+
+    const totalSpentCents = recentPurchases.reduce((sum, item) => sum + item.amountCents, 0);
+
+    const categories: ProductCategory[] = ['HEALTHY_SNACK', 'HOT_MEAL', 'DRINK', 'CANDY', 'STATIONERY'];
+    const breakdownByCategory: CategorySpendingBreakdownDto[] = categories.map((cat) => {
+      const catAmount = recentPurchases
+        .filter((item) => item.category === cat)
+        .reduce((sum, item) => sum + item.amountCents, 0);
+
+      const percentage = totalSpentCents > 0
+        ? Math.round((catAmount / totalSpentCents) * 100)
+        : 0;
+
+      return {
+        category: cat,
+        amountCents: catAmount,
+        percentage,
+      };
+    });
+
+    const studentBlocked = this.blockedAttempts.filter((b) => b.studentId === studentIdToUse);
+
+    const summary: WeeklyParentSummaryDto = {
+      studentId: studentIdToUse,
+      startDate: startOfWeek.toISOString().split('T')[0]!,
+      endDate: endOfWeek.toISOString().split('T')[0]!,
+      totalSpentCents,
+      breakdownByCategory,
+      recentPurchases,
+      communityPointsEarned: student?.communityPoints ?? 120,
+      blockedAttemptsCount: studentBlocked.length,
+    };
+
+    return WeeklyParentSummaryDtoSchema.parse(summary);
+  }
+
+  // --- Wave 3: Educational Savings Goals ---
+
+  private seedSavingsGoals() {
+    const defaultStudentId = '22222222-2222-4222-8222-222222222222';
+    const goals: MockSavingsGoal[] = [
+      {
+        id: 'goal-1',
+        studentId: defaultStudentId,
+        title: 'Libro de Aventuras Escolar',
+        targetAmountCents: 300000, // $3.000
+        savedAmountCents: 180000,  // $1.800
+        icon: '📚',
+        createdAt: '2026-11-01T10:00:00.000Z',
+      },
+      {
+        id: 'goal-2',
+        studentId: defaultStudentId,
+        title: 'Almuerzo Especial de Fin de Mes',
+        targetAmountCents: 250000, // $2.500
+        savedAmountCents: 100000,  // $1.000
+        icon: '🥪',
+        createdAt: '2026-11-03T11:30:00.000Z',
+      },
+    ];
+    goals.forEach((g) => this.savingsGoals.set(g.id, g));
+  }
+
+  public getSavingsGoals(studentId: string): MockSavingsGoal[] {
+    return Array.from(this.savingsGoals.values()).filter((g) => g.studentId === studentId);
+  }
+
+  public async createSavingsGoal(
+    studentId: string,
+    input: { title: string; targetAmountCents: number; icon?: string }
+  ): Promise<{ success: boolean; goal?: MockSavingsGoal; error?: string }> {
+    if (!input.title || input.title.trim().length < 2) {
+      return { success: false, error: 'El título de la meta debe tener al menos 2 caracteres.' };
+    }
+    if (!input.targetAmountCents || input.targetAmountCents <= 0) {
+      return { success: false, error: 'El monto objetivo debe ser mayor a cero.' };
+    }
+
+    const student = this.students.get(studentId);
+    if (!student) {
+      return { success: false, error: 'Alumno no encontrado.' };
+    }
+
+    const id = `goal-${Date.now()}`;
+    const newGoal: MockSavingsGoal = {
+      id,
+      studentId,
+      title: input.title.trim(),
+      targetAmountCents: input.targetAmountCents,
+      savedAmountCents: 0,
+      icon: input.icon || '🎯',
+      createdAt: new Date().toISOString(),
+    };
+
+    this.savingsGoals.set(id, newGoal);
+    return { success: true, goal: newGoal };
+  }
+
+  public async allocateToGoal(
+    studentId: string,
+    goalId: string,
+    amountCents: number
+  ): Promise<{ success: boolean; goal?: MockSavingsGoal; error?: string }> {
+    if (amountCents <= 0) {
+      return { success: false, error: 'El monto a separar debe ser mayor a cero.' };
+    }
+
+    const student = this.students.get(studentId);
+    if (!student) {
+      return { success: false, error: 'Alumno no encontrado.' };
+    }
+
+    const goal = this.savingsGoals.get(goalId);
+    if (!goal || goal.studentId !== studentId) {
+      return { success: false, error: 'Meta no encontrada.' };
+    }
+
+    if (student.balanceArsCents < amountCents) {
+      const balanceFormatted = (student.balanceArsCents / 100).toLocaleString('es-AR');
+      return {
+        success: false,
+        error: `Saldo insuficiente en tu billetera ($${balanceFormatted}).`,
+      };
+    }
+
+    student.balanceArsCents -= amountCents;
+    goal.savedAmountCents += amountCents;
+
+    return { success: true, goal };
+  }
+
+  public async withdrawFromGoal(
+    studentId: string,
+    goalId: string,
+    amountCents: number
+  ): Promise<{ success: boolean; goal?: MockSavingsGoal; error?: string }> {
+    if (amountCents <= 0) {
+      return { success: false, error: 'El monto a liberar debe ser mayor a cero.' };
+    }
+
+    const student = this.students.get(studentId);
+    if (!student) {
+      return { success: false, error: 'Alumno no encontrado.' };
+    }
+
+    const goal = this.savingsGoals.get(goalId);
+    if (!goal || goal.studentId !== studentId) {
+      return { success: false, error: 'Meta no encontrada.' };
+    }
+
+    if (goal.savedAmountCents < amountCents) {
+      return { success: false, error: 'El monto a liberar supera lo ahorrado en la meta.' };
+    }
+
+    goal.savedAmountCents -= amountCents;
+    student.balanceArsCents += amountCents;
+
+    return { success: true, goal };
+  }
+
+  // --- Wave 3: Community School Items Feed & Publication ---
+
+  private seedExchangeItems() {
+    const institutionId = this.institutions[0]!.id;
+    const defaultStudentId = '22222222-2222-4222-8222-222222222222';
+
+    const items: MockExchangeItem[] = [
+      {
+        id: 'item-1',
+        studentId: '55555555-5555-4555-8555-555555555551',
+        institutionId,
+        studentAlias: 'Lucía M.',
+        title: 'Diccionario Escolar Español Ilustrado',
+        description: 'En excelente estado, completo, sin hojas rotas. Ideal para 5° y 6° grado.',
+        category: 'Libros',
+        mode: 'BARTER',
+        status: 'APPROVED',
+        photoUrls: ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400'],
+        pickupLocation: 'Punto de Entrega Escolar Moderado (Biblioteca)',
+        createdAt: '2026-11-04T12:00:00.000Z',
+      },
+      {
+        id: 'item-2',
+        studentId: '55555555-5555-4555-8555-555555555552',
+        institutionId,
+        studentAlias: 'Sofía R.',
+        title: 'Set de Reglas y Escuadra Geometría',
+        description: 'Regla de 30cm, escuadra y transportador plástico transparente sin rayones.',
+        category: 'Útiles',
+        mode: 'DONATION',
+        status: 'APPROVED',
+        photoUrls: ['https://images.unsplash.com/photo-1588072432836-e10032774350?w=400'],
+        pickupLocation: 'Punto de Entrega Escolar Moderado (Recepción)',
+        createdAt: '2026-11-05T09:30:00.000Z',
+      },
+      {
+        id: 'item-3',
+        studentId: defaultStudentId,
+        institutionId,
+        studentAlias: 'Mateo Gómez',
+        title: 'Calculadora Científica Casio',
+        description: 'Préstamo para pruebas de matemática y física. Con tapa protectora y pila nueva.',
+        category: 'Tecnología',
+        mode: 'LOAN',
+        status: 'APPROVED',
+        photoUrls: ['https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?w=400'],
+        pickupLocation: 'Punto de Entrega Escolar Moderado (Laboratorio)',
+        createdAt: '2026-11-06T14:15:00.000Z',
+      },
+      {
+        id: 'item-4',
+        studentId: '55555555-5555-4555-8555-555555555553',
+        institutionId,
+        studentAlias: 'Joaquín T.',
+        title: 'Compás de Precisión Metálico',
+        description: 'Compás metálico con repuesto de minas incluido. Listo para usar en dibujo técnico.',
+        category: 'Útiles',
+        mode: 'DONATION',
+        status: 'APPROVED',
+        photoUrls: ['https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=400'],
+        pickupLocation: 'Punto de Entrega Escolar Moderado (Recepción)',
+        createdAt: '2026-11-07T08:45:00.000Z',
+      },
+      {
+        id: 'item-5',
+        studentId: '55555555-5555-4555-8555-555555555554',
+        institutionId,
+        studentAlias: 'Valentina P.',
+        title: 'Mochila Escolar Azul Reforzada',
+        description: 'Mochila con tres compartimentos, cierres en perfecto estado.',
+        category: 'Accesorios',
+        mode: 'BARTER',
+        status: 'APPROVED',
+        photoUrls: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400'],
+        pickupLocation: 'Punto de Entrega Escolar Moderado (Biblioteca)',
+        createdAt: '2026-11-07T16:00:00.000Z',
+      },
+    ];
+
+    items.forEach((item) => this.exchangeItems.set(item.id, item));
+  }
+
+  public getExchangeItems(institutionId: string, modeFilter?: ExchangeMode): MockExchangeItem[] {
+    return Array.from(this.exchangeItems.values()).filter((item) => {
+      if (item.institutionId !== institutionId || item.status !== 'APPROVED') {
+        return false;
+      }
+      if (modeFilter && item.mode !== modeFilter) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  public async createExchangeItem(
+    studentId: string,
+    institutionId: string,
+    input: CreateExchangeItemDto
+  ): Promise<{ success: boolean; item?: MockExchangeItem; error?: string }> {
+    const validation = CreateExchangeItemSchema.safeParse(input);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: validation.error.errors[0]?.message || 'Datos del útil escolar inválidos',
+      };
+    }
+
+    const student = this.students.get(studentId);
+    const studentAlias = student
+      ? student.fullName.split(' ')[0] + ' ' + (student.fullName.split(' ')[1]?.[0] || '') + '.'
+      : 'Alumno';
+
+    const id = `item-${Date.now()}`;
+    const newItem: MockExchangeItem = {
+      id,
+      studentId,
+      institutionId,
+      studentAlias,
+      title: validation.data.title,
+      description: validation.data.description,
+      category: validation.data.category,
+      mode: validation.data.mode,
+      status: 'PENDING',
+      photoUrls: validation.data.photoUrls,
+      pickupLocation: 'Punto de Entrega Escolar Moderado (Mesa de Recepción)',
+      createdAt: new Date().toISOString(),
+    };
+
+    this.exchangeItems.set(id, newItem);
+
+    return {
+      success: true,
+      item: newItem,
+    };
+  }
+
+  // --- Wave 3: Points, Badges, School Leaderboard & Rewards ---
+
+  private seedSchoolRewards() {
+    const institutionId = this.institutions[0]!.id;
+
+    const rewards: SchoolRewardDto[] = [
+      {
+        id: '66666666-6666-4666-8666-111111111111',
+        institutionId,
+        title: 'Pase Libre de Biblioteca por 1 Mes',
+        description: 'Acceso ilimitado a préstamo especial de libros y cómics escolares.',
+        pointsCost: 50,
+        stock: 15,
+        isActive: true,
+      },
+      {
+        id: '66666666-6666-4666-8666-222222222222',
+        institutionId,
+        title: 'Kit de Marcadores Ecológicos',
+        description: 'Set de 6 marcadores escolares recargables con tinta al agua.',
+        pointsCost: 80,
+        stock: 8,
+        isActive: true,
+      },
+      {
+        id: '66666666-6666-4666-8666-333333333333',
+        institutionId,
+        title: 'Mención de Honor al Mérito Solidario',
+        description: 'Diploma escolar oficial firmado por dirección en el acto escolar.',
+        pointsCost: 100,
+        stock: 25,
+        isActive: true,
+      },
+      {
+        id: '66666666-6666-4666-8666-444444444444',
+        institutionId,
+        title: 'Almuerzo Saludable Especial en Kiosco',
+        description: 'Tostado especial + jugo natural en el recreo largo como reconocimiento escolar.',
+        pointsCost: 150,
+        stock: 5,
+        isActive: true,
+      },
+    ];
+
+    rewards.forEach((r) => {
+      SchoolRewardSchema.parse(r);
+      this.schoolRewards.set(r.id, r);
+    });
+  }
+
+  public async getLeaderboard(institutionId: string): Promise<LeaderboardEntryDto[]> {
+    const defaultStudentId = '22222222-2222-4222-8222-222222222222';
+    const student = this.students.get(defaultStudentId);
+    const studentPoints = student?.communityPoints ?? 120;
+
+    const entries: LeaderboardEntryDto[] = [
+      {
+        rank: 1,
+        studentId: '77777777-7777-4777-8777-111111111111',
+        studentAlias: 'Lucía M.',
+        accumulatedPoints: 250,
+        badges: ['Gran Donante', 'Eco Campeón'],
+      },
+      {
+        rank: 2,
+        studentId: defaultStudentId,
+        studentAlias: 'Mateo G.',
+        accumulatedPoints: studentPoints,
+        badges: ['Primer Canje', 'Solidario'],
+      },
+      {
+        rank: 3,
+        studentId: '77777777-7777-4777-8777-333333333333',
+        studentAlias: 'Sofía R.',
+        accumulatedPoints: 95,
+        badges: ['Generosidad'],
+      },
+      {
+        rank: 4,
+        studentId: '77777777-7777-4777-8777-444444444444',
+        studentAlias: 'Joaquín T.',
+        accumulatedPoints: 70,
+        badges: ['Participación'],
+      },
+      {
+        rank: 5,
+        studentId: '77777777-7777-4777-8777-555555555555',
+        studentAlias: 'Valentina P.',
+        accumulatedPoints: 50,
+        badges: ['Eco Amigo'],
+      },
+    ];
+
+    entries.forEach((e) => LeaderboardEntryDtoSchema.parse(e));
+    return entries;
+  }
+
+  public async getSchoolRewards(institutionId: string): Promise<SchoolRewardDto[]> {
+    return Array.from(this.schoolRewards.values()).filter(
+      (r) => r.isActive && r.institutionId === institutionId
+    );
+  }
+
+  public async redeemReward(input: RedeemRewardDto): Promise<{
+    success: boolean;
+    remainingPoints?: number;
+    error?: string;
+  }> {
+    const validation = RedeemRewardSchema.safeParse(input);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: validation.error.errors[0]?.message || 'Solicitud de canje inválida',
+      };
+    }
+
+    const reward = this.schoolRewards.get(validation.data.rewardId);
+    if (!reward || !reward.isActive) {
+      return {
+        success: false,
+        error: 'La recompensa escolar seleccionada no está disponible.',
+      };
+    }
+
+    if (reward.stock !== undefined && reward.stock <= 0) {
+      return {
+        success: false,
+        error: 'No hay stock disponible para esta recompensa.',
+      };
+    }
+
+    const student = this.students.get(validation.data.studentId);
+    if (!student) {
+      return {
+        success: false,
+        error: 'Alumno no encontrado.',
+      };
+    }
+
+    if (student.communityPoints < reward.pointsCost) {
+      return {
+        success: false,
+        error: `Puntos insuficientes. Necesitás ${reward.pointsCost} puntos (tenés ${student.communityPoints} pts).`,
+      };
+    }
+
+    student.communityPoints -= reward.pointsCost;
+    if (reward.stock !== undefined) {
+      reward.stock -= 1;
+    }
+
+    return {
+      success: true,
+      remainingPoints: student.communityPoints,
+    };
   }
 }
 

@@ -108,9 +108,10 @@ export default function KioskCatalogPage() {
 
   // Filtered in memory by search query
   const filteredProducts = products.filter((p) => {
+    const categoryLabel = CATEGORY_LABELS[p.category as ProductCategory] || '';
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      CATEGORY_LABELS[p.category].toLowerCase().includes(searchQuery.toLowerCase());
+      categoryLabel.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 

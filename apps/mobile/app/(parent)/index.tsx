@@ -150,6 +150,12 @@ export default function ParentHomeScreen() {
             variant="secondary"
             testID="btn-parent-notifications"
           />
+          <Button
+            label="📊 Resumen Semanal de Gastos"
+            onPress={() => router.push('/(parent)/reports/weekly-summary')}
+            variant="secondary"
+            testID="btn-parent-weekly-summary"
+          />
         </View>
       </View>
 

@@ -1,13 +1,20 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type { ChargeQrRequestDto } from '@cambiazo/shared';
 import {
   QrTokenExpiredException,
   TenantMismatchException,
   ProductNotFoundException,
   InsufficientStockException,
+  InsufficientFundsException,
 } from '../../../../common/errors/domain.exception.js';
 import { ParentalControlsService } from '../../../identity-parental/application/services/parental-controls.service.js';
 import { LedgerService } from '../../../wallet-ledger/application/services/ledger.service.js';
+import { SavingsGoalService } from '../../../wallet-ledger/application/services/savings-goal.service.js';
+import {
+  type BlockedPurchaseRepositoryPort,
+  BLOCKED_PURCHASE_REPOSITORY,
+} from '../../../analytics-notifications/domain/ports/blocked-purchase.repository.port.js';
 import {
   type CatalogProductRepositoryPort,
   CATALOG_PRODUCT_REPOSITORY,
@@ -51,7 +58,13 @@ export class ProcessKioskQrPaymentUseCase {
     private readonly tokenRepo: PaymentTokenRepositoryPort,
     private readonly parentalControlsService: ParentalControlsService,
     private readonly ledgerService: LedgerService,
+    @Optional()
+    private readonly savingsGoalService?: SavingsGoalService,
+    @Optional()
+    @Inject(BLOCKED_PURCHASE_REPOSITORY)
+    private readonly blockedPurchaseRepo?: BlockedPurchaseRepositoryPort,
   ) {}
+
 
   async execute(
     kioskUserId: string,
@@ -120,13 +133,41 @@ export class ProcessKioskQrPaymentUseCase {
       kioskInstitutionId,
     );
 
-    await this.parentalControlsService.validatePurchaseItemsAndLimits(
-      token.studentId,
-      kioskInstitutionId,
-      resolvedItems,
-      spending.spentTodayCents,
-      spending.spentThisWeekCents,
-    );
+    try {
+      await this.parentalControlsService.validatePurchaseItemsAndLimits(
+        token.studentId,
+        kioskInstitutionId,
+        resolvedItems,
+        spending.spentTodayCents,
+        spending.spentThisWeekCents,
+      );
+    } catch (err: any) {
+      if (this.blockedPurchaseRepo) {
+        await this.blockedPurchaseRepo.recordAttempt({
+          id: randomUUID(),
+          studentId: token.studentId,
+          institutionId: kioskInstitutionId,
+          reason: err?.message || 'Blocked by parental controls',
+          attemptedAmountCents: totalCents,
+          categories: resolvedItems.map((i) => i.category),
+          createdAt: new Date(),
+        });
+      }
+      throw err;
+    }
+
+    // 5.1 Check spendable balance respecting locked savings goals
+    if (this.savingsGoalService) {
+      const spendable = await this.savingsGoalService.getSpendableBalance(
+        token.studentId,
+        kioskInstitutionId,
+      );
+      if (spendable < totalCents) {
+        throw new InsufficientFundsException(
+          `Insufficient spendable balance. Available: $${(spendable / 100).toFixed(2)} (after locked savings goals), Required: $${(totalCents / 100).toFixed(2)}`,
+        );
+      }
+    }
 
     // 6. Execute atomic double-entry ledger transaction (0% platform commission)
     const studentAccount = await this.ledgerService.getStudentAccount(
@@ -149,7 +190,16 @@ export class ProcessKioskQrPaymentUseCase {
         kioskUserId,
         itemCount: resolvedItems.length,
         totalCents,
+        items: resolvedItems.map((item) => ({
+          productId: item.productId,
+          productName: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unitPriceCents: item.priceCents,
+          subtotalCents: item.priceCents * item.quantity,
+        })),
       },
+
       entries: [
         {
           accountId: studentAccount.id,

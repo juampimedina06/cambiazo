@@ -132,3 +132,40 @@ export class WithdrawalNotPermittedException extends DomainException {
   }
 }
 
+export class ProhibitedCommunityConversionException extends DomainException {
+  constructor(message = 'Conversion between community points and money/kiosk balance is strictly prohibited') {
+    super(DOMAIN_ERROR_CODES.INVALID_COMMUNITY_CONVERSION, message, HttpStatus.FORBIDDEN);
+  }
+}
+
+export class ExchangeItemNotFoundException extends DomainException {
+  constructor(itemId: string, message = `Exchange item ${itemId} was not found`) {
+    super(DOMAIN_ERROR_CODES.EXCHANGE_ITEM_NOT_FOUND, message, HttpStatus.NOT_FOUND, { itemId });
+  }
+}
+
+export class RewardNotFoundException extends DomainException {
+  constructor(rewardId: string, message = `School reward ${rewardId} was not found`) {
+    super(DOMAIN_ERROR_CODES.REWARD_NOT_FOUND, message, HttpStatus.NOT_FOUND, { rewardId });
+  }
+}
+
+export class InsufficientCommunityPointsException extends DomainException {
+  constructor(message = 'Insufficient community points for this redemption') {
+    super(DOMAIN_ERROR_CODES.INSUFFICIENT_COMMUNITY_POINTS, message, HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class SavingsGoalNotFoundException extends DomainException {
+  constructor(goalId: string, message = `Savings goal ${goalId} was not found`) {
+    super(DOMAIN_ERROR_CODES.SAVINGS_GOAL_NOT_FOUND, message, HttpStatus.NOT_FOUND, { goalId });
+  }
+}
+
+export class ItemNotApprovedException extends DomainException {
+  constructor(message = 'Exchange item is not in APPROVED status') {
+    super(DOMAIN_ERROR_CODES.ITEM_NOT_APPROVED, message, HttpStatus.FORBIDDEN);
+  }
+}
+
+

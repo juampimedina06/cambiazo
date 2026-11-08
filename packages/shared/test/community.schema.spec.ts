@@ -6,7 +6,10 @@ import {
   RedeemRewardSchema,
   LeaderboardEntryDtoSchema,
   WeeklyParentSummaryDtoSchema,
+  CreateSavingsGoalSchema,
+  StudentSavingsGoalSchema,
 } from '../src/schemas/community.schema.js';
+
 
 describe('Community & Gamification Schemas Validation', () => {
   describe('CreateExchangeItemSchema', () => {
@@ -176,4 +179,41 @@ describe('Community & Gamification Schemas Validation', () => {
       ).toThrow();
     });
   });
+
+  describe('Savings Goals Schemas', () => {
+    it('parses valid CreateSavingsGoalSchema', () => {
+      const parsed = CreateSavingsGoalSchema.parse({
+        title: 'Mochila nueva',
+        targetAmountCents: 500000,
+        initialReservedCents: 100000,
+      });
+      expect(parsed.title).toBe('Mochila nueva');
+      expect(parsed.targetAmountCents).toBe(500000);
+      expect(parsed.initialReservedCents).toBe(100000);
+    });
+
+    it('parses valid StudentSavingsGoalSchema', () => {
+      const parsed = StudentSavingsGoalSchema.parse({
+        id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        institutionId: 'a81bc81b-dead-4e5d-abff-90865d1e13b1',
+        studentUserId: 'b91cc91c-feed-4e5d-abff-90865d1e13b2',
+        title: 'Libro de cuentos',
+        targetAmountCents: 250000,
+        reservedAmountCents: 250000,
+        isAchieved: true,
+      });
+      expect(parsed.isAchieved).toBe(true);
+      expect(parsed.reservedAmountCents).toBe(250000);
+    });
+
+    it('rejects non-positive targetAmountCents', () => {
+      expect(() =>
+        CreateSavingsGoalSchema.parse({
+          title: 'Goal',
+          targetAmountCents: 0,
+        }),
+      ).toThrow();
+    });
+  });
 });
+

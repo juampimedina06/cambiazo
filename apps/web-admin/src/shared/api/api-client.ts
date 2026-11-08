@@ -15,6 +15,15 @@ import {
   KioskWithdrawal,
   KioskLedgerBalance,
   ProductCategory,
+  ExchangeItem,
+  ExchangeMode,
+  ModerationStatus,
+  ModerateExchangeItemDto,
+  SchoolReward,
+  LeaderboardEntry,
+  RewardRedemption,
+  SchoolReportMetrics,
+  SuperAdminGlobalMetrics,
 } from './types';
 
 const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== 'false';
@@ -284,6 +293,178 @@ export class ApiClient {
     }
     return res.json();
   }
+
+  // School Moderation Desk & Pickup Point
+  async getExchangeItems(
+    institutionId?: string,
+    status?: ModerationStatus,
+    mode?: ExchangeMode
+  ): Promise<ExchangeItem[]> {
+    if (this.useMocks) {
+      return mockAdapter.getExchangeItems(institutionId, status, mode);
+    }
+    const params = new URLSearchParams();
+    if (institutionId) params.append('institutionId', institutionId);
+    if (status) params.append('status', status);
+    if (mode) params.append('mode', mode);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${this.baseUrl}/community/items${query}`);
+    if (!res.ok) throw new Error('Failed to fetch exchange items');
+    return res.json();
+  }
+
+  async getExchangeItemById(id: string): Promise<ExchangeItem | null> {
+    if (this.useMocks) {
+      return mockAdapter.getExchangeItemById(id);
+    }
+    const res = await fetch(`${this.baseUrl}/community/items/${id}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('Failed to fetch exchange item');
+    return res.json();
+  }
+
+  async moderateExchangeItem(
+    payload: ModerateExchangeItemDto
+  ): Promise<ExchangeItem> {
+    if (this.useMocks) {
+      return mockAdapter.moderateExchangeItem(payload);
+    }
+    const res = await fetch(
+      `${this.baseUrl}/community/items/${payload.itemId}/moderate`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error moderating exchange item');
+    }
+    return res.json();
+  }
+
+  // School Rewards & Badges ABM
+  async getSchoolRewards(institutionId?: string): Promise<SchoolReward[]> {
+    if (this.useMocks) {
+      return mockAdapter.getSchoolRewards(institutionId);
+    }
+    const query = institutionId ? `?institutionId=${institutionId}` : '';
+    const res = await fetch(`${this.baseUrl}/gamification/rewards${query}`);
+    if (!res.ok) throw new Error('Failed to fetch school rewards');
+    return res.json();
+  }
+
+  async createSchoolReward(reward: SchoolReward): Promise<SchoolReward> {
+    if (this.useMocks) {
+      return mockAdapter.createSchoolReward(reward);
+    }
+    const res = await fetch(`${this.baseUrl}/gamification/rewards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reward),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error creating school reward');
+    }
+    return res.json();
+  }
+
+  async updateSchoolReward(
+    id: string,
+    partial: Partial<SchoolReward>
+  ): Promise<SchoolReward> {
+    if (this.useMocks) {
+      return mockAdapter.updateSchoolReward(id, partial);
+    }
+    const res = await fetch(`${this.baseUrl}/gamification/rewards/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(partial),
+    });
+    if (!res.ok) throw new Error('Failed to update school reward');
+    return res.json();
+  }
+
+  async deleteSchoolReward(id: string): Promise<boolean> {
+    if (this.useMocks) {
+      return mockAdapter.deleteSchoolReward(id);
+    }
+    const res = await fetch(`${this.baseUrl}/gamification/rewards/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete school reward');
+    return true;
+  }
+
+  // School Leaderboard & Gamification Ranking
+  async getSchoolLeaderboard(
+    institutionId?: string
+  ): Promise<LeaderboardEntry[]> {
+    if (this.useMocks) {
+      return mockAdapter.getSchoolLeaderboard(institutionId);
+    }
+    const query = institutionId ? `?institutionId=${institutionId}` : '';
+    const res = await fetch(`${this.baseUrl}/gamification/leaderboard${query}`);
+    if (!res.ok) throw new Error('Failed to fetch leaderboard');
+    return res.json();
+  }
+
+  // Reward Redemptions Management
+  async getRewardRedemptions(
+    institutionId?: string
+  ): Promise<RewardRedemption[]> {
+    if (this.useMocks) {
+      return mockAdapter.getRewardRedemptions(institutionId);
+    }
+    const query = institutionId ? `?institutionId=${institutionId}` : '';
+    const res = await fetch(
+      `${this.baseUrl}/gamification/redemptions${query}`
+    );
+    if (!res.ok) throw new Error('Failed to fetch reward redemptions');
+    return res.json();
+  }
+
+  async fulfillRewardRedemption(
+    redemptionId: string
+  ): Promise<RewardRedemption> {
+    if (this.useMocks) {
+      return mockAdapter.fulfillRewardRedemption(redemptionId);
+    }
+    const res = await fetch(
+      `${this.baseUrl}/gamification/redemptions/${redemptionId}/fulfill`,
+      {
+        method: 'PATCH',
+      }
+    );
+    if (!res.ok) throw new Error('Failed to fulfill reward redemption');
+    return res.json();
+  }
+
+  // School Reports Dashboard
+  async getSchoolReportMetrics(
+    institutionId?: string
+  ): Promise<SchoolReportMetrics> {
+    if (this.useMocks) {
+      return mockAdapter.getSchoolReportMetrics(institutionId);
+    }
+    const query = institutionId ? `?institutionId=${institutionId}` : '';
+    const res = await fetch(`${this.baseUrl}/school/reports/metrics${query}`);
+    if (!res.ok) throw new Error('Failed to fetch report metrics');
+    return res.json();
+  }
+
+  // Super Admin Global Metrics & Billing Calculation
+  async getSuperAdminMetrics(): Promise<SuperAdminGlobalMetrics> {
+    if (this.useMocks) {
+      return mockAdapter.getSuperAdminMetrics();
+    }
+    const res = await fetch(`${this.baseUrl}/tenants/metrics/global`);
+    if (!res.ok) throw new Error('Failed to fetch super admin metrics');
+    return res.json();
+  }
 }
 
 export const apiClient = new ApiClient();
+

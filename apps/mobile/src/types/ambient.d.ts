@@ -145,6 +145,8 @@ declare module 'react-native' {
     autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
     maxLength?: number;
     editable?: boolean;
+    multiline?: boolean;
+    numberOfLines?: number;
     style?: TextStyle | (TextStyle | undefined | null | false | (TextStyle | undefined | null | false)[])[] | any;
     testID?: string;
   }
@@ -224,6 +226,8 @@ declare module 'vitest' {
     toBeFalsy(): void;
     toBeDefined(): void;
     toBeUndefined(): void;
+    toBeGreaterThan(expected: number): void;
+    toBeLessThan(expected: number): void;
     toBeGreaterThanOrEqual(expected: number): void;
     toBeLessThanOrEqual(expected: number): void;
     toContain(expected: any): void;

@@ -12,12 +12,15 @@ import { StudentPaymentController } from './infrastructure/http/student-payment.
 import { KioskPosController } from './infrastructure/http/kiosk-pos.controller.js';
 import { IdentityParentalModule } from '../identity-parental/identity-parental.module.js';
 import { WalletLedgerModule } from '../wallet-ledger/wallet-ledger.module.js';
+import { AnalyticsNotificationsModule } from '../analytics-notifications/analytics-notifications.module.js';
 
 @Module({
   imports: [
     forwardRef(() => IdentityParentalModule),
     forwardRef(() => WalletLedgerModule),
+    forwardRef(() => AnalyticsNotificationsModule),
   ],
+
   controllers: [
     KioskCatalogController,
     StudentPaymentController,

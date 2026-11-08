@@ -70,3 +70,26 @@ export const WeeklyParentSummaryDtoSchema = z.object({
   communityPointsEarned: z.number().int().nonnegative(),
   blockedAttemptsCount: z.number().int().nonnegative().default(0),
 });
+
+export const CreateSavingsGoalSchema = z.object({
+  title: z.string().min(2).max(100),
+  targetAmountCents: z.number().int().positive(),
+  initialReservedCents: z.number().int().nonnegative().default(0),
+});
+
+export const DepositSavingsGoalSchema = z.object({
+  amountCents: z.number().int().positive(),
+});
+
+export const StudentSavingsGoalSchema = z.object({
+  id: z.string().uuid(),
+  institutionId: z.string().uuid(),
+  studentUserId: z.string().uuid(),
+  title: z.string().min(2).max(100),
+  targetAmountCents: z.number().int().positive(),
+  reservedAmountCents: z.number().int().nonnegative(),
+  isAchieved: z.boolean().default(false),
+  createdAt: z.string().datetime().or(z.date()).optional(),
+  updatedAt: z.string().datetime().or(z.date()).optional(),
+});
+

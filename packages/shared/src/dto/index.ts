@@ -36,7 +36,11 @@ import {
   CategorySpendingBreakdownSchema,
   WeeklyPurchaseItemDtoSchema,
   WeeklyParentSummaryDtoSchema,
+  CreateSavingsGoalSchema,
+  DepositSavingsGoalSchema,
+  StudentSavingsGoalSchema,
 } from '../schemas/community.schema.js';
+
 
 // Institution DTOs
 export type CreateInstitutionDto = z.infer<typeof CreateInstitutionSchema>;
@@ -73,3 +77,7 @@ export type LeaderboardEntryDto = z.infer<typeof LeaderboardEntryDtoSchema>;
 export type CategorySpendingBreakdownDto = z.infer<typeof CategorySpendingBreakdownSchema>;
 export type WeeklyPurchaseItemDto = z.infer<typeof WeeklyPurchaseItemDtoSchema>;
 export type WeeklyParentSummaryDto = z.infer<typeof WeeklyParentSummaryDtoSchema>;
+export type CreateSavingsGoalDto = z.infer<typeof CreateSavingsGoalSchema>;
+export type DepositSavingsGoalDto = z.infer<typeof DepositSavingsGoalSchema>;
+export type StudentSavingsGoalDto = z.infer<typeof StudentSavingsGoalSchema>;
+
