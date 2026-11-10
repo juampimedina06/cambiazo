@@ -7,7 +7,6 @@ import {
   Easing,
   Dimensions,
 } from 'react-native';
-import { colors } from '../theme/colors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -16,68 +15,70 @@ export interface DramaticSplashScreenProps {
   onFinish?: () => void;
 }
 
+const TOTAL_SEGMENTS = 48;
+const RADIUS = 62;
+const CENTER_X = 100;
+const CENTER_Y = 100;
+const BEAD_DIAMETER = 18;
+const START_ANGLE_DEG = 40;
+const SWEEP_ANGLE_DEG = 280;
+
+// Pre-compute geometric coordinates for all segments of the curved pencil "C"
+const SEGMENTS = Array.from({ length: TOTAL_SEGMENTS }, (_, i) => {
+  const fraction = i / (TOTAL_SEGMENTS - 1);
+  const angleDeg = START_ANGLE_DEG + fraction * SWEEP_ANGLE_DEG;
+  const angleRad = (angleDeg * Math.PI) / 180;
+  const x = CENTER_X + RADIUS * Math.cos(angleRad) - BEAD_DIAMETER / 2;
+  const y = CENTER_Y + RADIUS * Math.sin(angleRad) - BEAD_DIAMETER / 2;
+  return { id: i, fraction, x, y, angleDeg };
+});
+
 /**
- * Premium Dramatic Splash Screen with Vector Curved Pencil "C" Spinner
- * Replaces cluttered stock photo with clean, high-contrast school chalkboard blueprint.
+ * Dramatic School Splash Screen with Progressive Pencil-Drawing "C" Completion
+ * Instead of rotating the whole logo like a wheel, the pencil tip literally
+ * traces and completes the curved letter "C" from 0% to 100%.
  */
 export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
-  durationMs = 2600,
+  durationMs = 2400,
   onFinish,
 }) => {
   // Animation drivers
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const logoScaleAnim = useRef(new Animated.Value(0.7)).current;
-  const pencilSpinAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const sniperReticleAnim = useRef(new Animated.Value(45)).current;
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
-  const [progressPercent, setProgressPercent] = useState(0);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const finishSparkleAnim = useRef(new Animated.Value(0)).current;
+
+  const [drawProgress, setDrawProgress] = useState(0);
 
   useEffect(() => {
-    // 1. Initial fade-in & elastic logo entrance
+    // 1. Initial fade-in & elastic entrance
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 400,
+        duration: 350,
         useNativeDriver: true,
       }),
-      Animated.spring(logoScaleAnim, {
+      Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 6,
-        tension: 50,
-        useNativeDriver: true,
-      }),
-      Animated.spring(sniperReticleAnim, {
-        toValue: 12,
-        friction: 5,
         tension: 45,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // 2. Continuous Pencil Spinner Rotation (The Spinner / Sniper charge loop)
-    const spinLoop = Animated.loop(
-      Animated.timing(pencilSpinAnim, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    spinLoop.start();
-
-    // 3. Energetic Pulse Loop
+    // 2. Continuous subtle pulse while drawing
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.12,
-          duration: 350,
+          toValue: 1.05,
+          duration: 300,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
-          toValue: 0.96,
-          duration: 350,
+          toValue: 0.97,
+          duration: 300,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -85,33 +86,34 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
     );
     pulseLoop.start();
 
-    // 4. Progress bar charging to 100%
+    // 3. Listener tracking the pencil drawing progress (0 to 1)
     const progressListener = progressAnim.addListener(({ value }: { value: number }) => {
-      setProgressPercent(Math.round(value * 100));
+      setDrawProgress(value);
     });
 
+    // 4. Animate the pencil drawing the "C"
     Animated.timing(progressAnim, {
       toValue: 1,
-      duration: durationMs - 400,
-      easing: Easing.inOut(Easing.quad),
+      duration: durationMs - 450,
+      easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     }).start(() => {
-      // 5. Exit Transition: Zoom out with flash and fade out
-      Animated.parallel([
+      // 5. Completion moment: flash sparkle at the pencil tip
+      Animated.sequence([
+        Animated.spring(finishSparkleAnim, {
+          toValue: 1,
+          friction: 3,
+          tension: 70,
+          useNativeDriver: true,
+        }),
+        Animated.delay(150),
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 380,
+          duration: 350,
           easing: Easing.ease,
           useNativeDriver: true,
         }),
-        Animated.timing(logoScaleAnim, {
-          toValue: 1.15,
-          duration: 380,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
       ]).start(() => {
-        spinLoop.stop();
         pulseLoop.stop();
         if (onFinish) {
           onFinish();
@@ -121,21 +123,18 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
 
     return () => {
       progressAnim.removeListener(progressListener);
-      spinLoop.stop();
       pulseLoop.stop();
     };
-  }, [durationMs, fadeAnim, logoScaleAnim, pencilSpinAnim, pulseAnim, sniperReticleAnim, progressAnim, onFinish]);
+  }, [durationMs, fadeAnim, scaleAnim, progressAnim, pulseAnim, finishSparkleAnim, onFinish]);
 
-  // Interpolations
-  const spinInterpolation = pencilSpinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  // Current tip coordinates along the drawing arc
+  const currentAngleDeg = START_ANGLE_DEG + drawProgress * SWEEP_ANGLE_DEG;
+  const currentAngleRad = (currentAngleDeg * Math.PI) / 180;
+  const tipX = CENTER_X + RADIUS * Math.cos(currentAngleRad);
+  const tipY = CENTER_Y + RADIUS * Math.sin(currentAngleRad);
+  const tipRotationDeg = currentAngleDeg + 90; // Tangent direction pointing forward
 
-  const counterSpinInterpolation = pencilSpinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['360deg', '0deg'],
-  });
+  const progressPercent = Math.round(drawProgress * 100);
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],
@@ -144,122 +143,102 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Sleek Dark School Blueprint Grid Background */}
-      <View style={styles.gridOverlay}>
-        <View style={styles.ambientGlowPrimary} />
-        <View style={styles.ambientGlowYellow} />
+      {/* Deep School Chalkboard Background with Ambient Violet/Yellow Glows */}
+      <View style={styles.ambientBackground}>
+        <View style={styles.glowViolet} />
+        <View style={styles.glowYellow} />
       </View>
 
-      {/* Center Stage: The Animated Pencil "C" Spinner & Sniper Reticle */}
-      <View style={styles.centerStage}>
-        {/* Outer Charging Pulse Wave */}
-        <Animated.View
-          style={[
-            styles.pulseWave,
-            {
-              transform: [{ scale: pulseAnim }],
-            },
-          ]}
-        />
+      {/* Center Stage: The Progressive Pencil-Drawing "C" */}
+      <Animated.View style={[styles.centerStage, { transform: [{ scale: scaleAnim }] }]}>
+        <View style={styles.pencilStageCanvas}>
+          {/* Faint Guide Track of the "C" */}
+          <View style={styles.guideTrackCircle} />
 
-        {/* Outer Sniper Target Rings */}
-        <Animated.View
-          style={[
-            styles.sniperRingDashed,
-            { transform: [{ rotate: counterSpinInterpolation }] },
-          ]}
-        >
-          <View style={styles.orbitingMintParticle} />
-        </Animated.View>
-
-        {/* Sniper Reticle Corner Brackets */}
-        <Animated.View
-          style={[
-            styles.reticleCorner,
-            styles.reticleTopLeft,
-            { transform: [{ translateX: Animated.multiply(sniperReticleAnim, -1) }, { translateY: Animated.multiply(sniperReticleAnim, -1) }] },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.reticleCorner,
-            styles.reticleTopRight,
-            { transform: [{ translateX: sniperReticleAnim }, { translateY: Animated.multiply(sniperReticleAnim, -1) }] },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.reticleCorner,
-            styles.reticleBottomLeft,
-            { transform: [{ translateX: Animated.multiply(sniperReticleAnim, -1) }, { translateY: sniperReticleAnim }] },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.reticleCorner,
-            styles.reticleBottomRight,
-            { transform: [{ translateX: sniperReticleAnim }, { translateY: sniperReticleAnim }] },
-          ]}
-        />
-
-        {/* The Animated Curved Pencil "C" Spinner */}
-        <Animated.View
-          style={[
-            styles.pencilSpinnerContainer,
-            {
-              transform: [
-                { scale: logoScaleAnim },
-                { rotate: spinInterpolation },
-              ],
-            },
-          ]}
-        >
-          {/* Main Curved Yellow Body (The "C") */}
-          <View style={styles.pencilBodyArc}>
-            <View style={styles.pencilBevelHighlight} />
+          {/* 1. Stationary Eraser & Ferrule at the start (Bottom-Right, 40°) */}
+          <View style={styles.eraserAnchor}>
+            <View style={styles.metalFerrule} />
+            <View style={styles.pinkEraser} />
           </View>
 
-          {/* Top Tip: Wood + Graphite Lead */}
-          <View style={styles.topTipContainer}>
+          {/* 2. Overlapping Curved Beads forming the Yellow Pencil Body */}
+          {SEGMENTS.map((seg) => {
+            const isVisible = seg.fraction <= drawProgress;
+            if (!isVisible) return null;
+            return (
+              <View
+                key={seg.id}
+                style={[
+                  styles.pencilBead,
+                  {
+                    left: seg.x,
+                    top: seg.y,
+                  },
+                ]}
+              >
+                <View style={styles.beadHighlight} />
+              </View>
+            );
+          })}
+
+          {/* 3. Moving Pencil Tip (Wood Cone + Graphite Point) actively drawing the line */}
+          <View
+            style={[
+              styles.movingPencilTip,
+              {
+                left: tipX - 10,
+                top: tipY - 14,
+                transform: [{ rotate: `${tipRotationDeg}deg` }] as any,
+              },
+            ]}
+          >
             <View style={styles.woodCone} />
             <View style={styles.graphiteLead} />
           </View>
 
-          {/* Bottom End: Silver Ferrule + Pink Eraser */}
-          <View style={styles.bottomEraserContainer}>
-            <View style={styles.metalFerrule} />
-            <View style={styles.pinkEraser} />
-          </View>
-        </Animated.View>
+          {/* 4. Completion Sparkle / Flash at 100% */}
+          <Animated.View
+            style={[
+              styles.sparkleContainer,
+              {
+                left: tipX - 18,
+                top: tipY - 18,
+                transform: [{ scale: finishSparkleAnim }],
+                opacity: finishSparkleAnim,
+              },
+            ]}
+          >
+            <View style={styles.sparkleStar} />
+            <View style={[styles.sparkleStar, { transform: [{ rotate: '45deg' }] as any }]} />
+          </Animated.View>
+        </View>
 
-        {/* Brand Name Title */}
-        <Animated.View style={[styles.brandContainer, { transform: [{ scale: logoScaleAnim }] }]}>
+        {/* Brand Name Typography */}
+        <View style={styles.brandContainer}>
           <Text style={styles.brandTitle}>
             CAMBIA<Text style={styles.brandTitleZ}>Z</Text>O
           </Text>
-          <Text style={styles.brandSubtitle}>Billetera Escolar & Comunidad</Text>
-        </Animated.View>
-      </View>
+          <Text style={styles.brandSubtitle}>
+            {progressPercent < 50
+              ? 'Dibujando tu recreo...'
+              : progressPercent < 100
+              ? 'Completando el lápiz...'
+              : '¡Todo listo!'}
+          </Text>
+        </View>
+      </Animated.View>
 
-      {/* Bottom HUD: Charging Bar & School Status */}
+      {/* Bottom HUD: Progress Bar & School Indicators */}
       <View style={styles.bottomHud}>
         <View style={styles.loadingInfoRow}>
-          <Text style={styles.loadingStatusText}>
-            {progressPercent < 35
-              ? 'Afilando el lápiz...'
-              : progressPercent < 75
-              ? 'Cargando billetera escolar...'
-              : '¡Listo para el recreo!'}
-          </Text>
+          <Text style={styles.loadingLabel}>Cargando experiencia escolar</Text>
           <Text style={styles.percentageText}>{progressPercent}%</Text>
         </View>
 
-        {/* High-tech charging track */}
         <View style={styles.progressTrack}>
           <Animated.View style={[styles.progressBarFill, { width: progressWidth }]} />
         </View>
 
-        {/* School Supplies Ticker */}
         <View style={styles.schoolPillsRow}>
           <View style={styles.miniSchoolPill}>
             <Text style={styles.miniPillEmoji}>✏️</Text>
@@ -267,7 +246,7 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
           </View>
           <View style={styles.miniSchoolPill}>
             <Text style={styles.miniPillEmoji}>⚡</Text>
-            <Text style={styles.miniPillText}>QR Rápido</Text>
+            <Text style={styles.miniPillText}>QR Kiosco</Text>
           </View>
           <View style={styles.miniSchoolPill}>
             <Text style={styles.miniPillEmoji}>⭐</Text>
@@ -279,10 +258,6 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
   );
 };
 
-const STAGE_SIZE = 160;
-const PENCIL_RADIUS = 100;
-const PENCIL_THICKNESS = 16;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -292,144 +267,119 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  gridOverlay: {
+  ambientBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0A0818',
+    backgroundColor: '#090814',
     overflow: 'hidden',
   },
-  ambientGlowPrimary: {
+  glowViolet: {
     position: 'absolute',
-    top: '30%',
-    left: '20%',
+    top: '28%',
+    left: '15%',
     width: SCREEN_WIDTH * 0.7,
     height: SCREEN_WIDTH * 0.7,
     borderRadius: (SCREEN_WIDTH * 0.7) / 2,
-    backgroundColor: 'rgba(108, 60, 233, 0.22)',
+    backgroundColor: 'rgba(108, 60, 233, 0.2)',
   },
-  ambientGlowYellow: {
+  glowYellow: {
     position: 'absolute',
-    top: '40%',
+    top: '38%',
     right: '15%',
-    width: SCREEN_WIDTH * 0.6,
-    height: SCREEN_WIDTH * 0.6,
-    borderRadius: (SCREEN_WIDTH * 0.6) / 2,
-    backgroundColor: 'rgba(250, 204, 21, 0.14)',
+    width: SCREEN_WIDTH * 0.65,
+    height: SCREEN_WIDTH * 0.65,
+    borderRadius: (SCREEN_WIDTH * 0.65) / 2,
+    backgroundColor: 'rgba(250, 204, 21, 0.16)',
   },
   centerStage: {
-    width: STAGE_SIZE,
-    height: STAGE_SIZE,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -30,
+  },
+  pencilStageCanvas: {
+    width: 200,
+    height: 200,
     position: 'relative',
-    marginTop: -40,
-  },
-  pulseWave: {
-    position: 'absolute',
-    width: PENCIL_RADIUS + 40,
-    height: PENCIL_RADIUS + 40,
-    borderRadius: (PENCIL_RADIUS + 40) / 2,
-    backgroundColor: 'rgba(250, 204, 21, 0.12)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(250, 204, 21, 0.35)',
-  },
-  sniperRingDashed: {
-    position: 'absolute',
-    width: PENCIL_RADIUS + 54,
-    height: PENCIL_RADIUS + 54,
-    borderRadius: (PENCIL_RADIUS + 54) / 2,
-    borderWidth: 1.5,
-    borderColor: 'rgba(108, 60, 233, 0.45)',
-    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  orbitingMintParticle: {
+  guideTrackCircle: {
     position: 'absolute',
-    top: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  reticleCorner: {
-    position: 'absolute',
-    width: 22,
-    height: 22,
-    borderColor: '#FACC15',
-  },
-  reticleTopLeft: {
-    top: -15,
-    left: -15,
-    borderTopWidth: 2.5,
-    borderLeftWidth: 2.5,
-  },
-  reticleTopRight: {
-    top: -15,
-    right: -15,
-    borderTopWidth: 2.5,
-    borderRightWidth: 2.5,
-  },
-  reticleBottomLeft: {
-    bottom: -15,
-    left: -15,
-    borderBottomWidth: 2.5,
-    borderLeftWidth: 2.5,
-  },
-  reticleBottomRight: {
-    bottom: -15,
-    right: -15,
-    borderBottomWidth: 2.5,
-    borderRightWidth: 2.5,
-  },
-
-  /* Curved Pencil "C" Geometry */
-  pencilSpinnerContainer: {
-    width: PENCIL_RADIUS,
-    height: PENCIL_RADIUS,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  pencilBodyArc: {
-    width: PENCIL_RADIUS,
-    height: PENCIL_RADIUS,
-    borderRadius: PENCIL_RADIUS / 2,
-    borderWidth: PENCIL_THICKNESS,
-    borderColor: '#FACC15',
-    borderRightColor: 'transparent', // Forms the "C" opening on the right
-    position: 'relative',
-    shadowColor: '#FACC15',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.65,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  pencilBevelHighlight: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: PENCIL_RADIUS / 2,
+    left: CENTER_X - RADIUS,
+    top: CENTER_Y - RADIUS,
+    width: RADIUS * 2,
+    height: RADIUS * 2,
+    borderRadius: RADIUS,
     borderWidth: 2,
-    borderColor: '#FEF08A',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderStyle: 'dashed',
     borderRightColor: 'transparent',
   },
-  topTipContainer: {
+
+  /* Fixed Eraser & Ferrule (Starting at bottom-right, ~40deg) */
+  eraserAnchor: {
     position: 'absolute',
-    top: -2,
-    right: 14,
+    left: 146,
+    top: 133,
     flexDirection: 'row',
     alignItems: 'center',
-    transform: [{ rotate: '45deg' }],
+    transform: [{ rotate: '-50deg' }],
+    zIndex: 10,
+  },
+  metalFerrule: {
+    width: 7,
+    height: BEAD_DIAMETER,
+    backgroundColor: '#94A3B8',
+    borderRadius: 2,
+    borderWidth: 0.5,
+    borderColor: '#CBD5E1',
+  },
+  pinkEraser: {
+    width: 11,
+    height: BEAD_DIAMETER - 2,
+    backgroundColor: '#F472B6',
+    borderTopRightRadius: 5,
+    borderBottomRightRadius: 5,
+  },
+
+  /* Overlapping Yellow Pencil Beads */
+  pencilBead: {
+    position: 'absolute',
+    width: BEAD_DIAMETER,
+    height: BEAD_DIAMETER,
+    borderRadius: BEAD_DIAMETER / 2,
+    backgroundColor: '#FACC15',
+    shadowColor: '#FACC15',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  beadHighlight: {
+    width: BEAD_DIAMETER * 0.45,
+    height: BEAD_DIAMETER * 0.45,
+    borderRadius: (BEAD_DIAMETER * 0.45) / 2,
+    backgroundColor: '#FEF08A',
+    opacity: 0.8,
+  },
+
+  /* Moving Active Pencil Tip */
+  movingPencilTip: {
+    position: 'absolute',
+    width: 20,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    zIndex: 20,
   },
   woodCone: {
     width: 0,
     height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 14,
+    borderLeftWidth: 9,
+    borderRightWidth: 9,
+    borderBottomWidth: 16,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderBottomColor: '#FDE68A',
@@ -437,62 +387,58 @@ const styles = StyleSheet.create({
   graphiteLead: {
     position: 'absolute',
     top: 0,
-    left: 5,
     width: 0,
     height: 0,
-    borderLeftWidth: 3,
-    borderRightWidth: 3,
-    borderBottomWidth: 6,
+    borderLeftWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderBottomWidth: 7,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderBottomColor: '#1E1B4B',
   },
-  bottomEraserContainer: {
+
+  /* Completion Sparkle */
+  sparkleContainer: {
     position: 'absolute',
-    bottom: -2,
-    right: 14,
-    flexDirection: 'row',
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ rotate: '-45deg' }],
+    zIndex: 30,
   },
-  metalFerrule: {
-    width: 7,
-    height: PENCIL_THICKNESS + 2,
-    backgroundColor: '#94A3B8',
+  sparkleStar: {
+    position: 'absolute',
+    width: 22,
+    height: 3,
+    backgroundColor: '#FFFFFF',
     borderRadius: 1.5,
-    borderWidth: 0.5,
-    borderColor: '#CBD5E1',
-  },
-  pinkEraser: {
-    width: 10,
-    height: PENCIL_THICKNESS,
-    backgroundColor: '#F472B6',
-    borderTopRightRadius: 5,
-    borderBottomRightRadius: 5,
+    shadowColor: '#FACC15',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 10,
   },
 
-  /* Brand Typography below Pencil */
+  /* Brand Typography */
   brandContainer: {
-    position: 'absolute',
-    bottom: -80,
+    marginTop: 22,
     alignItems: 'center',
-    width: 260,
   },
   brandTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 3,
+    letterSpacing: 4,
   },
   brandTitleZ: {
     color: '#FACC15',
   },
   brandSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: '#94A3B8',
-    marginTop: 4,
-    letterSpacing: 1,
+    marginTop: 5,
+    letterSpacing: 0.5,
   },
 
   /* Bottom HUD */
@@ -510,11 +456,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  loadingStatusText: {
-    color: '#E2E8F0',
+  loadingLabel: {
+    color: '#CBD5E1',
     fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.4,
   },
   percentageText: {
     color: '#FACC15',

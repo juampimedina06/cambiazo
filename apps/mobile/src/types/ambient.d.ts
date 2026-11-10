@@ -105,6 +105,7 @@ declare module 'react-native' {
     elevation?: number;
     overflow?: 'visible' | 'hidden' | 'scroll';
     flexWrap?: 'wrap' | 'nowrap' | 'wrap-reverse';
+    transform?: any[];
   }
 
   export interface TextStyle extends ViewStyle {
