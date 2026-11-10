@@ -15,12 +15,12 @@ export interface DramaticSplashScreenProps {
   onFinish?: () => void;
 }
 
-const TOTAL_SEGMENTS = 90;
-const RADIUS = 64;
-const CENTER_X = 110;
-const CENTER_Y = 110;
-const PENCIL_WIDTH = 18;
-const SEGMENT_HEIGHT = 7;
+const TOTAL_SEGMENTS = 100;
+const RADIUS = 70;
+const CENTER_X = 120;
+const CENTER_Y = 120;
+const PENCIL_WIDTH = 32;
+const SEGMENT_HEIGHT = 9;
 const START_ANGLE_DEG = 42;
 const SWEEP_ANGLE_DEG = 276;
 
@@ -131,7 +131,7 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
               styles.eraserPivotBox,
               {
                 left: START_X - PENCIL_WIDTH / 2,
-                top: START_Y - 24,
+                top: START_Y - 32,
                 transform: [{ rotate: `${START_ANGLE_DEG}deg` }],
               },
             ]}
@@ -170,7 +170,7 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
               styles.tipPivotBox,
               {
                 left: tipX - PENCIL_WIDTH / 2,
-                top: tipY - 24,
+                top: tipY - 34,
                 transform: [{ rotate: `${currentAngleDeg}deg` }],
               },
             ]}
@@ -219,8 +219,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pencilCanvas: {
-    width: 220,
-    height: 220,
+    width: 240,
+    height: 240,
     position: 'relative',
   },
   guideRing: {
@@ -235,36 +235,36 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
   },
 
-  /* Eraser & Ferrule Pivot Box (18 x 48 centered at START_X, START_Y) */
+  /* Eraser & Ferrule Pivot Box (32 x 64 centered at START_X, START_Y) */
   eraserPivotBox: {
     position: 'absolute',
     width: PENCIL_WIDTH,
-    height: 48,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'flex-start',
     zIndex: 10,
   },
   eraserTip: {
     width: PENCIL_WIDTH,
-    height: 14,
+    height: 18,
     backgroundColor: '#F43F5E',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
   },
   ferruleBand: {
     width: PENCIL_WIDTH,
-    height: 10,
+    height: 14,
     backgroundColor: '#CBD5E1',
     justifyContent: 'center',
     alignItems: 'center',
   },
   ferruleGroove: {
     width: PENCIL_WIDTH,
-    height: 2,
+    height: 3,
     backgroundColor: '#94A3B8',
   },
 
-  /* 3-Facet Hexagonal Pencil Shaft Segment (No round beads) */
+  /* 3-Facet Hexagonal Pencil Shaft Segment (32px wide) */
   shaftSegment: {
     position: 'absolute',
     width: PENCIL_WIDTH,
@@ -273,32 +273,32 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   facetInner: {
-    width: 5,
+    width: 9,
     height: SEGMENT_HEIGHT,
     backgroundColor: '#D97706',
   },
   facetCenter: {
-    width: 8,
+    width: 14,
     height: SEGMENT_HEIGHT,
     backgroundColor: '#FACC15',
   },
   facetOuter: {
-    width: 5,
+    width: 9,
     height: SEGMENT_HEIGHT,
     backgroundColor: '#FEF08A',
   },
 
-  /* Sharp Carved Tip Pivot Box (18 x 48 centered at tipX, tipY) */
+  /* Sharp Carved Tip Pivot Box (32 x 68 centered at tipX, tipY) */
   tipPivotBox: {
     position: 'absolute',
     width: PENCIL_WIDTH,
-    height: 48,
+    height: 68,
     zIndex: 15,
   },
   tipForwardHalf: {
-    marginTop: 24,
+    marginTop: 34,
     width: PENCIL_WIDTH,
-    height: 24,
+    height: 34,
     alignItems: 'center',
   },
   woodCone: {
@@ -306,19 +306,19 @@ const styles = StyleSheet.create({
     height: 0,
     borderLeftWidth: PENCIL_WIDTH / 2,
     borderRightWidth: PENCIL_WIDTH / 2,
-    borderTopWidth: 22,
+    borderTopWidth: 32,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: '#FDE68A',
   },
   graphiteApex: {
     position: 'absolute',
-    top: 14,
+    top: 20,
     width: 0,
     height: 0,
-    borderLeftWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderTopWidth: 8,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 12,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: '#334155',
