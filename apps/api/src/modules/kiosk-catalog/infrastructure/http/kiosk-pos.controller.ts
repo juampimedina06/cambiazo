@@ -28,6 +28,7 @@ import {
 @Controller('api/v1/kiosk')
 export class KioskPosController {
   constructor(
+    @Inject(ProcessKioskQrPaymentUseCase)
     private readonly processKioskQrPaymentUseCase: ProcessKioskQrPaymentUseCase,
     @Optional()
     @Inject(LEDGER_REPOSITORY)

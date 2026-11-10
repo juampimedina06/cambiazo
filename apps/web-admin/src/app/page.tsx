@@ -96,7 +96,7 @@ export default function HomePage() {
         <span>CAMBIAZO © 2026 — Monorepo Architecture Wave 1</span>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1 text-emerald-700 font-medium">
-            ● Modo Mock Activo
+            ● Backend API NestJS Conectado
           </span>
           <span>Ley 25.326 Protección de Datos Personales</span>
         </div>

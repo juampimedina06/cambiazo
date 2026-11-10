@@ -28,7 +28,9 @@ import {
 @UseGuards(AuthGuard, RolesGuard)
 export class InstitutionsController {
   constructor(
+    @Inject(CreateInstitutionUseCase)
     private readonly createInstitutionUseCase: CreateInstitutionUseCase,
+    @Inject(ListInstitutionsUseCase)
     private readonly listInstitutionsUseCase: ListInstitutionsUseCase,
     @Optional()
     @Inject(INSTITUTION_REPOSITORY)

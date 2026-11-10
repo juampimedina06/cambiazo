@@ -19,6 +19,7 @@ export interface GeneratedQrTokenResult {
 @Injectable()
 export class GenerateStudentPaymentTokenUseCase {
   constructor(
+    @Inject(ParentalControlsService)
     private readonly parentalControlsService: ParentalControlsService,
     @Inject(PAYMENT_TOKEN_REPOSITORY)
     private readonly tokenRepo: PaymentTokenRepositoryPort,

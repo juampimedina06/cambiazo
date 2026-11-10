@@ -19,6 +19,7 @@ export class HandleMpTopupWebhookUseCase {
   constructor(
     @Inject(PAYMENT_GATEWAY)
     private readonly paymentGateway: PaymentGatewayPort,
+    @Inject(LedgerService)
     private readonly ledgerService: LedgerService,
   ) {}
 

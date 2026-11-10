@@ -4,7 +4,9 @@ import {
   Get,
   Body,
   Param,
+  Query,
   Req,
+  Inject,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -32,9 +34,13 @@ import { GetParentalConsentAuditUseCase } from '../../application/use-cases/get-
 @UseGuards(AuthGuard, RolesGuard, TenantGuard)
 export class ConsentsController {
   constructor(
+    @Inject(GrantParentalConsentUseCase)
     private readonly grantParentalConsentUseCase: GrantParentalConsentUseCase,
+    @Inject(RevokeParentalConsentUseCase)
     private readonly revokeParentalConsentUseCase: RevokeParentalConsentUseCase,
+    @Inject(CheckStudentConsentUseCase)
     private readonly checkStudentConsentUseCase: CheckStudentConsentUseCase,
+    @Inject(GetParentalConsentAuditUseCase)
     private readonly getParentalConsentAuditUseCase: GetParentalConsentAuditUseCase,
   ) {}
 
@@ -79,19 +85,31 @@ export class ConsentsController {
 
   @Get('audit/all')
   @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
-  async getAllRoster(@CurrentUser() user: AuthUser) {
+  async getAllRoster(
+    @CurrentUser() user: AuthUser,
+    @Query('institutionId') queryInstitutionId?: string,
+  ) {
+    const instId = user.institutionId || queryInstitutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
     return [
       {
-        id: '22222222-2222-4222-8222-222222222222',
-        institutionId: user.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
-        fullName: 'Mateo Gómez',
-        dni: '52345678',
+        id: 'rost-22222222',
+        studentId: '22222222-2222-4222-8222-222222222222',
+        institutionId: instId,
+        studentName: 'Mateo Gómez',
+        studentDni: '52.345.678',
         grade: '6° Primaria',
         parentName: 'Carolina Gómez',
         parentEmail: 'carolina.gomez@ejemplo.com',
+        parentPhone: '+54 11 2233-4455',
         consentStatus: 'GRANTED',
-        consentUpdatedAt: new Date().toISOString(),
-        isActive: true,
+        consentAudit: {
+          acceptedTermsVersion: 'v1.0-2026-AR-LEY25326',
+          signedAt: new Date(Date.now() - 86400000).toISOString(),
+          signatureIp: '127.0.0.1',
+        },
+        walletBalanceCents: 450000,
+        communityPoints: 120,
+        createdAt: new Date().toISOString(),
       },
     ];
   }

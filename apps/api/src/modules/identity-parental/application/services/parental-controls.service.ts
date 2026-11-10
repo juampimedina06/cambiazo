@@ -23,6 +23,7 @@ export class ParentalControlsService {
   constructor(
     @Inject(SPENDING_LIMITS_REPOSITORY)
     private readonly limitsRepo: SpendingLimitsRepositoryPort,
+    @Inject(CheckStudentConsentUseCase)
     private readonly checkStudentConsentUseCase: CheckStudentConsentUseCase,
   ) {}
 

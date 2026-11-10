@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Inject } from '@nestjs/common';
 import type { WeeklyParentSummaryDto } from '@cambiazo/shared';
 import { CurrentUser } from '../../../../common/auth/current-user.decorator.js';
 import type { AuthUser } from '../../../../common/auth/auth-user.interface.js';
@@ -7,7 +7,10 @@ import { WeeklySummaryService } from '../../application/services/weekly-summary.
 
 @Controller('api/v1/parents')
 export class ParentWeeklySummaryController {
-  constructor(private readonly summaryService: WeeklySummaryService) {}
+  constructor(
+    @Inject(WeeklySummaryService)
+    private readonly summaryService: WeeklySummaryService,
+  ) {}
 
   @Get('children/:studentId/weekly-summary')
   @Roles('PARENT')

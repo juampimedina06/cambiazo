@@ -20,6 +20,7 @@ export class CreateTopUpPreferenceUseCase {
   constructor(
     @Inject(PARENT_STUDENT_LINK_REPOSITORY)
     private readonly linkRepo: ParentStudentLinkRepositoryPort,
+    @Inject(CheckStudentConsentUseCase)
     private readonly checkStudentConsentUseCase: CheckStudentConsentUseCase,
     @Inject(PAYMENT_GATEWAY)
     private readonly paymentGateway: PaymentGatewayPort,

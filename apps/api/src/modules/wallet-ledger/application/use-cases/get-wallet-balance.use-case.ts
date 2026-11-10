@@ -20,6 +20,7 @@ export interface WalletBalanceResult {
 @Injectable()
 export class GetWalletBalanceUseCase {
   constructor(
+    @Inject(LedgerService)
     private readonly ledgerService: LedgerService,
     @Inject(PARENT_STUDENT_LINK_REPOSITORY)
     private readonly linkRepo: ParentStudentLinkRepositoryPort,

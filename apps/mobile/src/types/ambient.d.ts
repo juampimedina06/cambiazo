@@ -246,6 +246,7 @@ declare module 'vitest' {
     toBeGreaterThanOrEqual(expected: number): void;
     toBeLessThanOrEqual(expected: number): void;
     toContain(expected: any): void;
+    toMatch(pattern: RegExp | string): void;
     toThrow(expected?: any): void;
     not: {
       toBe(expected: any): void;

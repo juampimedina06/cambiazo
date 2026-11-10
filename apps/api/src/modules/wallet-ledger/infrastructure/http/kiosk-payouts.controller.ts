@@ -32,7 +32,9 @@ import {
 @Controller('api/v1/kiosk')
 export class KioskPayoutsController {
   constructor(
+    @Inject(RequestKioskPayoutUseCase)
     private readonly requestKioskPayoutUseCase: RequestKioskPayoutUseCase,
+    @Inject(GetWalletBalanceUseCase)
     private readonly getWalletBalanceUseCase: GetWalletBalanceUseCase,
     @Optional()
     @Inject(LEDGER_REPOSITORY)

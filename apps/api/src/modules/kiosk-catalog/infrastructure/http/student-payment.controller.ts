@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Inject,
 } from '@nestjs/common';
 import { Roles } from '../../../../common/auth/roles.decorator.js';
 import { CurrentUser } from '../../../../common/auth/current-user.decorator.js';
@@ -14,6 +15,7 @@ import {
 @Controller('api/v1/student')
 export class StudentPaymentController {
   constructor(
+    @Inject(GenerateStudentPaymentTokenUseCase)
     private readonly generateTokenUseCase: GenerateStudentPaymentTokenUseCase,
   ) {}
 

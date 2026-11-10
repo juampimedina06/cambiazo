@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Body,
+  Inject,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -15,7 +16,10 @@ import { RegisterFamilyUseCase } from '../../application/use-cases/register-fami
 
 @Controller('api/v1/onboarding')
 export class OnboardingController {
-  constructor(private readonly registerFamilyUseCase: RegisterFamilyUseCase) {}
+  constructor(
+    @Inject(RegisterFamilyUseCase)
+    private readonly registerFamilyUseCase: RegisterFamilyUseCase,
+  ) {}
 
   @Post('register-family')
   @Public()

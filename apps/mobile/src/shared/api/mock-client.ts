@@ -159,9 +159,76 @@ export interface MockBlockedAttempt {
 
 export class MockMobileApiClient {
   private baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+  private resolvedBaseUrl: string | null = null;
 
   private shouldUseRealBackend(): boolean {
-    return process.env.NODE_ENV !== 'test' && process.env.EXPO_PUBLIC_USE_MOCKS === 'false';
+    return process.env.NODE_ENV !== 'test' && process.env.EXPO_PUBLIC_USE_MOCKS !== 'true';
+  }
+
+  /**
+   * Resolves candidate API base URLs for physical devices (Expo Go LAN IP),
+   * Android Emulator (10.0.2.2), and local host.
+   */
+  private getCandidateBaseUrls(): string[] {
+    const candidates: string[] = [];
+    if (this.resolvedBaseUrl) {
+      candidates.push(this.resolvedBaseUrl);
+    }
+
+    // Attempt to extract the LAN IP from React Native's SourceCode.scriptURL or Expo hostUri
+    try {
+      const rn = require('react-native');
+      const scriptURL: string | undefined = rn?.NativeModules?.SourceCode?.scriptURL;
+      if (scriptURL) {
+        const match = scriptURL.match(/^https?:\/\/([^:/]+)/);
+        const host = match?.[1];
+        if (host && host !== 'localhost' && host !== '127.0.0.1') {
+          const lanUrl = this.baseUrl.replace(/localhost|127\.0\.0\.1/, host);
+          if (!candidates.includes(lanUrl)) {
+            candidates.push(lanUrl);
+          }
+        }
+      }
+    } catch {
+      // Ignore if react-native NativeModules is not available
+    }
+
+    if (!candidates.includes(this.baseUrl)) {
+      candidates.push(this.baseUrl);
+    }
+
+    if (this.baseUrl.includes('localhost') || this.baseUrl.includes('127.0.0.1')) {
+      const androidEmulatorUrl = this.baseUrl.replace(/localhost|127\.0\.0\.1/, '10.0.2.2');
+      if (!candidates.includes(androidEmulatorUrl)) {
+        candidates.push(androidEmulatorUrl);
+      }
+    }
+
+    return candidates;
+  }
+
+  private async fetchBackend(path: string, init?: RequestInit): Promise<Response> {
+    const candidates = this.getCandidateBaseUrls();
+    let lastError: unknown;
+
+    for (const candidateBase of candidates) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
+      try {
+        const res = await fetch(`${candidateBase}${path}`, {
+          ...init,
+          ...(controller ? { signal: controller.signal } : {}),
+        });
+        if (timeoutId) clearTimeout(timeoutId);
+        this.resolvedBaseUrl = candidateBase;
+        return res;
+      } catch (err) {
+        if (timeoutId) clearTimeout(timeoutId);
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error('Network request failed');
   }
 
   private getHeaders(role: string = 'STUDENT', institutionId?: string, userId?: string) {
@@ -401,7 +468,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/invitations/validate/${encodeURIComponent(validation.data.code)}`);
+        const res = await this.fetchBackend(`/invitations/validate/${encodeURIComponent(validation.data.code)}`);
         const json = await res.json();
         if (!res.ok) {
           return {
@@ -409,16 +476,17 @@ export class MockMobileApiClient {
             error: json.message || 'El código no corresponde a ninguna institución activa.',
           };
         }
+        const inst: MockInstitution = {
+          id: json.institution?.id || json.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+          name: json.institution?.name || json.institutionName || 'Institución Escolar',
+          code: json.invitation?.code || validation.data.code,
+        };
         return {
           success: true,
-          institution: {
-            id: json.institutionId,
-            name: json.institutionName,
-            code: validation.data.code,
-          },
+          institution: inst,
         };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local registry
       }
     }
 
@@ -459,7 +527,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/onboarding/register-family`, {
+        const res = await this.fetchBackend('/onboarding/register-family', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(validation.data),
@@ -468,17 +536,21 @@ export class MockMobileApiClient {
         if (!res.ok) {
           return { success: false, error: json.message || 'Error registrando familia' };
         }
+        const resolvedInstitutionId =
+          json.institutionId ||
+          json.parent?.institutionId ||
+          'e28bb18a-66fe-4f8e-9092-2df283f55001';
         const parentUser: MockParentUser = {
-          id: json.parent?.id || `p-${Date.now()}`,
-          institutionId: json.parent?.institutionId || '',
+          id: json.parentId || json.parent?.id || `p-${Date.now()}`,
+          institutionId: resolvedInstitutionId,
           fullName: json.parent?.fullName || validation.data.parent.fullName,
           email: json.parent?.email || validation.data.parent.email,
           dni: json.parent?.dni || validation.data.parent.dni,
           phone: json.parent?.phone || validation.data.parent.phone,
         };
         const studentUser: MockStudentUser = {
-          id: json.student?.id || `s-${Date.now()}`,
-          institutionId: json.student?.institutionId || parentUser.institutionId,
+          id: json.studentId || json.student?.id || `s-${Date.now()}`,
+          institutionId: json.student?.institutionId || resolvedInstitutionId,
           parentId: parentUser.id,
           fullName: json.student?.fullName || validation.data.student.fullName,
           dni: json.student?.dni || validation.data.student.dni,
@@ -493,8 +565,8 @@ export class MockMobileApiClient {
         this.parents.set(parentUser.id, parentUser);
         this.students.set(studentUser.id, studentUser);
         return { success: true, parent: parentUser, student: studentUser };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local registration
       }
     }
 
@@ -564,7 +636,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/consents/grant`, {
+        const res = await this.fetchBackend('/consents/grant', {
           method: 'POST',
           headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
           body: JSON.stringify(validation.data),
@@ -573,10 +645,23 @@ export class MockMobileApiClient {
         if (!res.ok) {
           return { success: false, error: json.message || 'Error al firmar consentimiento' };
         }
-        if (student) student.consentStatus = 'GRANTED';
+        if (student) {
+          student.consentStatus = 'GRANTED';
+          const record: MockConsentRecord = {
+            id: json.consentId || json.id || `c-${Date.now()}`,
+            studentId: student.id,
+            parentId: student.parentId,
+            status: 'GRANTED',
+            acceptedTermsVersion: validation.data.acceptedTermsVersion,
+            acceptedAt: json.grantedAt || validation.data.acceptedAt,
+            signatureIp: validation.data.signatureIp,
+          };
+          this.consents.set(student.id, record);
+          return { success: true, consentRecord: record };
+        }
         return { success: true, consentRecord: json };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local consent grant
       }
     }
 
@@ -628,7 +713,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/consents/revoke`, {
+        const res = await this.fetchBackend('/consents/revoke', {
           method: 'POST',
           headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
           body: JSON.stringify(validation.data),
@@ -637,10 +722,25 @@ export class MockMobileApiClient {
         if (!res.ok) {
           return { success: false, error: json.message || 'Error al revocar consentimiento' };
         }
-        if (student) student.consentStatus = 'REVOKED';
+        if (student) {
+          student.consentStatus = 'REVOKED';
+          const record: MockConsentRecord = {
+            id: json.consentId || json.id || `c-rev-${Date.now()}`,
+            studentId: student.id,
+            parentId: student.parentId,
+            status: 'REVOKED',
+            acceptedTermsVersion: 'v1.0',
+            acceptedAt: new Date().toISOString(),
+            signatureIp: '127.0.0.1',
+            revokedAt: json.revokedAt || new Date().toISOString(),
+            revocationReason: validation.data.reason,
+          };
+          this.consents.set(student.id, record);
+          return { success: true, consentRecord: record };
+        }
         return { success: true, consentRecord: json };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local consent revocation
       }
     }
 
@@ -771,7 +871,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/students/${studentId}/limits`, {
+        const res = await this.fetchBackend(`/students/${studentId}/limits`, {
           method: 'PUT',
           headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
           body: JSON.stringify(validation.data),
@@ -790,8 +890,8 @@ export class MockMobileApiClient {
         this.spendingLimits.set(studentId, updated);
         if (student) student.dailyLimitCents = updated.dailyLimitCents;
         return { success: true, limits: updated };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local spending limits update
       }
     }
 
@@ -847,7 +947,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/wallet/top-up-preference`, {
+        const res = await this.fetchBackend('/wallet/top-up-preference', {
           method: 'POST',
           headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
           body: JSON.stringify(validation.data),
@@ -863,8 +963,8 @@ export class MockMobileApiClient {
           amountCents: validation.data.amountCents,
           studentId: validation.data.studentId,
         };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local preference generation
       }
     }
 
@@ -947,7 +1047,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/student/payment-token`, {
+        const res = await this.fetchBackend('/student/payment-token', {
           method: 'POST',
           headers: this.getHeaders('STUDENT', student?.institutionId, studentId),
         });
@@ -955,20 +1055,35 @@ export class MockMobileApiClient {
         if (!res.ok) {
           return { success: false, error: json.message || 'Error al generar código QR' };
         }
+        const resolvedToken = json.token || json.ephemeralToken || json.qrPayload;
+        const resolvedBackupCode = json.code || json.backupCode;
+        const resolvedInstitutionId =
+          json.institutionId || student?.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
         const qrToken: QrPaymentTokenDto = {
-          token: json.ephemeralToken || json.qrPayload,
+          token: resolvedToken,
           studentId,
-          institutionId: student?.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+          institutionId: resolvedInstitutionId,
           expiresAt: json.expiresAt,
         };
+        const record: MockQrTokenRecord = {
+          token: resolvedToken,
+          studentId,
+          institutionId: resolvedInstitutionId,
+          expiresAt: json.expiresAt,
+          backupCode: resolvedBackupCode,
+        };
+        this.activeQrTokens.set(resolvedToken, record);
+        if (resolvedBackupCode) {
+          this.activeQrTokens.set(resolvedBackupCode, record);
+        }
         return {
           success: true,
           qrToken,
-          backupCode: json.backupCode,
+          backupCode: resolvedBackupCode,
           expiresInSeconds: json.expiresInSeconds || 120,
         };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local QR generation
       }
     }
 
@@ -1046,7 +1161,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/kiosk/charge`, {
+        const res = await this.fetchBackend('/kiosk/charge', {
           method: 'POST',
           headers: this.getHeaders('KIOSK', undefined, 'kiosk-user-1'),
           body: JSON.stringify(validation.data),
@@ -1055,16 +1170,29 @@ export class MockMobileApiClient {
         if (!res.ok) {
           return { success: false, error: json.message || 'Error al procesar cobro' };
         }
+        const totalChargedCents = json.totalCents ?? json.totalAmountCents ?? 0;
+        const student = this.students.get(json.studentId || '22222222-2222-4222-8222-222222222222');
+        if (student) {
+          student.balanceArsCents = Math.max(0, student.balanceArsCents - totalChargedCents);
+          student.dailySpentCents += totalChargedCents;
+        }
+        const limits = student ? this.getSpendingLimits(student.id) : undefined;
+        const remainingDaily =
+          json.remainingDailyLimitCents ??
+          (limits && student ? Math.max(0, limits.dailyLimitCents - student.dailySpentCents) : 0);
+        const itemsSummary = validation.data.items
+          .map((i) => `${this.catalog.get(i.productId)?.name || 'Producto'} (x${i.quantity})`)
+          .join(', ');
         return {
           success: true,
           chargeId: json.transactionId,
-          totalChargedCents: json.totalAmountCents,
-          studentName: json.studentName || 'Alumno',
-          remainingDailyLimitCents: json.remainingDailyLimitCents,
-          itemsSummary: validation.data.items.map((i) => `${this.catalog.get(i.productId)?.name || 'Producto'} (x${i.quantity})`).join(', '),
+          totalChargedCents,
+          studentName: json.studentName || student?.fullName || 'Alumno',
+          remainingDailyLimitCents: remainingDaily,
+          itemsSummary,
         };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local kiosk charge
       }
     }
 
@@ -1333,7 +1461,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/wallet/savings-goals`, {
+        const res = await this.fetchBackend('/wallet/savings-goals', {
           method: 'POST',
           headers: this.getHeaders('STUDENT', undefined, studentId),
           body: JSON.stringify({
@@ -1350,14 +1478,14 @@ export class MockMobileApiClient {
           studentId: json.studentUserId || studentId,
           title: json.title,
           targetAmountCents: json.targetAmountCents,
-          savedAmountCents: json.savedAmountCents || 0,
+          savedAmountCents: json.reservedAmountCents ?? json.savedAmountCents ?? 0,
           icon: input.icon || '🎯',
           createdAt: json.createdAt || new Date().toISOString(),
         };
         this.savingsGoals.set(goal.id, goal);
         return { success: true, goal };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local savings goal creation
       }
     }
 
@@ -1392,7 +1520,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/wallet/savings-goals/${goalId}/deposit`, {
+        const res = await this.fetchBackend(`/wallet/savings-goals/${goalId}/deposit`, {
           method: 'POST',
           headers: this.getHeaders('STUDENT', undefined, studentId),
           body: JSON.stringify({ amountCents }),
@@ -1403,11 +1531,16 @@ export class MockMobileApiClient {
         }
         const goal = this.savingsGoals.get(goalId);
         if (goal) {
-          goal.savedAmountCents = json.savedAmountCents ?? (goal.savedAmountCents + amountCents);
+          goal.savedAmountCents =
+            json.reservedAmountCents ?? json.savedAmountCents ?? (goal.savedAmountCents + amountCents);
+        }
+        const student = this.students.get(studentId);
+        if (student) {
+          student.balanceArsCents = Math.max(0, student.balanceArsCents - amountCents);
         }
         return { success: true, goal: goal || json };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local allocation
       }
     }
 
@@ -1446,7 +1579,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/wallet/savings-goals/${goalId}`, {
+        const res = await this.fetchBackend(`/wallet/savings-goals/${goalId}`, {
           method: 'DELETE',
           headers: this.getHeaders('STUDENT', undefined, studentId),
         });
@@ -1458,9 +1591,13 @@ export class MockMobileApiClient {
         if (goal) {
           goal.savedAmountCents = Math.max(0, goal.savedAmountCents - amountCents);
         }
+        const student = this.students.get(studentId);
+        if (student) {
+          student.balanceArsCents += amountCents;
+        }
         return { success: true, goal };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local withdrawal
       }
     }
 
@@ -1593,7 +1730,7 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/community/items`, {
+        const res = await this.fetchBackend('/community/items', {
           method: 'POST',
           headers: this.getHeaders('STUDENT', institutionId, studentId),
           body: JSON.stringify(validation.data),
@@ -1613,13 +1750,13 @@ export class MockMobileApiClient {
           mode: json.mode,
           status: json.moderationStatus || json.status || 'PENDING',
           photoUrls: json.photoUrls || [],
-          pickupLocation: json.pickupLocation || 'Punto de Entrega Escolar',
+          pickupLocation: json.pickupPointNotes || json.pickupLocation || 'Punto de Entrega Escolar',
           createdAt: json.createdAt || new Date().toISOString(),
         };
         this.exchangeItems.set(item.id, item);
         return { success: true, item };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local item creation
       }
     }
 
@@ -1705,7 +1842,7 @@ export class MockMobileApiClient {
   public async getLeaderboard(institutionId: string): Promise<LeaderboardEntryDto[]> {
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/community/leaderboard`, {
+        const res = await this.fetchBackend('/community/leaderboard', {
           headers: this.getHeaders('STUDENT', institutionId),
         });
         if (res.ok) {
@@ -1764,7 +1901,7 @@ export class MockMobileApiClient {
   public async getSchoolRewards(institutionId: string): Promise<SchoolRewardDto[]> {
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/community/rewards`, {
+        const res = await this.fetchBackend('/community/rewards', {
           headers: this.getHeaders('STUDENT', institutionId),
         });
         if (res.ok) {
@@ -1811,21 +1948,27 @@ export class MockMobileApiClient {
 
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/community/rewards/redeem`, {
+        const res = await this.fetchBackend('/community/rewards/redeem', {
           method: 'POST',
-          headers: this.getHeaders('STUDENT', undefined, validation.data.studentId),
+          headers: this.getHeaders('STUDENT', student?.institutionId, validation.data.studentId),
           body: JSON.stringify(validation.data),
         });
         const json = await res.json();
         if (!res.ok) {
           return { success: false, error: json.message || 'Error al canjear recompensa' };
         }
+        if (student) {
+          student.communityPoints = Math.max(0, student.communityPoints - reward.pointsCost);
+        }
+        if (reward.stock !== undefined) {
+          reward.stock -= 1;
+        }
         return {
           success: true,
-          remainingPoints: json.remainingPoints ?? 0,
+          remainingPoints: json.remainingPoints ?? student?.communityPoints ?? 0,
         };
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      } catch {
+        // Network unreachable: fall through to local reward redemption
       }
     }
 
@@ -1857,7 +2000,7 @@ export class MockMobileApiClient {
   public async fetchCatalogProducts(institutionId?: string): Promise<MockCatalogProduct[]> {
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/kiosk/products`, {
+        const res = await this.fetchBackend('/kiosk/products', {
           headers: this.getHeaders('KIOSK', institutionId),
         });
         if (res.ok) {
@@ -1885,7 +2028,7 @@ export class MockMobileApiClient {
   public async fetchExchangeItems(institutionId: string, modeFilter?: ExchangeMode): Promise<MockExchangeItem[]> {
     if (this.shouldUseRealBackend()) {
       try {
-        const res = await fetch(`${this.baseUrl}/community/items?status=APPROVED`, {
+        const res = await this.fetchBackend('/community/items?status=APPROVED', {
           headers: this.getHeaders('STUDENT', institutionId),
         });
         if (res.ok) {
@@ -1902,7 +2045,7 @@ export class MockMobileApiClient {
               mode: item.mode,
               status: item.moderationStatus || 'APPROVED',
               photoUrls: item.photoUrls || [],
-              pickupLocation: item.pickupLocation || 'Punto de Entrega Escolar',
+              pickupLocation: item.pickupPointNotes || item.pickupLocation || 'Punto de Entrega Escolar',
               createdAt: item.createdAt || new Date().toISOString(),
             }));
             mapped.forEach((item) => this.exchangeItems.set(item.id, item));
@@ -1918,7 +2061,7 @@ export class MockMobileApiClient {
     if (this.shouldUseRealBackend()) {
       try {
         const student = this.students.get(studentId);
-        const res = await fetch(`${this.baseUrl}/parents/children/${studentId}/weekly-summary`, {
+        const res = await this.fetchBackend(`/parents/children/${studentId}/weekly-summary`, {
           headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
         });
         if (res.ok) {

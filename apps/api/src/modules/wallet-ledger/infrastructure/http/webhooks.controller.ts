@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Body,
+  Inject,
   UsePipes,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,7 @@ import {
 @Controller('api/v1/webhooks')
 export class WebhooksController {
   constructor(
+    @Inject(HandleMpTopupWebhookUseCase)
     private readonly handleMpTopupWebhookUseCase: HandleMpTopupWebhookUseCase,
   ) {}
 

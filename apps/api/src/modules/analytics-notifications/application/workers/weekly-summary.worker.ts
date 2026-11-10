@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { WeeklySummaryService } from '../services/weekly-summary.service.js';
 import type { WeeklyParentSummaryDto } from '@cambiazo/shared';
 
@@ -6,7 +6,10 @@ import type { WeeklyParentSummaryDto } from '@cambiazo/shared';
 export class WeeklySummaryWorker {
   private readonly logger = new Logger(WeeklySummaryWorker.name);
 
-  constructor(private readonly summaryService: WeeklySummaryService) {}
+  constructor(
+    @Inject(WeeklySummaryService)
+    private readonly summaryService: WeeklySummaryService,
+  ) {}
 
   async processStudentWeeklySummary(
     parentId: string,

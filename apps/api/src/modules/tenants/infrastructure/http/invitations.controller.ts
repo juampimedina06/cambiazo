@@ -33,7 +33,9 @@ import {
 @Controller('api/v1/invitations')
 export class InvitationsController {
   constructor(
+    @Inject(CreateInvitationUseCase)
     private readonly createInvitationUseCase: CreateInvitationUseCase,
+    @Inject(ValidateInvitationUseCase)
     private readonly validateInvitationUseCase: ValidateInvitationUseCase,
     @Optional()
     @Inject(INVITATION_REPOSITORY)

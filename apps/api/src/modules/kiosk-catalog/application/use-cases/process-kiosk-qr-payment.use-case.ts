@@ -56,9 +56,12 @@ export class ProcessKioskQrPaymentUseCase {
     private readonly catalogRepo: CatalogProductRepositoryPort,
     @Inject(PAYMENT_TOKEN_REPOSITORY)
     private readonly tokenRepo: PaymentTokenRepositoryPort,
+    @Inject(ParentalControlsService)
     private readonly parentalControlsService: ParentalControlsService,
+    @Inject(LedgerService)
     private readonly ledgerService: LedgerService,
     @Optional()
+    @Inject(SavingsGoalService)
     private readonly savingsGoalService?: SavingsGoalService,
     @Optional()
     @Inject(BLOCKED_PURCHASE_REPOSITORY)

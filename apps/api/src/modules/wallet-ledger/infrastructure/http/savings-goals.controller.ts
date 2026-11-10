@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Inject,
   UsePipes,
 } from '@nestjs/common';
 import {
@@ -22,7 +23,10 @@ import type { StudentSavingsGoal } from '../../domain/entities/student-savings-g
 
 @Controller('api/v1/wallet/savings-goals')
 export class SavingsGoalsController {
-  constructor(private readonly savingsGoalService: SavingsGoalService) {}
+  constructor(
+    @Inject(SavingsGoalService)
+    private readonly savingsGoalService: SavingsGoalService,
+  ) {}
 
   @Post()
   @Roles('STUDENT')

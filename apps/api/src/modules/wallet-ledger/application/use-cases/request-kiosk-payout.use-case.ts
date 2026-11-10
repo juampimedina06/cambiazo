@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { KioskWithdrawalRequestDto } from '@cambiazo/shared';
 import { LedgerService } from '../services/ledger.service.js';
 
@@ -13,7 +13,10 @@ export interface KioskPayoutResult {
 
 @Injectable()
 export class RequestKioskPayoutUseCase {
-  constructor(private readonly ledgerService: LedgerService) {}
+  constructor(
+    @Inject(LedgerService)
+    private readonly ledgerService: LedgerService,
+  ) {}
 
   async execute(
     kioskUserId: string,

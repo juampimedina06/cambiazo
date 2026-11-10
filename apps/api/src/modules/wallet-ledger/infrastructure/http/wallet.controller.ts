@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Param,
+  Inject,
   UsePipes,
 } from '@nestjs/common';
 import {
@@ -25,7 +26,9 @@ import type { PreferenceResult } from '../../domain/ports/payment-gateway.port.j
 @Controller('api/v1/wallet')
 export class WalletController {
   constructor(
+    @Inject(CreateTopUpPreferenceUseCase)
     private readonly createTopUpPreferenceUseCase: CreateTopUpPreferenceUseCase,
+    @Inject(GetWalletBalanceUseCase)
     private readonly getWalletBalanceUseCase: GetWalletBalanceUseCase,
   ) {}
 

@@ -4,6 +4,7 @@ import {
   Put,
   Param,
   Body,
+  Inject,
   UsePipes,
 } from '@nestjs/common';
 import {
@@ -22,7 +23,9 @@ import type { SpendingLimits } from '../../domain/entities/spending-limits.entit
 @Controller('api/v1/students')
 export class ParentalControlsController {
   constructor(
+    @Inject(UpdateSpendingLimitsUseCase)
     private readonly updateSpendingLimitsUseCase: UpdateSpendingLimitsUseCase,
+    @Inject(GetSpendingLimitsUseCase)
     private readonly getSpendingLimitsUseCase: GetSpendingLimitsUseCase,
   ) {}
 

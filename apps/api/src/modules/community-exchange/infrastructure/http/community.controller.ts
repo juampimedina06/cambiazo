@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Inject,
   UsePipes,
 } from '@nestjs/common';
 import {
@@ -30,7 +31,10 @@ import type { RewardRedemption } from '../../domain/entities/reward-redemption.e
 
 @Controller('api/v1/community')
 export class CommunityController {
-  constructor(private readonly communityService: CommunityService) {}
+  constructor(
+    @Inject(CommunityService)
+    private readonly communityService: CommunityService,
+  ) {}
 
   @Post('items')
   @Roles('STUDENT')

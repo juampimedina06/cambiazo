@@ -31,7 +31,9 @@ import type { CatalogProduct } from '../../domain/entities/catalog-product.entit
 @Controller('api/v1/kiosk')
 export class KioskCatalogController {
   constructor(
+    @Inject(CreateCatalogProductUseCase)
     private readonly createCatalogProductUseCase: CreateCatalogProductUseCase,
+    @Inject(ListCatalogProductsUseCase)
     private readonly listCatalogProductsUseCase: ListCatalogProductsUseCase,
     @Optional()
     @Inject(CATALOG_PRODUCT_REPOSITORY)
