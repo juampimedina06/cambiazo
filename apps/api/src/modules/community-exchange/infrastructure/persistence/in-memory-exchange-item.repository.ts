@@ -9,6 +9,45 @@ import type {
 export class InMemoryExchangeItemRepository implements ExchangeItemRepositoryPort {
   private readonly items = new Map<string, ExchangeItem>();
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  private seedDefault(): void {
+    const item1: ExchangeItem = {
+      id: 'item-demo-1',
+      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      studentUserId: 'student-demo-1',
+      title: 'Manual de Biología 2do Año Kapelusz',
+      description: 'En excelente estado, con fotos a color y ejercicios sin resolver.',
+      category: 'BOOKS',
+      mode: 'DONATION',
+      photoUrls: ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c'],
+      moderationStatus: 'PENDING',
+      pickupPointNotes: 'Entregar en secretaría escolar',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const item2: ExchangeItem = {
+      id: 'item-demo-2',
+      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      studentUserId: 'student-demo-2',
+      title: 'Juego de Geometría Pizzini 30cm',
+      description: 'Regla, escuadra y transportador nuevos en su estuche.',
+      category: 'SCHOOL_SUPPLIES',
+      mode: 'BARTER',
+      photoUrls: ['https://images.unsplash.com/photo-1588072432836-e10032774350'],
+      moderationStatus: 'APPROVED',
+      pickupPointNotes: 'Punto de entrega Biblioteca escolar',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.items.set(item1.id, item1);
+    this.items.set(item2.id, item2);
+  }
+
   async save(item: ExchangeItem): Promise<ExchangeItem> {
     const copy = { ...item };
     this.items.set(item.id, copy);

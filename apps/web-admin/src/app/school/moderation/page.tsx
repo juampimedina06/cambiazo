@@ -48,7 +48,11 @@ export default function SchoolModerationPage() {
   const loadItems = async () => {
     setIsLoading(true);
     try {
-      const data = await apiClient.getExchangeItems();
+      const activeId =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('cambiazo_institution_id') || 'e28bb18a-66fe-4f8e-9092-2df283f55001'
+          : 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+      const data = await apiClient.getExchangeItems(activeId);
       setItems(data);
     } catch (err) {
       console.error('Error loading exchange items:', err);

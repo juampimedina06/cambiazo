@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../../../shared/theme/colors';
 import { Pill } from '../../../shared/ui/Pill';
+import { LogoPencilC } from '../../../shared/ui/LogoPencilC';
 
 export interface StudentHeaderProps {
   fullName: string;
@@ -12,7 +13,7 @@ export interface StudentHeaderProps {
 
 /**
  * Header Alumno:
- * Saludo ("Hola, Mateo") + Badge Escuela + Píldora amarilla con Puntos Comunitarios.
+ * Isologo oficial + Saludo ("Hola, Mateo") + Badge Escuela + Píldora amarilla con Puntos Comunitarios.
  */
 export const StudentHeader: React.FC<StudentHeaderProps> = ({
   fullName,
@@ -24,11 +25,14 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
 
   return (
     <View style={styles.container} testID={testID}>
-      <View style={styles.left}>
-        <Text style={styles.greeting}>¡Hola, {firstName}! 👋</Text>
-        <Text style={styles.schoolBadge} numberOfLines={1}>
-          🏫 {institutionName}
-        </Text>
+      <View style={styles.brandAndGreeting}>
+        <LogoPencilC size="sm" showLabel={false} testID={`${testID}-logo`} />
+        <View style={styles.left}>
+          <Text style={styles.greeting}>¡Hola, {firstName}! 👋</Text>
+          <Text style={styles.schoolBadge} numberOfLines={1}>
+            🏫 {institutionName}
+          </Text>
+        </View>
       </View>
       <Pill
         label={`${communityPoints} Pts`}
@@ -47,9 +51,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
+  brandAndGreeting: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingRight: 12,
+  },
   left: {
     flex: 1,
-    paddingRight: 12,
   },
   greeting: {
     fontSize: 22,

@@ -4,6 +4,7 @@
     "slug": "cambiazo",
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./assets/logo-pencil-c.jpg",
     "userInterfaceStyle": "light",
     "scheme": "cambiazo",
     "ios": {

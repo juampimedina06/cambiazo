@@ -9,17 +9,18 @@ import { Button } from '@/shared/ui/Button';
 import { InvitationRow } from '@/entities/invitation';
 import { CreateInvitationModal } from '@/features/invitation-generator';
 
-const DEFAULT_SCHOOL_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'; // Colegio Belgrano Day School
+const DEFAULT_SCHOOL_ID = 'e28bb18a-66fe-4f8e-9092-2df283f55001'; // Colegio Belgrano Day School
 
 export default function SchoolInvitationsPage() {
   const [invitations, setInvitations] = useState<InvitationCode[]>([]);
+  const [institutionId, setInstitutionId] = useState<string>(DEFAULT_SCHOOL_ID);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadInvitations = async () => {
+  const loadInvitations = async (targetId: string = institutionId) => {
     setIsLoading(true);
     try {
-      const data = await apiClient.getInvitations(DEFAULT_SCHOOL_ID);
+      const data = await apiClient.getInvitations(targetId);
       setInvitations(data);
     } catch (err) {
       console.error('Failed to load invitations:', err);
@@ -29,7 +30,12 @@ export default function SchoolInvitationsPage() {
   };
 
   useEffect(() => {
-    loadInvitations();
+    const activeId =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('cambiazo_institution_id') || DEFAULT_SCHOOL_ID
+        : DEFAULT_SCHOOL_ID;
+    setInstitutionId(activeId);
+    loadInvitations(activeId);
   }, []);
 
   const handleInvitationCreated = (newInv: InvitationCode) => {
@@ -150,7 +156,7 @@ export default function SchoolInvitationsPage() {
       <CreateInvitationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        institutionId={DEFAULT_SCHOOL_ID}
+        institutionId={institutionId}
         onSuccess={handleInvitationCreated}
       />
     </div>

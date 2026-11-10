@@ -62,10 +62,14 @@ export default function SchoolRewardsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      const activeId =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('cambiazo_institution_id') || 'e28bb18a-66fe-4f8e-9092-2df283f55001'
+          : 'e28bb18a-66fe-4f8e-9092-2df283f55001';
       const [rewardsData, leaderboardData, redemptionsData] = await Promise.all([
-        apiClient.getSchoolRewards(),
-        apiClient.getSchoolLeaderboard(),
-        apiClient.getRewardRedemptions(),
+        apiClient.getSchoolRewards(activeId),
+        apiClient.getSchoolLeaderboard(activeId),
+        apiClient.getRewardRedemptions(activeId),
       ]);
       setRewards(rewardsData);
       setLeaderboard(leaderboardData);

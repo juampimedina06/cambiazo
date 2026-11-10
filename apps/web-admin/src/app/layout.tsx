@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'CAMBIAZO — Consola de Administración Escolar',
   description:
     'Plataforma escolar multi-tenant para digitalización de pagos en kioscos y economía circular de útiles.',
+  icons: {
+    icon: '/logo-pencil-c.jpg',
+  },
 };
 
 export default function RootLayout({

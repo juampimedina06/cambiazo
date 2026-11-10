@@ -5,6 +5,7 @@ export interface InvitationRepositoryPort {
   findByCode(code: string): Promise<InstitutionInvitation | null>;
   findById(id: string): Promise<InstitutionInvitation | null>;
   incrementUsedCount(id: string): Promise<void>;
+  findByInstitutionId?(institutionId: string): Promise<InstitutionInvitation[]>;
 }
 
 export const INVITATION_REPOSITORY = Symbol('INVITATION_REPOSITORY');

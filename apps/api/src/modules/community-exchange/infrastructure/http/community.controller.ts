@@ -42,57 +42,72 @@ export class CommunityController {
   }
 
   @Get('items')
-  @Roles('STUDENT', 'SCHOOL_ADMIN')
+  @Roles('STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN')
   async listItems(
     @CurrentUser() user: AuthUser,
     @Query('status') status?: string,
+    @Query('institutionId') queryInstitutionId?: string,
   ): Promise<ExchangeItem[]> {
-    return this.communityService.listItems(user, { status });
+    const targetUser: AuthUser = {
+      ...user,
+      institutionId: user.institutionId || queryInstitutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+    };
+    return this.communityService.listItems(targetUser, { status });
   }
 
   @Get('items/:id')
-  @Roles('STUDENT', 'SCHOOL_ADMIN')
+  @Roles('STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN')
   async getItem(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
   ): Promise<ExchangeItem> {
-    return this.communityService.getItemById(user, id);
+    const targetUser: AuthUser = {
+      ...user,
+      institutionId: user.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+    };
+    return this.communityService.getItemById(targetUser, id);
   }
 
   @Patch('items/:id/moderate')
-  @Roles('SCHOOL_ADMIN')
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
   @UsePipes(new ZodValidationPipe(ModerateExchangeItemSchema))
   async moderateItem(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() dto: ModerateExchangeItemDto,
   ): Promise<ExchangeItem> {
-    return this.communityService.moderateItem(user.id, user.institutionId!, id, dto);
+    const instId = user.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    return this.communityService.moderateItem(user.id, instId, id, dto);
   }
 
   @Get('leaderboard')
-  @Roles('STUDENT', 'SCHOOL_ADMIN')
+  @Roles('STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN')
   async getLeaderboard(
     @CurrentUser() user: AuthUser,
+    @Query('institutionId') queryInstitutionId?: string,
   ): Promise<LeaderboardEntryDto[]> {
-    return this.communityService.getLeaderboard(user.institutionId!);
+    const instId = user.institutionId || queryInstitutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    return this.communityService.getLeaderboard(instId);
   }
 
   @Get('rewards')
-  @Roles('STUDENT', 'SCHOOL_ADMIN')
+  @Roles('STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN')
   async listRewards(
     @CurrentUser() user: AuthUser,
+    @Query('institutionId') queryInstitutionId?: string,
   ): Promise<SchoolReward[]> {
-    return this.communityService.listRewards(user.institutionId!);
+    const instId = user.institutionId || queryInstitutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    return this.communityService.listRewards(instId);
   }
 
   @Post('rewards')
-  @Roles('SCHOOL_ADMIN')
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
   async createReward(
     @CurrentUser() user: AuthUser,
     @Body() dto: Partial<SchoolRewardDto> & { title: string; description: string; pointsCost: number },
   ): Promise<SchoolReward> {
-    return this.communityService.createReward(user.institutionId!, dto);
+    const instId = user.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    return this.communityService.createReward(instId, dto);
   }
 
   @Get('rewards/redemptions')

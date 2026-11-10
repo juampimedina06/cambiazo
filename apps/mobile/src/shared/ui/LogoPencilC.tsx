@@ -1,42 +1,50 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 
 export interface LogoPencilCProps {
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
+  testID?: string;
 }
 
 /**
- * Isologo: Un lápiz flexible curvado formando la letra "C"
- * en color Amarillo Vibrante (#FACC15), con punta de grafito y goma en tonos morados (#6C3CE9).
+ * Official Cambiazo Isologo (<LogoPencilC />)
+ * Uses the high-resolution 3D Curved Pencil "C" asset (assets/logo-pencil-c.jpg).
  */
-export const LogoPencilC: React.FC<LogoPencilCProps> = ({ size = 'md', showLabel = true }) => {
-  const dimensions = size === 'sm' ? { box: 36, font: 20, tagFont: 14 } : size === 'lg' ? { box: 64, font: 36, tagFont: 22 } : { box: 48, font: 28, tagFont: 18 };
+export const LogoPencilC: React.FC<LogoPencilCProps> = ({
+  size = 'md',
+  showLabel = true,
+  testID = 'logo-pencil-c',
+}) => {
+  const dimensions =
+    size === 'sm'
+      ? { box: 38, radius: 10, tagFont: 15 }
+      : size === 'lg'
+      ? { box: 72, radius: 18, tagFont: 24 }
+      : { box: 48, radius: 12, tagFont: 18 };
 
   return (
-    <View style={styles.container} testID="logo-pencil-c">
+    <View style={styles.container} testID={testID}>
       <View
         style={[
           styles.badge,
           {
             width: dimensions.box,
             height: dimensions.box,
-            borderRadius: dimensions.box / 2,
+            borderRadius: dimensions.radius,
           },
         ]}
       >
-        <Text
-          style={[
-            styles.letterC,
-            {
-              fontSize: dimensions.font,
-            },
-          ]}
-        >
-          C
-        </Text>
-        <View style={styles.graphiteTip} />
+        <Image
+          source={require('../../../assets/logo-pencil-c.jpg')}
+          style={{
+            width: dimensions.box - 4,
+            height: dimensions.box - 4,
+            borderRadius: dimensions.radius - 2,
+          }}
+          resizeMode="contain"
+        />
       </View>
       {showLabel && (
         <View style={styles.labelContainer}>
@@ -56,26 +64,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   badge: {
-    backgroundColor: colors.economy.pointsYellow,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.brand.primary,
-    position: 'relative',
-  },
-  letterC: {
-    fontWeight: '800',
-    color: colors.brand.primaryDark,
-    textAlign: 'center',
-  },
-  graphiteTip: {
-    position: 'absolute',
-    bottom: 2,
-    right: 4,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.brand.primary,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
   },
   labelContainer: {
     justifyContent: 'center',

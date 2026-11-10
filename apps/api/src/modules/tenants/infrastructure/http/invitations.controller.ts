@@ -4,9 +4,12 @@ import {
   Get,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
+  Inject,
+  Optional,
 } from '@nestjs/common';
 import {
   CreateInvitationSchema,
@@ -22,13 +25,34 @@ import type { AuthUser } from '../../../../common/auth/auth-user.interface.js';
 import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe.js';
 import { CreateInvitationUseCase } from '../../application/use-cases/create-invitation.use-case.js';
 import { ValidateInvitationUseCase } from '../../application/use-cases/validate-invitation.use-case.js';
+import {
+  type InvitationRepositoryPort,
+  INVITATION_REPOSITORY,
+} from '../../domain/ports/invitation.repository.port.js';
 
 @Controller('api/v1/invitations')
 export class InvitationsController {
   constructor(
     private readonly createInvitationUseCase: CreateInvitationUseCase,
     private readonly validateInvitationUseCase: ValidateInvitationUseCase,
+    @Optional()
+    @Inject(INVITATION_REPOSITORY)
+    private readonly invitationRepo?: InvitationRepositoryPort,
   ) {}
+
+  @Get()
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
+  @UseGuards(AuthGuard, RolesGuard, TenantGuard)
+  async listInvitations(
+    @CurrentUser() user: AuthUser,
+    @Query('institutionId') queryInstitutionId?: string,
+  ) {
+    const instId = user.institutionId || queryInstitutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    if (this.invitationRepo?.findByInstitutionId) {
+      return this.invitationRepo.findByInstitutionId(instId);
+    }
+    return [];
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

@@ -23,7 +23,18 @@ export class InMemoryInvitationRepository implements InvitationRepositoryPort {
       createdByUserId: 'admin-1',
       createdAt: new Date(),
     };
+    const secondaryInv: InstitutionInvitation = {
+      id: 'inv-belgrano-f47',
+      institutionId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      code: 'BELGRANO2026',
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      maxUses: 500,
+      usedCount: 0,
+      createdByUserId: 'admin-1',
+      createdAt: new Date(),
+    };
     this.invitations.set(defaultInv.id, defaultInv);
+    this.invitations.set(secondaryInv.id, secondaryInv);
   }
 
   async create(invitation: InstitutionInvitation): Promise<InstitutionInvitation> {
@@ -45,6 +56,16 @@ export class InMemoryInvitationRepository implements InvitationRepositoryPort {
   async findById(id: string): Promise<InstitutionInvitation | null> {
     const inv = this.invitations.get(id);
     return inv ? { ...inv } : null;
+  }
+
+  async findByInstitutionId(institutionId: string): Promise<InstitutionInvitation[]> {
+    const results: InstitutionInvitation[] = [];
+    for (const inv of this.invitations.values()) {
+      if (inv.institutionId === institutionId) {
+        results.push({ ...inv });
+      }
+    }
+    return results;
   }
 
   async incrementUsedCount(id: string): Promise<void> {

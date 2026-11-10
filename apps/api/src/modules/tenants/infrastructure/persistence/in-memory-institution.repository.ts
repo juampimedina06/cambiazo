@@ -23,7 +23,18 @@ export class InMemoryInstitutionRepository implements InstitutionRepositoryPort 
       status: 'ACTIVE',
       createdAt: new Date(),
     };
+    const secondaryInst: Institution = {
+      id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      name: 'Colegio Belgrano Day School',
+      cuit: '30-11223344-5',
+      address: 'Juramento 2100, CABA',
+      billingPlanType: 'FIXED_MONTHLY',
+      monthlyFeeCents: 4500000,
+      status: 'ACTIVE',
+      createdAt: new Date(),
+    };
     this.institutions.set(defaultInst.id, defaultInst);
+    this.institutions.set(secondaryInst.id, secondaryInst);
   }
 
   async create(institution: Institution): Promise<Institution> {
