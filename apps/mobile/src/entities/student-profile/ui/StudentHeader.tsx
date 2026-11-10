@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../../../shared/theme/colors';
 import { Pill } from '../../../shared/ui/Pill';
 import { LogoPencilC } from '../../../shared/ui/LogoPencilC';
@@ -8,6 +8,7 @@ export interface StudentHeaderProps {
   fullName: string;
   institutionName: string;
   communityPoints: number;
+  onLogout?: () => void;
   testID?: string;
 }
 
@@ -19,6 +20,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
   fullName,
   institutionName,
   communityPoints,
+  onLogout,
   testID = 'student-header',
 }) => {
   const firstName = fullName.split(' ')[0] || fullName;
@@ -34,12 +36,19 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
           </Text>
         </View>
       </View>
-      <Pill
-        label={`${communityPoints} Pts`}
-        icon="⭐"
-        variant="points"
-        testID={`${testID}-points-pill`}
-      />
+      <View style={styles.rightActions}>
+        <Pill
+          label={`${communityPoints} Pts`}
+          icon="⭐"
+          variant="points"
+          testID={`${testID}-points-pill`}
+        />
+        {onLogout && (
+          <TouchableOpacity onPress={onLogout} style={styles.logoutBtn} testID={`${testID}-logout-btn`}>
+            <Text style={styles.logoutText}>Salir</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -56,10 +65,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingRight: 12,
+    paddingRight: 8,
   },
   left: {
     flex: 1,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoutBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+  },
+  logoutText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
   },
   greeting: {
     fontSize: 22,

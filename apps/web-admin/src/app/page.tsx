@@ -8,9 +8,17 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col justify-between p-6 sm:p-12">
       <header className="flex items-center justify-between max-w-6xl w-full mx-auto pb-8 border-b border-slate-200">
         <LogoPencilC size={48} showText />
-        <span className="text-xs font-semibold px-3 py-1 bg-brand-soft text-brand-dark rounded-full">
-          Portal Administrativo
-        </span>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-xs font-bold px-3.5 py-1.5 rounded-full border border-slate-300 text-text-primary hover:border-brand-primary hover:text-brand-primary transition-colors"
+          >
+            Iniciar Sesión / Elegir Colegio
+          </Link>
+          <span className="text-xs font-semibold px-3 py-1 bg-brand-soft text-brand-dark rounded-full">
+            Portal Administrativo
+          </span>
+        </div>
       </header>
 
       <main className="max-w-6xl w-full mx-auto py-12 flex flex-col gap-8">

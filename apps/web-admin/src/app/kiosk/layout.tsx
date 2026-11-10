@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogoPencilC } from '@/shared/ui/LogoPencilC';
 import { Store, Package, CreditCard, ArrowUpRight, ArrowLeft } from 'lucide-react';
+import { InstitutionSwitcher } from '@/shared/ui/InstitutionSwitcher';
 
 export default function KioskLayout({
   children,
@@ -44,19 +45,7 @@ export default function KioskLayout({
               <LogoPencilC size={36} showText />
             </Link>
             <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-purple-100 text-brand-dark flex items-center justify-center font-bold text-xs">
-                <Store size={16} />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-xs text-text-primary leading-tight">
-                  Kiosco Belgrano Day School
-                </span>
-                <span className="text-[10px] text-emerald-700 font-bold">
-                  0% Comisión • Liquidación 100% Neta
-                </span>
-              </div>
-            </div>
+            <InstitutionSwitcher roleLabel="Portal Kiosco" isKiosk={true} />
           </div>
 
           <div className="flex items-center gap-4">

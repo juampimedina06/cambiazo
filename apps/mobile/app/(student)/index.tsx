@@ -46,6 +46,11 @@ export default function StudentHomeScreen() {
 
   const recentPurchases = student ? mockApiClient.getPurchases(student.id).slice(0, 3) : [];
 
+  const handleLogout = () => {
+    authStore.logout();
+    router.replace('/(auth)/school-code');
+  };
+
   return (
     <ScrollView
       style={styles.scrollView}
@@ -58,6 +63,7 @@ export default function StudentHomeScreen() {
         fullName={student?.fullName || 'Mateo Gómez'}
         institutionName={institutionName}
         communityPoints={student?.communityPoints ?? 120}
+        onLogout={handleLogout}
       />
 
       {/* Paused Account Alert */}

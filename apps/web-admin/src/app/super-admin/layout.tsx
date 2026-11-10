@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogoPencilC } from '@/shared/ui/LogoPencilC';
-import { Shield, Building2, ArrowLeft, BarChart3 } from 'lucide-react';
+import { Shield, Building2, ArrowLeft, BarChart3, LogOut } from 'lucide-react';
 
 export default function SuperAdminLayout({
   children,
@@ -53,6 +53,13 @@ export default function SuperAdminLayout({
             >
               <ArrowLeft size={14} />
               <span>Cambiar de Portal</span>
+            </Link>
+            <Link
+              href="/login"
+              className="text-xs font-semibold text-text-secondary hover:text-red-600 flex items-center gap-1 px-3 py-2 rounded-xl hover:bg-red-50 transition-colors"
+            >
+              <LogOut size={14} />
+              <span>Cerrar Sesión</span>
             </Link>
           </div>
         </div>

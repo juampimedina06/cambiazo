@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
@@ -49,6 +49,11 @@ export default function ParentHomeScreen() {
     }
   };
 
+  const handleLogout = () => {
+    authStore.logout();
+    router.replace('/(auth)/school-code');
+  };
+
   return (
     <ScrollView
       style={styles.scrollView}
@@ -58,7 +63,12 @@ export default function ParentHomeScreen() {
     >
       <View style={styles.topHeader}>
         <LogoPencilC size="sm" showLabel={true} />
-        <Pill label="Panel Tutor" variant="primary" icon="👨‍👩‍👦" />
+        <View style={styles.headerRight}>
+          <Pill label="Panel Tutor" variant="primary" icon="👨‍👩‍👦" />
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} testID="btn-logout-parent">
+            <Text style={styles.logoutText}>Salir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={styles.greeting}>Hola, {parentName.split(' ')[0]}</Text>
@@ -209,6 +219,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoutBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+  },
+  logoutText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
   },
   greeting: {
     fontSize: 26,

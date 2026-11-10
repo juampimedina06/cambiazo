@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogoPencilC } from '@/shared/ui/LogoPencilC';
 import { School, Ticket, Users, ArrowLeft, PackageCheck, Trophy, BarChart3 } from 'lucide-react';
+import { InstitutionSwitcher } from '@/shared/ui/InstitutionSwitcher';
 
 export default function SchoolLayout({
   children,
@@ -56,19 +57,7 @@ export default function SchoolLayout({
               <LogoPencilC size={36} showText />
             </Link>
             <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
-                <School size={16} />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-xs text-text-primary leading-tight">
-                  Colegio Belgrano Day School
-                </span>
-                <span className="text-[10px] text-text-secondary font-medium">
-                  Panel Directivo Escolar
-                </span>
-              </div>
-            </div>
+            <InstitutionSwitcher roleLabel="Panel Directivo Escolar" />
           </div>
 
           <div className="flex items-center gap-4">
