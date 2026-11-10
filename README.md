@@ -1,12 +1,12 @@
-# CAMBIAZO — Multi-Tenant School Kiosk Wallet & Community Exchange
+# CAMBIAZO — Billetera Escolar Multi-Tenant & Comunidad de Intercambio
 
-**CAMBIAZO** is a multi-tenant school platform with a 1-to-1 prepaid kiosk wallet in real Argentine Pesos (`$ ARS`) and a non-monetary student community item exchange (barter, donation, and loan).
+**CAMBIAZO** es una plataforma escolar multi-tenant que integra una billetera prepaga 1 a 1 en pesos argentinos reales (`$ ARS`) para consumos en el kiosco escolar y un sistema de intercambio comunitario no monetario entre alumnos (trueque, donación y préstamo de útiles escolares).
 
 ---
 
-## Architecture & Monorepo Structure
+## Arquitectura y Estructura del Monorepo
 
-Built with **Turborepo + pnpm workspaces** following a **Contract-First** design:
+Construido con **Turborepo + pnpm workspaces** bajo un diseño **Contract-First**:
 
 ```text
 cambiazo/
@@ -14,115 +14,115 @@ cambiazo/
 ├── pnpm-workspace.yaml
 ├── turbo.json
 ├── tsconfig.base.json
-├── ARCHITECTURE.md               # Domain, Hexagonal & FSD Architecture Blueprint
-├── AGENTS.md                     # Multi-Agent Write Scopes & Youth UI/UX Design Guide
-├── tickets/                      # Parallel Wave Execution Backlog (Waves 0, 1, 2, 3)
+├── ARCHITECTURE.md               # Especificación de Arquitectura Hexagonal, Dominio y FSD
+├── AGENTS.md                     # Reglas de Agentes, Alcances de Escritura y Guía UI/UX
+├── tickets/                      # Backlog de Ejecución por Olas (Olas 0, 1, 2, 3)
 ├── packages/
-│   └── shared/                   # @cambiazo/shared — Zod Contracts, DTOs, Enums & Constants
+│   └── shared/                   # @cambiazo/shared — Contratos Zod, DTOs, Enums y Constantes
 └── apps/
-    ├── api/                      # NestJS Modular Monolith + Hexagonal Architecture + Vitest
+    ├── api/                      # NestJS Monolito Modular + Arquitectura Hexagonal + Vitest
     ├── web-admin/                # Next.js 15 App Router + Tailwind CSS (FSD)
     └── mobile/                   # React Native + Expo Router (FSD)
 ```
 
 ---
 
-## Core Business Invariants
+## Invariantes Clave del Negocio
 
-1. **Strict Multi-Tenancy (`institution_id` + RLS):**
-   - **Super Admin** provisions schools and configures monthly billing plans (`FIXED_MONTHLY` or `PER_ACTIVE_STUDENT`).
-   - Every school isolates its **School Admin**, **Kiosk**, **Parents**, and **Students** via `TenantGuard` and Row-Level Security (`institution_id`).
-2. **Two Strictly Separated Economies:**
-   - **Kiosk Wallet (`$ ARS` 1-to-1):** Funded by parents via Mercado Pago. Spent exclusively at the student's school kiosk via ephemeral 120-second QR codes or 6-digit tokens. Student-to-student P2P transfers and cash withdrawals by students are strictly prohibited.
-   - **Community Points (Non-Monetary):** Earned and redeemed through school supply barter, donation, or loan at the moderated **School Pickup Point**. Zero conversion between pesos and community points.
-3. **Immutable Double-Entry Ledger:**
-   - All financial movements are recorded in an append-only double-entry ledger (`accounts`, `ledger_transactions`, `ledger_entries`) in integer cents (`BIGINT > 0`), enforcing `SUM(DEBIT) === SUM(CREDIT)` and forbidding `UPDATE`/`DELETE`.
-   - **0% Kiosk Commission:** Kiosk operators liquidate 100% of their sales balance to Mercado Pago.
-4. **Parental Consent & Controls (Law 25.326):**
-   - No minor can operate without explicit, timestamped, and revocable parental consent (`parental_consents` immutable audit log).
-   - Parents configure daily/weekly spending limits, block product categories (e.g., `CANDY`), trigger instant 1-tap account pauses, and receive real-time purchase alerts plus a weekly nutritional & community digest.
-
----
-
-## Design System (60-30-10 Youth UI/UX)
-
-- **60% Clean Surfaces:** `#F8F7FF` (Soft Lavender Base) & `#FFFFFF` (Pure White Surface)
-- **30% Brand Purple:** `#6C3CE9` (Primary), `#4C1D95` (Primary Dark), `#EDE9FE` (Primary Soft)
-- **10% Semantic Accents:**
-  - `#FACC15` (Pencil Yellow — Community Points, Badges & Ranking)
-  - `#10B981` (Mint Green — Real Pesos `$`, QR Payment Success & Savings Goals)
-- **Golden Visual Rules:** Zero card nesting (*No Card-inside-Card*), maximum 3 data points per row for 2-second recess scanning, and `>= 52px` ergonomic touch targets.
+1. **Multi-Tenancy Estricto (`institution_id` + RLS):**
+   - El **Super Administrador** da de alta instituciones y configura planes de facturación mensual (`FIXED_MONTHLY` o `PER_ACTIVE_STUDENT`).
+   - Cada escuela aísla sus usuarios (**Administrador Escolar**, **Kiosco**, **Padres** y **Alumnos**) mediante `TenantGuard` y Seguridad a Nivel de Fila (`institution_id`).
+2. **Dos Economías Estrictamente Separadas:**
+   - **Billetera del Kiosco (`$ ARS` 1 a 1):** Recargada por los padres mediante Mercado Pago. Se consume exclusivamente en el kiosco de la escuela mediante códigos QR efímeros de 120 segundos o tokens numéricos de 6 dígitos. Están terminantemente prohibidas las transferencias P2P entre alumnos y el retiro de efectivo por parte de menores.
+   - **Puntos de Comunidad (No Monetarios):** Se obtienen y canjean mediante intercambio, donación o préstamo de útiles en el **Punto de Entrega Escolar** moderado. Cero conversión entre pesos y puntos de comunidad.
+3. **Libro Mayor Inmutable por Partida Doble (Ledger):**
+   - Todos los movimientos financieros se registran en un ledger append-only (`accounts`, `ledger_transactions`, `ledger_entries`) en centavos enteros (`BIGINT > 0`), asegurando `SUM(DÉBITO) === SUM(CRÉDITO)` y bloqueando operaciones de `UPDATE` o `DELETE`.
+   - **0% Comisión al Kiosco:** Los kiosqueros liquidan el 100% de sus ventas hacia su cuenta de Mercado Pago.
+4. **Consentimiento Parental y Controles (Ley 25.326):**
+   - Ningún menor puede operar sin el consentimiento parental explícito, fechado y revocable (`parental_consents` registro inmutable de auditoría).
+   - Los padres configuran topes de gasto diarios/semanales, bloquean categorías de productos (ej. `Golosinas`), aplican pausas instantáneas con 1 toque y reciben alertas de consumo en tiempo real más un resumen semanal nutricional y comunitario.
 
 ---
 
-## Quick Start
+## Sistema de Diseño (UI/UX Juvenil 60-30-10)
 
-### 1. Install Dependencies
+- **60% Superficies Limpias:** `#F8F7FF` (Base Lavanda Ultra Suave) y `#FFFFFF` (Superficie Blanca Pura)
+- **30% Morado de Marca:** `#6C3CE9` (Principal), `#4C1D95` (Morado Oscuro), `#EDE9FE` (Lavanda Pastel)
+- **10% Acentos Semánticos:**
+  - `#FACC15` (Amarillo Lápiz — Puntos de Comunidad, Insignias y Ranking)
+  - `#10B981` (Verde Menta — Pesos Reales `$`, Confirmación de Pago QR y Metas de Ahorro)
+- **Reglas de Oro Visuales:** Prohibido anidar tarjetas (*No Card-inside-Card*), máximo 3 datos por fila para escaneo rápido de 2 segundos en el recreo, y botones táctiles con altura mínima `>= 52px`.
+
+---
+
+## Inicio Rápido
+
+### 1. Instalación de Dependencias
 
 ```bash
 pnpm install
 ```
 
-### 2. Environment Variables & Infrastructure
+### 2. Variables de Entorno e Infraestructura
 
-Copy `.env.example` to `.env` in each workspace when connecting live services:
+Copiar `.env.example` a `.env` en cada espacio de trabajo al conectar servicios en vivo:
 
 - `apps/api/.env.example`
 - `apps/web-admin/.env.example`
 - `apps/mobile/.env.example`
 
-By default, Web Admin and Mobile include resilient typed mock adapters (`NEXT_PUBLIC_USE_MOCKS=true` / `EXPO_PUBLIC_USE_MOCKS=true`) backed by `@cambiazo/shared` contracts, with automatic fallback when the backend is offline.
+Por defecto, Web Admin y Mobile incluyen adaptadores tipados con datos mock (`NEXT_PUBLIC_USE_MOCKS=true` / `EXPO_PUBLIC_USE_MOCKS=true`) basados en los contratos de `@cambiazo/shared`, con fallback automático si el backend no está disponible.
 
-#### Local Services (Docker Compose)
-To run local PostgreSQL and Redis for `apps/api`:
+#### Servicios Locales (Docker Compose)
+Para levantar PostgreSQL y Redis locales para `apps/api`:
 
 ```bash
-# Inside apps/api or with docker compose file flag
+# Desde la carpeta apps/api
 cd apps/api
 docker compose up -d
 ```
 
-Services exposed:
-- **PostgreSQL 16**: `localhost:5432` (db: `cambiazo_dev`, user/password: `postgres`/`postgres`)
+Servicios expuestos:
+- **PostgreSQL 16**: `localhost:5432` (base de datos: `cambiazo_dev`, usuario/contraseña: `postgres`/`postgres`)
 - **Redis 7**: `localhost:6379`
 
-### 3. Running Applications in Development
+### 3. Ejecución de Aplicaciones en Desarrollo
 
 ```bash
-# Backend NestJS API (runs on http://localhost:3000)
+# Backend NestJS API (corre en http://localhost:3000)
 pnpm --filter @cambiazo/api dev
 
-# Web Admin Next.js (runs on http://localhost:3001)
+# Web Admin Next.js (corre en http://localhost:3001)
 pnpm --filter @cambiazo/web-admin dev
 
 # Mobile Expo App (Metro Bundler)
 pnpm --filter @cambiazo/mobile start -c
 ```
 
-> **Note on Mobile (Expo Router + Metro):**
-> Metro is configured via `apps/mobile/metro.config.js` to watch the monorepo root and resolve `@cambiazo/shared` directly from TypeScript sources without hardcoded `.js` extensions. When running with Expo Go, make sure your mobile client is updated to match Expo SDK 58.
+> **Nota sobre Mobile (Expo Router + Metro):**
+> Metro está configurado mediante `apps/mobile/metro.config.js` para observar la raíz del monorepo y resolver `@cambiazo/shared` directamente desde el código fuente TypeScript sin extensiones forzadas `.js`. Al probar con Expo Go en un dispositivo móvil, asegúrate de tener la app actualizada a la versión correspondiente a Expo SDK 58.
 
-### 4. Build, Typecheck & Run Tests
+### 4. Compilación, Chequeo de Tipos y Tests
 
 ```bash
-# Build all packages and apps
+# Compilar todos los paquetes y aplicaciones
 pnpm turbo build
 
-# Run TypeScript typechecking across the entire monorepo
+# Ejecutar chequeo de tipos TypeScript en todo el monorepo
 pnpm turbo typecheck
 
-# Run the full Vitest suite (305 tests across shared, api, web-admin, and mobile)
+# Ejecutar la suite completa de Vitest (305 pruebas en shared, api, web-admin y mobile)
 pnpm turbo test
 ```
 
 ---
 
-## Verification Summary
+## Resumen de Verificación
 
-| Workspace Package | Architecture | Vitest Suite | Typecheck |
+| Paquete / Aplicación | Arquitectura | Suite Vitest | Chequeo de Tipos |
 | :--- | :--- | :--- | :--- |
-| `@cambiazo/shared` | Zod Schemas, DTOs & Domain Enums | 70 / 70 passing | 0 errors |
-| `@cambiazo/api` | NestJS Modular Monolith + Hexagonal | 99 / 99 passing | 0 errors |
-| `@cambiazo/web-admin` | Next.js App Router + Tailwind (FSD) | 55 / 55 passing | 0 errors |
-| `@cambiazo/mobile` | React Native + Expo Router (FSD) | 81 / 81 passing | 0 errors |
-| **Total Monorepo** | **Turborepo + pnpm** | **305 / 305 passing** | **0 errors** |
+| `@cambiazo/shared` | Esquemas Zod, DTOs y Enums de Dominio | 70 / 70 aprobados | 0 errores |
+| `@cambiazo/api` | NestJS Monolito Modular + Hexagonal | 99 / 99 aprobados | 0 errores |
+| `@cambiazo/web-admin` | Next.js App Router + Tailwind (FSD) | 55 / 55 aprobados | 0 errores |
+| `@cambiazo/mobile` | React Native + Expo Router (FSD) | 81 / 81 aprobados | 0 errores |
+| **Total del Monorepo** | **Turborepo + pnpm** | **305 / 305 aprobados** | **0 errores** |
