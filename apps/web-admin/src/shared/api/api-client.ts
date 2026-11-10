@@ -102,7 +102,8 @@ export class ApiClient {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Error creating institution');
     }
-    return res.json();
+    const json = await res.json();
+    return json?.institution ? json.institution : json;
   }
 
   async updateInstitutionStatus(

@@ -21,9 +21,12 @@ export default function SuperAdminInstitutionsPage() {
     setIsLoading(true);
     try {
       const data = await apiClient.getInstitutions();
-      setInstitutions(data);
+      const rawList = Array.isArray(data) ? data : ((data as any)?.institutions || []);
+      const sanitized = rawList.map((item: any) => item?.institution || item);
+      setInstitutions(sanitized);
     } catch (err) {
       console.error('Failed to load institutions:', err);
+      setInstitutions([]);
     } finally {
       setIsLoading(false);
     }
@@ -52,16 +55,28 @@ export default function SuperAdminInstitutionsPage() {
     }
   };
 
-  const handleInstitutionCreated = (newInst: Institution) => {
-    setInstitutions((prev) => [newInst, ...prev]);
+  const handleInstitutionCreated = (newInst: any) => {
+    const unwrapped = newInst?.institution ? newInst.institution : newInst;
+    setInstitutions((prev) => [unwrapped, ...(Array.isArray(prev) ? prev : [])]);
   };
 
   // Filtered institutions
-  const filteredInstitutions = institutions.filter((inst) => {
+  const safeInstitutions = (Array.isArray(institutions) ? institutions : []).map(
+    (item: any) => item?.institution || item
+  );
+
+  const filteredInstitutions = safeInstitutions.filter((inst) => {
+    if (!inst) return false;
+    const name = typeof inst.name === 'string' ? inst.name : '';
+    const cuit = typeof inst.cuit === 'string' ? inst.cuit : '';
+    const address = typeof inst.address === 'string' ? inst.address : '';
+    const query = searchQuery ? searchQuery.toLowerCase().trim() : '';
+
     const matchesSearch =
-      inst.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inst.cuit.includes(searchQuery) ||
-      inst.address.toLowerCase().includes(searchQuery.toLowerCase());
+      !query ||
+      name.toLowerCase().includes(query) ||
+      cuit.includes(query) ||
+      address.toLowerCase().includes(query);
 
     const matchesStatus =
       statusFilter === 'ALL' || inst.status === statusFilter;
@@ -70,16 +85,16 @@ export default function SuperAdminInstitutionsPage() {
   });
 
   // Calculate overview metrics
-  const totalSchools = institutions.length;
-  const activeSchools = institutions.filter((i) => i.status === 'ACTIVE').length;
-  const totalStudents = institutions.reduce((sum, i) => sum + i.activeStudentsCount, 0);
+  const totalSchools = safeInstitutions.length;
+  const activeSchools = safeInstitutions.filter((i) => i?.status === 'ACTIVE').length;
+  const totalStudents = safeInstitutions.reduce((sum, i) => sum + (i?.activeStudentsCount || 0), 0);
 
-  const totalMonthlyBillingCents = institutions.reduce((sum, i) => {
-    if (i.status !== 'ACTIVE') return sum;
+  const totalMonthlyBillingCents = safeInstitutions.reduce((sum, i) => {
+    if (!i || i.status !== 'ACTIVE') return sum;
     if (i.billingPlanType === 'FIXED_MONTHLY') {
-      return sum + i.monthlyFeeCents;
+      return sum + (i.monthlyFeeCents || 0);
     } else {
-      return sum + i.monthlyFeeCents * i.activeStudentsCount;
+      return sum + (i.monthlyFeeCents || 0) * (i.activeStudentsCount || 0);
     }
   }, 0);
 

@@ -25,12 +25,16 @@ export const InstitutionRow: React.FC<InstitutionRowProps> = ({
   onToggleStatus,
   isUpdating = false,
 }) => {
-  const isMonthlyFixed = institution.billingPlanType === 'FIXED_MONTHLY';
+  const item = (institution as any)?.institution || institution;
+  const isMonthlyFixed = item?.billingPlanType === 'FIXED_MONTHLY';
+  const monthlyFeeCents = item?.monthlyFeeCents || 0;
+  const activeStudentsCount = item?.activeStudentsCount || 0;
+
   const feeFormatted = new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
     maximumFractionDigits: 0,
-  }).format(institution.monthlyFeeCents / 100);
+  }).format(monthlyFeeCents / 100);
 
   const estimatedBilling = isMonthlyFixed
     ? feeFormatted
@@ -38,7 +42,7 @@ export const InstitutionRow: React.FC<InstitutionRowProps> = ({
         style: 'currency',
         currency: 'ARS',
         maximumFractionDigits: 0,
-      }).format((institution.monthlyFeeCents * institution.activeStudentsCount) / 100);
+      }).format((monthlyFeeCents * activeStudentsCount) / 100);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-slate-100 hover:bg-slate-50/50 transition-colors gap-4">
@@ -49,10 +53,10 @@ export const InstitutionRow: React.FC<InstitutionRowProps> = ({
         </div>
         <div>
           <h3 className="font-bold text-text-primary text-base leading-tight">
-            {institution.name}
+            {item?.name || 'Institución Educativa'}
           </h3>
           <p className="text-xs text-text-secondary mt-0.5">
-            CUIT {institution.cuit} • {institution.address}
+            CUIT {item?.cuit || '-'} • {item?.address || '-'}
           </p>
         </div>
       </div>
@@ -60,15 +64,15 @@ export const InstitutionRow: React.FC<InstitutionRowProps> = ({
       {/* 2. Status & Plan Badges */}
       <div className="flex items-center gap-2 flex-wrap">
         <Pill
-          variant={institution.status === 'ACTIVE' ? 'active' : 'suspended'}
+          variant={item?.status === 'ACTIVE' ? 'active' : 'suspended'}
           icon={
-            institution.status === 'ACTIVE' ? (
+            item?.status === 'ACTIVE' ? (
               <CheckCircle2 size={13} />
             ) : (
               <AlertCircle size={13} />
             )
           }
-          label={institution.status === 'ACTIVE' ? 'Activo' : 'Suspendido'}
+          label={item?.status === 'ACTIVE' ? 'Activo' : 'Suspendido'}
         />
         <Pill
           variant="plan"
@@ -84,7 +88,7 @@ export const InstitutionRow: React.FC<InstitutionRowProps> = ({
       <div className="flex items-center justify-between sm:justify-end gap-6">
         <div className="text-right">
           <div className="font-extrabold text-text-primary text-base tabular-nums">
-            {institution.activeStudentsCount}{' '}
+            {activeStudentsCount}{' '}
             <span className="text-xs font-normal text-text-secondary">
               alumnos activos
             </span>
@@ -98,11 +102,11 @@ export const InstitutionRow: React.FC<InstitutionRowProps> = ({
         {onToggleStatus && (
           <Button
             size="sm"
-            variant={institution.status === 'ACTIVE' ? 'danger' : 'outline'}
-            onClick={() => onToggleStatus(institution.id, institution.status)}
+            variant={item?.status === 'ACTIVE' ? 'danger' : 'outline'}
+            onClick={() => onToggleStatus(item?.id, item?.status)}
             isLoading={isUpdating}
           >
-            {institution.status === 'ACTIVE' ? 'Suspender' : 'Reactivar'}
+            {item?.status === 'ACTIVE' ? 'Suspender' : 'Reactivar'}
           </Button>
         )}
       </div>
