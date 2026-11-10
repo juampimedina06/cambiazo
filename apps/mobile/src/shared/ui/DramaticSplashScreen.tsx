@@ -15,106 +15,84 @@ export interface DramaticSplashScreenProps {
   onFinish?: () => void;
 }
 
-const TOTAL_SEGMENTS = 48;
-const RADIUS = 62;
-const CENTER_X = 100;
-const CENTER_Y = 100;
-const BEAD_DIAMETER = 18;
-const START_ANGLE_DEG = 40;
-const SWEEP_ANGLE_DEG = 280;
+const TOTAL_SEGMENTS = 90;
+const RADIUS = 64;
+const CENTER_X = 110;
+const CENTER_Y = 110;
+const PENCIL_WIDTH = 18;
+const SEGMENT_HEIGHT = 7;
+const START_ANGLE_DEG = 42;
+const SWEEP_ANGLE_DEG = 276;
 
-// Pre-compute geometric coordinates for all segments of the curved pencil "C"
+// Pre-compute tangential flat segments for a crisp hexagonal 3-facet pencil shaft
 const SEGMENTS = Array.from({ length: TOTAL_SEGMENTS }, (_, i) => {
   const fraction = i / (TOTAL_SEGMENTS - 1);
   const angleDeg = START_ANGLE_DEG + fraction * SWEEP_ANGLE_DEG;
   const angleRad = (angleDeg * Math.PI) / 180;
-  const x = CENTER_X + RADIUS * Math.cos(angleRad) - BEAD_DIAMETER / 2;
-  const y = CENTER_Y + RADIUS * Math.sin(angleRad) - BEAD_DIAMETER / 2;
-  return { id: i, fraction, x, y, angleDeg };
+  const cx = CENTER_X + RADIUS * Math.cos(angleRad);
+  const cy = CENTER_Y + RADIUS * Math.sin(angleRad);
+  return {
+    id: i,
+    fraction,
+    left: cx - PENCIL_WIDTH / 2,
+    top: cy - SEGMENT_HEIGHT / 2,
+    angleDeg,
+  };
 });
 
+const START_RAD = (START_ANGLE_DEG * Math.PI) / 180;
+const START_X = CENTER_X + RADIUS * Math.cos(START_RAD);
+const START_Y = CENTER_Y + RADIUS * Math.sin(START_RAD);
+
 /**
- * Dramatic School Splash Screen with Progressive Pencil-Drawing "C" Completion
- * Instead of rotating the whole logo like a wheel, the pencil tip literally
- * traces and completes the curved letter "C" from 0% to 100%.
+ * Clean, Architectural Splash Screen
+ * The hexagonal 3-facet pencil progressively traces and completes the letter "C"
+ * with zero circular bead artifacts and a minimalist, professional layout.
  */
 export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
-  durationMs = 2400,
+  durationMs = 2300,
   onFinish,
 }) => {
-  // Animation drivers
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const finishSparkleAnim = useRef(new Animated.Value(0)).current;
 
   const [drawProgress, setDrawProgress] = useState(0);
 
   useEffect(() => {
-    // 1. Initial fade-in & elastic entrance
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 350,
+        duration: 300,
         useNativeDriver: true,
       }),
-      Animated.spring(scaleAnim, {
+      Animated.timing(scaleAnim, {
         toValue: 1,
-        friction: 6,
-        tension: 45,
+        duration: 450,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
 
-    // 2. Continuous subtle pulse while drawing
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 300,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0.97,
-          duration: 300,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulseLoop.start();
-
-    // 3. Listener tracking the pencil drawing progress (0 to 1)
     const progressListener = progressAnim.addListener(({ value }: { value: number }) => {
       setDrawProgress(value);
     });
 
-    // 4. Animate the pencil drawing the "C"
     Animated.timing(progressAnim, {
       toValue: 1,
-      duration: durationMs - 450,
+      duration: durationMs - 400,
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     }).start(() => {
-      // 5. Completion moment: flash sparkle at the pencil tip
       Animated.sequence([
-        Animated.spring(finishSparkleAnim, {
-          toValue: 1,
-          friction: 3,
-          tension: 70,
-          useNativeDriver: true,
-        }),
-        Animated.delay(150),
+        Animated.delay(140),
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 350,
+          duration: 300,
           easing: Easing.ease,
           useNativeDriver: true,
         }),
       ]).start(() => {
-        pulseLoop.stop();
         if (onFinish) {
           onFinish();
         }
@@ -123,16 +101,14 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
 
     return () => {
       progressAnim.removeListener(progressListener);
-      pulseLoop.stop();
     };
-  }, [durationMs, fadeAnim, scaleAnim, progressAnim, pulseAnim, finishSparkleAnim, onFinish]);
+  }, [durationMs, fadeAnim, scaleAnim, progressAnim, onFinish]);
 
-  // Current tip coordinates along the drawing arc
+  // Leading pencil tip position & tangent angle
   const currentAngleDeg = START_ANGLE_DEG + drawProgress * SWEEP_ANGLE_DEG;
   const currentAngleRad = (currentAngleDeg * Math.PI) / 180;
   const tipX = CENTER_X + RADIUS * Math.cos(currentAngleRad);
   const tipY = CENTER_Y + RADIUS * Math.sin(currentAngleRad);
-  const tipRotationDeg = currentAngleDeg + 90; // Tangent direction pointing forward
 
   const progressPercent = Math.round(drawProgress * 100);
 
@@ -143,115 +119,86 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Deep School Chalkboard Background with Ambient Violet/Yellow Glows */}
-      <View style={styles.ambientBackground}>
-        <View style={styles.glowViolet} />
-        <View style={styles.glowYellow} />
-      </View>
+      <Animated.View style={[styles.centerBlock, { transform: [{ scale: scaleAnim }] }]}>
+        {/* Geometric Pencil "C" Canvas */}
+        <View style={styles.pencilCanvas}>
+          {/* Subtle Track Guide */}
+          <View style={styles.guideRing} />
 
-      {/* Center Stage: The Progressive Pencil-Drawing "C" */}
-      <Animated.View style={[styles.centerStage, { transform: [{ scale: scaleAnim }] }]}>
-        <View style={styles.pencilStageCanvas}>
-          {/* Faint Guide Track of the "C" */}
-          <View style={styles.guideTrackCircle} />
-
-          {/* 1. Stationary Eraser & Ferrule at the start (Bottom-Right, 40°) */}
-          <View style={styles.eraserAnchor}>
-            <View style={styles.metalFerrule} />
-            <View style={styles.pinkEraser} />
+          {/* 1. Eraser & Metal Ferrule anchored at start of the "C" */}
+          <View
+            style={[
+              styles.eraserPivotBox,
+              {
+                left: START_X - PENCIL_WIDTH / 2,
+                top: START_Y - 24,
+                transform: [{ rotate: `${START_ANGLE_DEG}deg` }],
+              },
+            ]}
+          >
+            <View style={styles.eraserTip} />
+            <View style={styles.ferruleBand}>
+              <View style={styles.ferruleGroove} />
+            </View>
           </View>
 
-          {/* 2. Overlapping Curved Beads forming the Yellow Pencil Body */}
+          {/* 2. Flat 3-Facet Hexagonal Pencil Body Segments */}
           {SEGMENTS.map((seg) => {
-            const isVisible = seg.fraction <= drawProgress;
-            if (!isVisible) return null;
+            if (seg.fraction > drawProgress) return null;
             return (
               <View
                 key={seg.id}
                 style={[
-                  styles.pencilBead,
+                  styles.shaftSegment,
                   {
-                    left: seg.x,
-                    top: seg.y,
+                    left: seg.left,
+                    top: seg.top,
+                    transform: [{ rotate: `${seg.angleDeg}deg` }],
                   },
                 ]}
               >
-                <View style={styles.beadHighlight} />
+                <View style={styles.facetInner} />
+                <View style={styles.facetCenter} />
+                <View style={styles.facetOuter} />
               </View>
             );
           })}
 
-          {/* 3. Moving Pencil Tip (Wood Cone + Graphite Point) actively drawing the line */}
+          {/* 3. Leading Carved Wood Cone & Graphite Point */}
           <View
             style={[
-              styles.movingPencilTip,
+              styles.tipPivotBox,
               {
-                left: tipX - 10,
-                top: tipY - 14,
-                transform: [{ rotate: `${tipRotationDeg}deg` }] as any,
+                left: tipX - PENCIL_WIDTH / 2,
+                top: tipY - 24,
+                transform: [{ rotate: `${currentAngleDeg}deg` }],
               },
             ]}
           >
-            <View style={styles.woodCone} />
-            <View style={styles.graphiteLead} />
+            <View style={styles.tipForwardHalf}>
+              <View style={styles.woodCone} />
+              <View style={styles.graphiteApex} />
+            </View>
           </View>
-
-          {/* 4. Completion Sparkle / Flash at 100% */}
-          <Animated.View
-            style={[
-              styles.sparkleContainer,
-              {
-                left: tipX - 18,
-                top: tipY - 18,
-                transform: [{ scale: finishSparkleAnim }],
-                opacity: finishSparkleAnim,
-              },
-            ]}
-          >
-            <View style={styles.sparkleStar} />
-            <View style={[styles.sparkleStar, { transform: [{ rotate: '45deg' }] as any }]} />
-          </Animated.View>
         </View>
 
-        {/* Brand Name Typography */}
-        <View style={styles.brandContainer}>
+        {/* Minimalist Brand Header */}
+        <View style={styles.brandBlock}>
           <Text style={styles.brandTitle}>
-            CAMBIA<Text style={styles.brandTitleZ}>Z</Text>O
+            CAMBIA<Text style={styles.brandAccent}>Z</Text>O
           </Text>
-          <Text style={styles.brandSubtitle}>
-            {progressPercent < 50
-              ? 'Dibujando tu recreo...'
-              : progressPercent < 100
-              ? 'Completando el lápiz...'
-              : '¡Todo listo!'}
-          </Text>
+          <Text style={styles.brandTagline}>ECOSISTEMA ESCOLAR</Text>
         </View>
       </Animated.View>
 
-      {/* Bottom HUD: Progress Bar & School Indicators */}
-      <View style={styles.bottomHud}>
-        <View style={styles.loadingInfoRow}>
-          <Text style={styles.loadingLabel}>Cargando experiencia escolar</Text>
-          <Text style={styles.percentageText}>{progressPercent}%</Text>
+      {/* Clean, Sharp Linear Progress Footer (No rounded pills or clutter) */}
+      <View style={styles.footer}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.statusText}>INICIANDO</Text>
+          <Text style={styles.percentText}>{progressPercent}%</Text>
         </View>
-
         <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressBarFill, { width: progressWidth }]} />
-        </View>
-
-        <View style={styles.schoolPillsRow}>
-          <View style={styles.miniSchoolPill}>
-            <Text style={styles.miniPillEmoji}>✏️</Text>
-            <Text style={styles.miniPillText}>Lápiz C</Text>
-          </View>
-          <View style={styles.miniSchoolPill}>
-            <Text style={styles.miniPillEmoji}>⚡</Text>
-            <Text style={styles.miniPillText}>QR Kiosco</Text>
-          </View>
-          <View style={styles.miniSchoolPill}>
-            <Text style={styles.miniPillEmoji}>⭐</Text>
-            <Text style={styles.miniPillText}>Puntos</Text>
-          </View>
+          <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
         </View>
       </View>
     </Animated.View>
@@ -261,248 +208,175 @@ export const DramaticSplashScreen: React.FC<DramaticSplashScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090814',
+    backgroundColor: '#0B0F19',
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ambientBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#090814',
-    overflow: 'hidden',
-  },
-  glowViolet: {
-    position: 'absolute',
-    top: '28%',
-    left: '15%',
-    width: SCREEN_WIDTH * 0.7,
-    height: SCREEN_WIDTH * 0.7,
-    borderRadius: (SCREEN_WIDTH * 0.7) / 2,
-    backgroundColor: 'rgba(108, 60, 233, 0.2)',
-  },
-  glowYellow: {
-    position: 'absolute',
-    top: '38%',
-    right: '15%',
-    width: SCREEN_WIDTH * 0.65,
-    height: SCREEN_WIDTH * 0.65,
-    borderRadius: (SCREEN_WIDTH * 0.65) / 2,
-    backgroundColor: 'rgba(250, 204, 21, 0.16)',
-  },
-  centerStage: {
+  centerBlock: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -30,
   },
-  pencilStageCanvas: {
-    width: 200,
-    height: 200,
+  pencilCanvas: {
+    width: 220,
+    height: 220,
     position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  guideTrackCircle: {
+  guideRing: {
     position: 'absolute',
     left: CENTER_X - RADIUS,
     top: CENTER_Y - RADIUS,
     width: RADIUS * 2,
     height: RADIUS * 2,
     borderRadius: RADIUS,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
     borderRightColor: 'transparent',
   },
 
-  /* Fixed Eraser & Ferrule (Starting at bottom-right, ~40deg) */
-  eraserAnchor: {
+  /* Eraser & Ferrule Pivot Box (18 x 48 centered at START_X, START_Y) */
+  eraserPivotBox: {
     position: 'absolute',
-    left: 146,
-    top: 133,
-    flexDirection: 'row',
-    alignItems: 'center',
-    transform: [{ rotate: '-50deg' }],
-    zIndex: 10,
-  },
-  metalFerrule: {
-    width: 7,
-    height: BEAD_DIAMETER,
-    backgroundColor: '#94A3B8',
-    borderRadius: 2,
-    borderWidth: 0.5,
-    borderColor: '#CBD5E1',
-  },
-  pinkEraser: {
-    width: 11,
-    height: BEAD_DIAMETER - 2,
-    backgroundColor: '#F472B6',
-    borderTopRightRadius: 5,
-    borderBottomRightRadius: 5,
-  },
-
-  /* Overlapping Yellow Pencil Beads */
-  pencilBead: {
-    position: 'absolute',
-    width: BEAD_DIAMETER,
-    height: BEAD_DIAMETER,
-    borderRadius: BEAD_DIAMETER / 2,
-    backgroundColor: '#FACC15',
-    shadowColor: '#FACC15',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
-    elevation: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 5,
-  },
-  beadHighlight: {
-    width: BEAD_DIAMETER * 0.45,
-    height: BEAD_DIAMETER * 0.45,
-    borderRadius: (BEAD_DIAMETER * 0.45) / 2,
-    backgroundColor: '#FEF08A',
-    opacity: 0.8,
-  },
-
-  /* Moving Active Pencil Tip */
-  movingPencilTip: {
-    position: 'absolute',
-    width: 20,
-    height: 28,
+    width: PENCIL_WIDTH,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    zIndex: 20,
+    zIndex: 10,
+  },
+  eraserTip: {
+    width: PENCIL_WIDTH,
+    height: 14,
+    backgroundColor: '#F43F5E',
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  ferruleBand: {
+    width: PENCIL_WIDTH,
+    height: 10,
+    backgroundColor: '#CBD5E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ferruleGroove: {
+    width: PENCIL_WIDTH,
+    height: 2,
+    backgroundColor: '#94A3B8',
+  },
+
+  /* 3-Facet Hexagonal Pencil Shaft Segment (No round beads) */
+  shaftSegment: {
+    position: 'absolute',
+    width: PENCIL_WIDTH,
+    height: SEGMENT_HEIGHT,
+    flexDirection: 'row',
+    zIndex: 5,
+  },
+  facetInner: {
+    width: 5,
+    height: SEGMENT_HEIGHT,
+    backgroundColor: '#D97706',
+  },
+  facetCenter: {
+    width: 8,
+    height: SEGMENT_HEIGHT,
+    backgroundColor: '#FACC15',
+  },
+  facetOuter: {
+    width: 5,
+    height: SEGMENT_HEIGHT,
+    backgroundColor: '#FEF08A',
+  },
+
+  /* Sharp Carved Tip Pivot Box (18 x 48 centered at tipX, tipY) */
+  tipPivotBox: {
+    position: 'absolute',
+    width: PENCIL_WIDTH,
+    height: 48,
+    zIndex: 15,
+  },
+  tipForwardHalf: {
+    marginTop: 24,
+    width: PENCIL_WIDTH,
+    height: 24,
+    alignItems: 'center',
   },
   woodCone: {
     width: 0,
     height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderBottomWidth: 16,
+    borderLeftWidth: PENCIL_WIDTH / 2,
+    borderRightWidth: PENCIL_WIDTH / 2,
+    borderTopWidth: 22,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: '#FDE68A',
+    borderTopColor: '#FDE68A',
   },
-  graphiteLead: {
+  graphiteApex: {
     position: 'absolute',
-    top: 0,
+    top: 14,
     width: 0,
     height: 0,
     borderLeftWidth: 3.5,
     borderRightWidth: 3.5,
-    borderBottomWidth: 7,
+    borderTopWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: '#1E1B4B',
+    borderTopColor: '#334155',
   },
 
-  /* Completion Sparkle */
-  sparkleContainer: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 30,
-  },
-  sparkleStar: {
-    position: 'absolute',
-    width: 22,
-    height: 3,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1.5,
-    shadowColor: '#FACC15',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-
-  /* Brand Typography */
-  brandContainer: {
-    marginTop: 22,
+  /* Minimalist Typography */
+  brandBlock: {
+    marginTop: 28,
     alignItems: 'center',
   },
   brandTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 4,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    letterSpacing: 5,
   },
-  brandTitleZ: {
+  brandAccent: {
     color: '#FACC15',
   },
-  brandSubtitle: {
-    fontSize: 13,
+  brandTagline: {
+    fontSize: 10,
     fontWeight: '600',
-    color: '#94A3B8',
-    marginTop: 5,
-    letterSpacing: 0.5,
+    color: '#64748B',
+    marginTop: 6,
+    letterSpacing: 3,
   },
 
-  /* Bottom HUD */
-  bottomHud: {
+  /* Clean Architectural Footer (No rounded pills) */
+  footer: {
     position: 'absolute',
-    bottom: 50,
-    left: 36,
-    right: 36,
-    alignItems: 'center',
-    gap: 14,
+    bottom: 56,
+    width: 200,
+    gap: 8,
   },
-  loadingInfoRow: {
-    width: '100%',
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  loadingLabel: {
-    color: '#CBD5E1',
-    fontSize: 13,
+  statusText: {
+    color: '#64748B',
+    fontSize: 10,
     fontWeight: '700',
+    letterSpacing: 2,
   },
-  percentageText: {
+  percentText: {
     color: '#FACC15',
-    fontSize: 14,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
   progressTrack: {
     width: '100%',
-    height: 7,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 4,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    height: 2,
+    backgroundColor: '#1E293B',
   },
-  progressBarFill: {
-    height: '100%',
+  progressFill: {
+    height: 2,
     backgroundColor: '#FACC15',
-    borderRadius: 4,
-  },
-  schoolPillsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
-  },
-  miniSchoolPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-  },
-  miniPillEmoji: {
-    fontSize: 12,
-  },
-  miniPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#CBD5E1',
   },
 });
