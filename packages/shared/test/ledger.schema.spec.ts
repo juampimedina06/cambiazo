@@ -7,7 +7,7 @@ import {
   QrPaymentTokenSchema,
   ChargeQrRequestSchema,
   KioskWithdrawalRequestSchema,
-} from '../src/schemas/ledger.schema.js';
+} from '../src/schemas/ledger.schema';
 
 describe('Ledger & Kiosk Schemas Validation', () => {
   describe('TopUpPreferenceRequestSchema', () => {

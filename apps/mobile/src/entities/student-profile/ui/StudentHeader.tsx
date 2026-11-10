@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../../shared/theme/colors.js';
-import { Pill } from '../../../shared/ui/Pill.js';
+import { colors } from '../../../shared/theme/colors';
+import { Pill } from '../../../shared/ui/Pill';
 
 export interface StudentHeaderProps {
   fullName: string;

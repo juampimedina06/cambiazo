@@ -7,8 +7,8 @@ import {
 import {
   mockApiClient,
   type MockConsentRecord,
-} from '../../../shared/api/mock-client.js';
-import { authStore } from '../../../shared/store/auth-store.js';
+} from '../../../shared/api/mock-client';
+import { authStore } from '../../../shared/store/auth-store';
 
 export function useParentalConsent() {
   const [isLoading, setIsLoading] = useState(false);

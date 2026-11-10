@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
-import { Button } from '../../src/shared/ui/Button.js';
-import { FlatListItem } from '../../src/shared/ui/FlatListItem.js';
-import { StudentHeader } from '../../src/entities/student-profile/ui/StudentHeader.js';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store.js';
-import { mockApiClient } from '../../src/shared/api/mock-client.js';
+import { colors } from '../../src/shared/theme/colors';
+import { Button } from '../../src/shared/ui/Button';
+import { FlatListItem } from '../../src/shared/ui/FlatListItem';
+import { StudentHeader } from '../../src/entities/student-profile/ui/StudentHeader';
+import { authStore, type AuthState } from '../../src/shared/store/auth-store';
+import { mockApiClient } from '../../src/shared/api/mock-client';
 
 export default function StudentHomeScreen() {
   const router = useRouter();

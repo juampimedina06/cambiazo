@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { RegisterParentAndStudentSchema } from '@cambiazo/shared';
-import { colors } from '../../../shared/theme/colors.js';
-import { Button } from '../../../shared/ui/Button.js';
-import { Input } from '../../../shared/ui/Input.js';
+import { colors } from '../../../shared/theme/colors';
+import { Button } from '../../../shared/ui/Button';
+import { Input } from '../../../shared/ui/Input';
 import {
   mockApiClient,
   type MockParentUser,
   type MockStudentUser,
-} from '../../../shared/api/mock-client.js';
-import { authStore } from '../../../shared/store/auth-store.js';
+} from '../../../shared/api/mock-client';
+import { authStore } from '../../../shared/store/auth-store';
 
 export interface RegisterFamilyFormProps {
   inviteCode: string;

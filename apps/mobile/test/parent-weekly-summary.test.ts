@@ -3,7 +3,7 @@ import {
   WeeklyParentSummaryDtoSchema,
   type WeeklyParentSummaryDto,
 } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Parent Weekly Summary & Habits View (WAVE-3-MOBILE-03)', () => {
   const studentId = '22222222-2222-4222-8222-222222222222';

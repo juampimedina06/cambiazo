@@ -1,2 +1,2 @@
-export * from './hooks/useSchoolCode.js';
-export * from './ui/SchoolCodeForm.js';
+export * from './hooks/useSchoolCode';
+export * from './ui/SchoolCodeForm';

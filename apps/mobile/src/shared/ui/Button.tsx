@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { colors } from '../theme/colors.js';
-import { layout } from '../theme/layout.js';
+import { colors } from '../theme/colors';
+import { layout } from '../theme/layout';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'mint' | 'yellow' | 'danger' | 'outline';
 

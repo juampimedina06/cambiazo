@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
-import { RegisterFamilyForm } from '../../src/features/parental-consent/ui/RegisterFamilyForm.js';
-import { DigitalConsentModal } from '../../src/features/parental-consent/ui/DigitalConsentModal.js';
+import { colors } from '../../src/shared/theme/colors';
+import { RegisterFamilyForm } from '../../src/features/parental-consent/ui/RegisterFamilyForm';
+import { DigitalConsentModal } from '../../src/features/parental-consent/ui/DigitalConsentModal';
 import {
   type MockParentUser,
   type MockStudentUser,
-} from '../../src/shared/api/mock-client.js';
+} from '../../src/shared/api/mock-client';
 
 export default function RegisterFamilyScreen() {
   const router = useRouter();

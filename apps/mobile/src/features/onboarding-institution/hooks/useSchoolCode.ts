@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ValidateInviteCodeSchema } from '@cambiazo/shared';
-import { mockApiClient, type MockInstitution } from '../../../shared/api/mock-client.js';
-import { authStore } from '../../../shared/store/auth-store.js';
+import { mockApiClient, type MockInstitution } from '../../../shared/api/mock-client';
+import { authStore } from '../../../shared/store/auth-store';
 
 export interface UseSchoolCodeState {
   code: string;

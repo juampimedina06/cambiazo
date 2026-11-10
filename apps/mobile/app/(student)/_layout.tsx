@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { Slot, useRouter } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store.js';
-import { mockApiClient } from '../../src/shared/api/mock-client.js';
-import { StudentBlockedView } from '../../src/features/parental-consent/ui/StudentBlockedView.js';
+import { colors } from '../../src/shared/theme/colors';
+import { authStore, type AuthState } from '../../src/shared/store/auth-store';
+import { mockApiClient } from '../../src/shared/api/mock-client';
+import { StudentBlockedView } from '../../src/features/parental-consent/ui/StudentBlockedView';
 
 /**
  * Student Layout with strict Parental Consent Gate (Ley 25.326):

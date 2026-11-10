@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { StudentBlockedView } from '../../src/features/parental-consent/ui/StudentBlockedView.js';
-import { authStore } from '../../src/shared/store/auth-store.js';
-import { mockApiClient } from '../../src/shared/api/mock-client.js';
+import { StudentBlockedView } from '../../src/features/parental-consent/ui/StudentBlockedView';
+import { authStore } from '../../src/shared/store/auth-store';
+import { mockApiClient } from '../../src/shared/api/mock-client';
 
 export default function StudentBlockedScreen() {
   const router = useRouter();

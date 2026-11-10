@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SpendingLimitsSchema } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Parent Spending Limits & Controls (SpendingLimitsSchema & Pause Toggle)', () => {
   const studentId = '22222222-2222-4222-8222-222222222222';

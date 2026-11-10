@@ -7,7 +7,7 @@ import {
   type MockParentUser,
   type MockStudentUser,
   mockApiClient,
-} from '../api/mock-client.js';
+} from '../api/mock-client';
 
 export interface AuthState {
   currentRole: UserRole | null;

@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
-import { LogoPencilC } from '../../src/shared/ui/LogoPencilC.js';
-import { SchoolCodeForm } from '../../src/features/onboarding-institution/ui/SchoolCodeForm.js';
+import { colors } from '../../src/shared/theme/colors';
+import { LogoPencilC } from '../../src/shared/ui/LogoPencilC';
+import { SchoolCodeForm } from '../../src/features/onboarding-institution/ui/SchoolCodeForm';
 
 export default function SchoolCodeScreen() {
   const router = useRouter();

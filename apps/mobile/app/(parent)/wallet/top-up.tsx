@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../../src/shared/theme/colors.js';
-import { Button } from '../../../src/shared/ui/Button.js';
-import { Pill } from '../../../src/shared/ui/Pill.js';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store.js';
-import { mockApiClient } from '../../../src/shared/api/mock-client.js';
+import { colors } from '../../../src/shared/theme/colors';
+import { Button } from '../../../src/shared/ui/Button';
+import { Pill } from '../../../src/shared/ui/Pill';
+import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
+import { mockApiClient } from '../../../src/shared/api/mock-client';
 import { TopUpPreferenceRequestSchema } from '@cambiazo/shared';
 
 const PRESET_AMOUNTS = [1000, 2000, 5000, 10000];

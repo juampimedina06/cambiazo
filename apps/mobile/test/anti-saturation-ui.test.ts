@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { colors } from '../src/shared/theme/colors.js';
-import { layout } from '../src/shared/theme/layout.js';
+import { colors } from '../src/shared/theme/colors';
+import { layout } from '../src/shared/theme/layout';
 
 describe('Anti-Saturation & Economy Separation Rules (AGENTS.md)', () => {
   it('strictly forbids nesting cards within cards', () => {

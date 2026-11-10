@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RegisterParentAndStudentSchema } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Family Registration (RegisterParentAndStudentSchema)', () => {
   beforeEach(() => {

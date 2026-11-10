@@ -3,7 +3,7 @@ import {
   GrantParentalConsentSchema,
   RevokeParentalConsentSchema,
 } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Digital Parental Consent Lifecycle (Ley 25.326)', () => {
   const studentId = '22222222-2222-4222-8222-222222222222';

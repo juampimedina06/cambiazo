@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
-import { Button } from '../../src/shared/ui/Button.js';
-import { Pill } from '../../src/shared/ui/Pill.js';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store.js';
-import { mockApiClient } from '../../src/shared/api/mock-client.js';
+import { colors } from '../../src/shared/theme/colors';
+import { Button } from '../../src/shared/ui/Button';
+import { Pill } from '../../src/shared/ui/Pill';
+import { authStore, type AuthState } from '../../src/shared/store/auth-store';
+import { mockApiClient } from '../../src/shared/api/mock-client';
 import { QrPaymentTokenSchema, type QrPaymentTokenDto } from '@cambiazo/shared';
 
 export default function PayQrScreen() {

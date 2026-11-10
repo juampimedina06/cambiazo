@@ -9,8 +9,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@cambiazo/shared": ["../../packages/shared/dist/index.d.ts"],
-      "@cambiazo/shared/*": ["../../packages/shared/dist/*"],
+      "@cambiazo/shared": ["../../packages/shared/src/index.ts"],
+      "@cambiazo/shared/*": ["../../packages/shared/src/*"],
       "zod": ["../../packages/shared/node_modules/zod/lib/index.d.ts"]
     }
   },

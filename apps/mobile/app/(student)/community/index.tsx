@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { type ExchangeMode } from '@cambiazo/shared';
-import { colors } from '../../../src/shared/theme/colors.js';
-import { Pill } from '../../../src/shared/ui/Pill.js';
-import { Button } from '../../../src/shared/ui/Button.js';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store.js';
-import { mockApiClient, type MockExchangeItem } from '../../../src/shared/api/mock-client.js';
+import { colors } from '../../../src/shared/theme/colors';
+import { Pill } from '../../../src/shared/ui/Pill';
+import { Button } from '../../../src/shared/ui/Button';
+import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
+import { mockApiClient, type MockExchangeItem } from '../../../src/shared/api/mock-client';
 
 type FilterTab = 'ALL' | ExchangeMode;
 

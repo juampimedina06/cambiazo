@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ChargeQrRequestSchema } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)', () => {
   const studentId = '22222222-2222-4222-8222-222222222222';

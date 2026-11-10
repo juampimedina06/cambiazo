@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, SafeAreaView } from 'react-native';
 import { RevokeParentalConsentSchema } from '@cambiazo/shared';
-import { colors } from '../../../shared/theme/colors.js';
-import { Button } from '../../../shared/ui/Button.js';
-import { Input } from '../../../shared/ui/Input.js';
-import { Pill } from '../../../shared/ui/Pill.js';
-import { useParentalConsent } from '../hooks/useParentalConsent.js';
+import { colors } from '../../../shared/theme/colors';
+import { Button } from '../../../shared/ui/Button';
+import { Input } from '../../../shared/ui/Input';
+import { Pill } from '../../../shared/ui/Pill';
+import { useParentalConsent } from '../hooks/useParentalConsent';
 
 export interface ConsentRevocationModalProps {
   visible: boolean;

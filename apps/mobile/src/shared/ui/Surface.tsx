@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../theme/colors.js';
-import { layout } from '../theme/layout.js';
+import { colors } from '../theme/colors';
+import { layout } from '../theme/layout';
 
 export interface SurfaceProps {
   children: ReactNode;

@@ -64,5 +64,5 @@ import { SavingsGoalsController } from './infrastructure/http/savings-goals.cont
     GetWalletBalanceUseCase,
   ],
 })
-export class WalletLedgerModule {}
+export class WalletLedgerModule { }
 

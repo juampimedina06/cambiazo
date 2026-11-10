@@ -8,7 +8,7 @@ import {
   WeeklyParentSummaryDtoSchema,
   CreateSavingsGoalSchema,
   StudentSavingsGoalSchema,
-} from '../src/schemas/community.schema.js';
+} from '../src/schemas/community.schema';
 
 
 describe('Community & Gamification Schemas Validation', () => {

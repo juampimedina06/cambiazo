@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProductCategorySchema, LedgerEntryDirectionSchema } from '../enums.js';
+import { ProductCategorySchema, LedgerEntryDirectionSchema } from '../enums';
 
 export const TopUpPreferenceRequestSchema = z.object({
   studentId: z.string().uuid(),

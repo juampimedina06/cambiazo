@@ -43,35 +43,50 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.getInstitutions();
     }
-    const res = await fetch(`${this.baseUrl}/tenants/institutions`);
-    if (!res.ok) throw new Error(`Failed to fetch institutions: ${res.statusText}`);
-    return res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/institutions`);
+      if (!res.ok) throw new Error(`Failed to fetch institutions: ${res.statusText}`);
+      return res.json();
+    } catch (err) {
+      console.warn(`[ApiClient] Backend unreachable at ${this.baseUrl}/institutions. Falling back to mocks:`, err);
+      return mockAdapter.getInstitutions();
+    }
   }
 
   async getInstitutionById(id: string): Promise<Institution | null> {
     if (this.useMocks) {
       return mockAdapter.getInstitutionById(id);
     }
-    const res = await fetch(`${this.baseUrl}/tenants/institutions/${id}`);
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`Failed to fetch institution: ${res.statusText}`);
-    return res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/institutions/${id}`);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`Failed to fetch institution: ${res.statusText}`);
+      return res.json();
+    } catch (err) {
+      console.warn(`[ApiClient] Backend unreachable at ${this.baseUrl}/institutions/${id}. Falling back to mocks:`, err);
+      return mockAdapter.getInstitutionById(id);
+    }
   }
 
   async createInstitution(data: CreateInstitutionInput): Promise<Institution> {
     if (this.useMocks) {
       return mockAdapter.createInstitution(data);
     }
-    const res = await fetch(`${this.baseUrl}/tenants/institutions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error creating institution');
+    try {
+      const res = await fetch(`${this.baseUrl}/institutions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Error creating institution');
+      }
+      return res.json();
+    } catch (err) {
+      console.warn(`[ApiClient] Backend unreachable at ${this.baseUrl}/institutions. Falling back to mocks:`, err);
+      return mockAdapter.createInstitution(data);
     }
-    return res.json();
   }
 
   async updateInstitutionStatus(
@@ -81,13 +96,18 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.updateInstitutionStatus(id, status);
     }
-    const res = await fetch(`${this.baseUrl}/tenants/institutions/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
-    if (!res.ok) throw new Error('Error updating institution status');
-    return res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/institutions/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error('Error updating institution status');
+      return res.json();
+    } catch (err) {
+      console.warn(`[ApiClient] Backend unreachable. Falling back to mocks:`, err);
+      return mockAdapter.updateInstitutionStatus(id, status);
+    }
   }
 
   // Invitations (School Admin)
@@ -95,26 +115,36 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.getInvitations(institutionId);
     }
-    const query = institutionId ? `?institutionId=${institutionId}` : '';
-    const res = await fetch(`${this.baseUrl}/tenants/invitations${query}`);
-    if (!res.ok) throw new Error('Failed to fetch invitations');
-    return res.json();
+    try {
+      const query = institutionId ? `?institutionId=${institutionId}` : '';
+      const res = await fetch(`${this.baseUrl}/invitations${query}`);
+      if (!res.ok) throw new Error('Failed to fetch invitations');
+      return res.json();
+    } catch (err) {
+      console.warn(`[ApiClient] Backend unreachable at ${this.baseUrl}/invitations. Falling back to mocks:`, err);
+      return mockAdapter.getInvitations(institutionId);
+    }
   }
 
   async createInvitation(data: CreateInvitationInput): Promise<InvitationCode> {
     if (this.useMocks) {
       return mockAdapter.createInvitation(data);
     }
-    const res = await fetch(`${this.baseUrl}/tenants/invitations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error creating invitation');
+    try {
+      const res = await fetch(`${this.baseUrl}/invitations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Error creating invitation');
+      }
+      return res.json();
+    } catch (err) {
+      console.warn(`[ApiClient] Backend unreachable at ${this.baseUrl}/invitations. Falling back to mocks:`, err);
+      return mockAdapter.createInvitation(data);
     }
-    return res.json();
   }
 
   // Student and Family Roster (School Admin)

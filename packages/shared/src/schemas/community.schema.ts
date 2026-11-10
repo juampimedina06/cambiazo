@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ExchangeModeSchema, ProductCategorySchema } from '../enums.js';
+import { ExchangeModeSchema, ProductCategorySchema } from '../enums';
 
 export const CreateExchangeItemSchema = z.object({
   title: z.string().min(2).max(100),

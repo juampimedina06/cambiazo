@@ -1,6 +1,6 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
-import { authStore } from '../src/shared/store/auth-store.js';
+import { authStore } from '../src/shared/store/auth-store';
 
 export default function RootIndex() {
   const state = authStore.getState();

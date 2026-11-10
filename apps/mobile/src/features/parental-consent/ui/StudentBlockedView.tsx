@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { type ConsentStatus } from '@cambiazo/shared';
-import { colors } from '../../../shared/theme/colors.js';
-import { Button } from '../../../shared/ui/Button.js';
-import { LogoPencilC } from '../../../shared/ui/LogoPencilC.js';
-import { ConsentStatusBadge } from '../../../entities/student-profile/ui/ConsentStatusBadge.js';
+import { colors } from '../../../shared/theme/colors';
+import { Button } from '../../../shared/ui/Button';
+import { LogoPencilC } from '../../../shared/ui/LogoPencilC';
+import { ConsentStatusBadge } from '../../../entities/student-profile/ui/ConsentStatusBadge';
 
 export interface StudentBlockedViewProps {
   studentName: string;

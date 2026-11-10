@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { Slot } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
+import { colors } from '../../src/shared/theme/colors';
 
 export default function ParentLayout() {
   return (

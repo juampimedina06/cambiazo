@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
-import { authStore } from '../src/shared/store/auth-store.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
+import { authStore } from '../src/shared/store/auth-store';
 
 describe('Student Consent Gate & Access Enforcement', () => {
   const studentId = '22222222-2222-4222-8222-222222222222';

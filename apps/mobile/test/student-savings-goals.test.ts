@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Student Educational Savings Goals (WAVE-3-MOBILE-03)', () => {
   const studentId = '22222222-2222-4222-8222-222222222222';

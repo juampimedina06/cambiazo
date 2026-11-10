@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { colors } from '../../../shared/theme/colors.js';
-import { Button } from '../../../shared/ui/Button.js';
-import { Pill } from '../../../shared/ui/Pill.js';
-import { useParentalConsent } from '../hooks/useParentalConsent.js';
-import { type MockStudentUser } from '../../../shared/api/mock-client.js';
+import { colors } from '../../../shared/theme/colors';
+import { Button } from '../../../shared/ui/Button';
+import { Pill } from '../../../shared/ui/Pill';
+import { useParentalConsent } from '../hooks/useParentalConsent';
+import { type MockStudentUser } from '../../../shared/api/mock-client';
 
 export interface DigitalConsentContentProps {
   student: MockStudentUser;

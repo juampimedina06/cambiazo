@@ -6,11 +6,11 @@ import {
   WeeklyParentSummaryDtoSchema,
   type ProductCategory,
 } from '@cambiazo/shared';
-import { colors } from '../../../src/shared/theme/colors.js';
-import { Pill } from '../../../src/shared/ui/Pill.js';
-import { FlatListItem } from '../../../src/shared/ui/FlatListItem.js';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store.js';
-import { mockApiClient, type MockBlockedAttempt } from '../../../src/shared/api/mock-client.js';
+import { colors } from '../../../src/shared/theme/colors';
+import { Pill } from '../../../src/shared/ui/Pill';
+import { FlatListItem } from '../../../src/shared/ui/FlatListItem';
+import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
+import { mockApiClient, type MockBlockedAttempt } from '../../../src/shared/api/mock-client';
 
 const categoryLabels: Record<ProductCategory, { label: string; icon: string }> = {
   HEALTHY_SNACK: { label: 'Snacks Saludables', icon: '🍎' },

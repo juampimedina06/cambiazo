@@ -4,14 +4,14 @@ import {
   InstitutionDtoSchema,
   CreateInvitationSchema,
   ValidateInviteCodeSchema,
-} from '../schemas/institution.schema.js';
+} from '../schemas/institution.schema';
 
 import {
   RegisterParentAndStudentSchema,
   GrantParentalConsentSchema,
   RevokeParentalConsentSchema,
   SpendingLimitsSchema,
-} from '../schemas/consent.schema.js';
+} from '../schemas/consent.schema';
 
 import {
   TopUpPreferenceRequestSchema,
@@ -24,7 +24,7 @@ import {
   ChargeQrRequestSchema,
   KioskWithdrawalRequestSchema,
   LedgerMovementDtoSchema,
-} from '../schemas/ledger.schema.js';
+} from '../schemas/ledger.schema';
 
 import {
   CreateExchangeItemSchema,
@@ -39,7 +39,7 @@ import {
   CreateSavingsGoalSchema,
   DepositSavingsGoalSchema,
   StudentSavingsGoalSchema,
-} from '../schemas/community.schema.js';
+} from '../schemas/community.schema';
 
 
 // Institution DTOs

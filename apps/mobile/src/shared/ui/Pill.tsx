@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { colors } from '../theme/colors.js';
+import { colors } from '../theme/colors';
 
 export type PillVariant = 'points' | 'primary' | 'mint' | 'warning' | 'danger' | 'neutral';
 

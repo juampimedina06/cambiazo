@@ -4,7 +4,7 @@ import {
   SchoolRewardSchema,
   RedeemRewardSchema,
 } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Community Points, School Leaderboard & Rewards Catalog (WAVE-3-MOBILE-03)', () => {
   const institutionId = 'e28bb18a-66fe-4f8e-9092-2df283f55001'; // Colegio Manuel Belgrano

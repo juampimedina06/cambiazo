@@ -1,0 +1,309 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// Enums
+// -------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  KIOSK
+  PARENT
+  STUDENT
+}
+
+enum BillingPlanType {
+  FIXED_MONTHLY
+  PER_ACTIVE_STUDENT
+}
+
+enum InstitutionStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ConsentStatus {
+  PENDING
+  GRANTED
+  REVOKED
+}
+
+enum AccountType {
+  PARENT_WALLET
+  STUDENT_ALLOCATION
+  KIOSK_BALANCE
+  PLATFORM_CLEARING
+}
+
+enum LedgerEntryDirection {
+  DEBIT
+  CREDIT
+}
+
+enum ProductCategory {
+  HEALTHY_SNACK
+  DRINK
+  CANDY
+  HOT_MEAL
+  STATIONERY
+}
+
+enum ExchangeMode {
+  BARTER
+  DONATION
+  LOAN
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DELIVERED
+}
+
+enum TransactionType {
+  TOP_UP
+  KIOSK_PURCHASE
+  KIOSK_PAYOUT
+  REFUND
+}
+
+// -------------------------------------------------------------
+// Models
+// -------------------------------------------------------------
+
+model Institution {
+  id              String            @id @default(uuid()) @db.Uuid
+  name            String
+  taxId           String?           @map("tax_id")
+  billingPlanType BillingPlanType   @default(FIXED_MONTHLY) @map("billing_plan_type")
+  monthlyFeeCents BigInt            @default(0) @map("monthly_fee_cents")
+  status          InstitutionStatus @default(ACTIVE)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  users           User[]
+  invitations     InstitutionInvitation[]
+  accounts        Account[]
+  products        CatalogProduct[]
+  exchangeItems   ExchangeItem[]
+
+  @@map("institutions")
+}
+
+model User {
+  id            String       @id @default(uuid()) @db.Uuid
+  institutionId String?      @map("institution_id") @db.Uuid
+  role          UserRole
+  email         String       @unique
+  passwordHash  String?      @map("password_hash")
+  fullName      String       @map("full_name")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  accounts      Account[]
+
+  @@index([institutionId])
+  @@map("users")
+}
+
+model InstitutionInvitation {
+  id              String      @id @default(uuid()) @db.Uuid
+  institutionId   String      @map("institution_id") @db.Uuid
+  code            String      @unique
+  expiresAt       DateTime    @map("expires_at")
+  maxUses         Int         @default(100) @map("max_uses")
+  usedCount       Int         @default(0) @map("used_count")
+  createdByUserId String      @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@map("institution_invitations")
+}
+
+model ParentStudentLink {
+  id            String   @id @default(uuid()) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  parentUserId  String   @map("parent_user_id") @db.Uuid
+  studentUserId String   @map("student_user_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([parentUserId, studentUserId])
+  @@index([institutionId])
+  @@map("parent_student_links")
+}
+
+model ParentalConsent {
+  id            String        @id @default(uuid()) @db.Uuid
+  institutionId String        @map("institution_id") @db.Uuid
+  parentUserId  String        @map("parent_user_id") @db.Uuid
+  studentUserId String        @map("student_user_id") @db.Uuid
+  action        ConsentStatus
+  termsVersion  String        @map("terms_version")
+  ipAddress     String        @map("ip_address")
+  userAgent     String        @map("user_agent")
+  reason        String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  @@index([institutionId, studentUserId])
+  @@map("parental_consents")
+}
+
+model StudentSpendingLimits {
+  id                String   @id @default(uuid()) @db.Uuid
+  institutionId     String   @map("institution_id") @db.Uuid
+  studentId         String   @unique @map("student_id") @db.Uuid
+  dailyLimitCents   BigInt   @default(200000) @map("daily_limit_cents")
+  weeklyLimitCents  BigInt   @default(1000000) @map("weekly_limit_cents")
+  blockedCategories String[] @map("blocked_categories")
+  isPaused          Boolean  @default(false) @map("is_paused")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([institutionId])
+  @@map("student_spending_limits")
+}
+
+model Account {
+  id            String      @id @default(uuid()) @db.Uuid
+  institutionId String      @map("institution_id") @db.Uuid
+  ownerUserId   String?     @map("owner_user_id") @db.Uuid
+  accountType   AccountType @map("account_type")
+  currency      String      @default("ARS")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  entries       LedgerEntry[]
+
+  @@unique([institutionId, ownerUserId, accountType])
+  @@index([institutionId])
+  @@map("accounts")
+}
+
+model LedgerTransaction {
+  id             String          @id @default(uuid()) @db.Uuid
+  institutionId  String          @map("institution_id") @db.Uuid
+  idempotencyKey String          @unique @map("idempotency_key")
+  type           TransactionType
+  metadataJson   Json?           @map("metadata_json")
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  entries        LedgerEntry[]
+
+  @@index([institutionId])
+  @@map("ledger_transactions")
+}
+
+model LedgerEntry {
+  id            String               @id @default(uuid()) @db.Uuid
+  transactionId String               @map("transaction_id") @db.Uuid
+  institutionId String               @map("institution_id") @db.Uuid
+  accountId     String               @map("account_id") @db.Uuid
+  direction     LedgerEntryDirection
+  amountCents   BigInt               @map("amount_cents")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  transaction   LedgerTransaction    @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  account       Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([institutionId, accountId])
+  @@index([transactionId])
+  @@map("ledger_entries")
+}
+
+model CatalogProduct {
+  id            String          @id @default(uuid()) @db.Uuid
+  institutionId String          @map("institution_id") @db.Uuid
+  name          String
+  category      ProductCategory
+  priceCents    BigInt          @map("price_cents")
+  stock         Int             @default(0)
+  isActive      Boolean         @default(true) @map("is_active")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@map("catalog_products")
+}
+
+model ExchangeItem {
+  id               String           @id @default(uuid()) @db.Uuid
+  institutionId    String           @map("institution_id") @db.Uuid
+  studentUserId    String           @map("student_user_id") @db.Uuid
+  title            String
+  description      String
+  category         String
+  mode             ExchangeMode     @default(BARTER)
+  status           ModerationStatus @default(PENDING)
+  moderatorNotes   String?          @map("moderator_notes")
+  pickupPointNotes String?          @map("pickup_point_notes")
+  photoUrls        String[]         @map("photo_urls")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  institution      Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId, status])
+  @@map("exchange_items")
+}
+
+model CommunityPointsLedger {
+  id            String   @id @default(uuid()) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  studentUserId String   @map("student_user_id") @db.Uuid
+  pointsDelta   Int      @map("points_delta")
+  reason        String
+  referenceId   String?  @map("reference_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([institutionId, studentUserId])
+  @@map("community_points_ledger")
+}
+
+model StudentSavingsGoal {
+  id                 String   @id @default(uuid()) @db.Uuid
+  institutionId      String   @map("institution_id") @db.Uuid
+  studentUserId      String   @map("student_user_id") @db.Uuid
+  title              String
+  targetAmountCents  BigInt   @map("target_amount_cents")
+  reservedAmountCents BigInt  @default(0) @map("reserved_amount_cents")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([institutionId, studentUserId])
+  @@map("student_savings_goals")
+}
+
+model SchoolReward {
+  id            String   @id @default(uuid()) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  title         String
+  description   String
+  pointsCost    Int      @map("points_cost")
+  stock         Int      @default(0)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([institutionId])
+  @@map("school_rewards")
+}
+
+model RewardRedemption {
+  id            String   @id @default(uuid()) @db.Uuid
+  institutionId String   @map("institution_id") @db.Uuid
+  rewardId      String   @map("reward_id") @db.Uuid
+  studentUserId String   @map("student_user_id") @db.Uuid
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([institutionId, studentUserId])
+  @@map("reward_redemptions")
+}

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BillingPlanTypeSchema, InstitutionStatusSchema } from '../enums.js';
+import { BillingPlanTypeSchema, InstitutionStatusSchema } from '../enums';
 
 export const CUIT_REGEX = /^\d{2}-?\d{8}-?\d{1}$/;
 

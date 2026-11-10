@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
-import { DigitalConsentContent } from '../../src/features/parental-consent/ui/DigitalConsentContent.js';
-import { mockApiClient } from '../../src/shared/api/mock-client.js';
-import { authStore } from '../../src/shared/store/auth-store.js';
+import { colors } from '../../src/shared/theme/colors';
+import { DigitalConsentContent } from '../../src/features/parental-consent/ui/DigitalConsentContent';
+import { mockApiClient } from '../../src/shared/api/mock-client';
+import { authStore } from '../../src/shared/store/auth-store';
 
 export default function ConsentModalScreen() {
   const router = useRouter();

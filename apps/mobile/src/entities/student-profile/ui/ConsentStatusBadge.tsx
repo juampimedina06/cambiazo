@@ -1,6 +1,6 @@
 import React from 'react';
 import { type ConsentStatus } from '@cambiazo/shared';
-import { Pill, PillVariant } from '../../../shared/ui/Pill.js';
+import { Pill, PillVariant } from '../../../shared/ui/Pill';
 
 export interface ConsentStatusBadgeProps {
   status: ConsentStatus;

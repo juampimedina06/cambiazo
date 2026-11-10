@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { colors } from '../src/shared/theme/colors.js';
-import { typography } from '../src/shared/theme/typography.js';
-import { layout } from '../src/shared/theme/layout.js';
+import { colors } from '../src/shared/theme/colors';
+import { typography } from '../src/shared/theme/typography';
+import { layout } from '../src/shared/theme/layout';
 
 describe('Design Tokens & Visual Rules (AGENTS.md)', () => {
   it('complies with 60-30-10 color proportions and required palette', () => {

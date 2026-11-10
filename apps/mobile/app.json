@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Cambiazo",
+    "slug": "cambiazo",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "cambiazo",
+    "ios": {
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
+

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProductCategorySchema } from '../enums.js';
+import { ProductCategorySchema } from '../enums';
 
 export const RegisterParentAndStudentSchema = z.object({
   inviteCode: z.string().min(4).max(32),

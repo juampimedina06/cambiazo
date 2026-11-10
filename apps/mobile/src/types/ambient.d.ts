@@ -1,9 +1,5 @@
 declare namespace JSX {
-  interface Element {
-    type: any;
-    props: any;
-    key: any;
-  }
+  type Element = any;
   interface IntrinsicAttributes {
     key?: string | number | null | undefined;
   }

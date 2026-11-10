@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/shared/theme/colors.js';
-import { Button } from '../../src/shared/ui/Button.js';
-import { Pill } from '../../src/shared/ui/Pill.js';
-import { LogoPencilC } from '../../src/shared/ui/LogoPencilC.js';
-import { ConsentStatusBadge } from '../../src/entities/student-profile/ui/ConsentStatusBadge.js';
-import { ConsentRevocationModal } from '../../src/features/parental-consent/ui/ConsentRevocationModal.js';
-import { DigitalConsentModal } from '../../src/features/parental-consent/ui/DigitalConsentModal.js';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store.js';
-import { mockApiClient } from '../../src/shared/api/mock-client.js';
+import { colors } from '../../src/shared/theme/colors';
+import { Button } from '../../src/shared/ui/Button';
+import { Pill } from '../../src/shared/ui/Pill';
+import { LogoPencilC } from '../../src/shared/ui/LogoPencilC';
+import { ConsentStatusBadge } from '../../src/entities/student-profile/ui/ConsentStatusBadge';
+import { ConsentRevocationModal } from '../../src/features/parental-consent/ui/ConsentRevocationModal';
+import { DigitalConsentModal } from '../../src/features/parental-consent/ui/DigitalConsentModal';
+import { authStore, type AuthState } from '../../src/shared/store/auth-store';
+import { mockApiClient } from '../../src/shared/api/mock-client';
 
 export default function ParentHomeScreen() {
   const router = useRouter();

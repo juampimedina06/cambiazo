@@ -9,7 +9,7 @@ import {
   ProductCategorySchema,
   ExchangeModeSchema,
   ModerationStatusSchema,
-} from '../src/enums.js';
+} from '../src/enums';
 
 describe('Domain Enums Validation', () => {
   describe('UserRoleSchema', () => {

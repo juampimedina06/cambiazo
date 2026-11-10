@@ -4,7 +4,7 @@ import {
   InstitutionDtoSchema,
   CreateInvitationSchema,
   ValidateInviteCodeSchema,
-} from '../src/schemas/institution.schema.js';
+} from '../src/schemas/institution.schema';
 
 describe('Institution Schemas Validation', () => {
   const validInstitution = {

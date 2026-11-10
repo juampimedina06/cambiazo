@@ -1,8 +1,8 @@
 import React from 'react';
 import { Modal, View, StyleSheet, SafeAreaView } from 'react-native';
-import { colors } from '../../../shared/theme/colors.js';
-import { DigitalConsentContent } from './DigitalConsentContent.js';
-import { type MockStudentUser } from '../../../shared/api/mock-client.js';
+import { colors } from '../../../shared/theme/colors';
+import { DigitalConsentContent } from './DigitalConsentContent';
+import { type MockStudentUser } from '../../../shared/api/mock-client';
 
 export interface DigitalConsentModalProps {
   visible: boolean;

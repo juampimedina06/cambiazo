@@ -63,17 +63,46 @@ cambiazo/
 pnpm install
 ```
 
-### 2. Environment Variables
+### 2. Environment Variables & Infrastructure
 
-Copy `.env.example` to `.env` in each application when connecting live services (PostgreSQL/Supabase, Redis, Mercado Pago):
+Copy `.env.example` to `.env` in each workspace when connecting live services:
 
 - `apps/api/.env.example`
 - `apps/web-admin/.env.example`
 - `apps/mobile/.env.example`
 
-By default, Web Admin and Mobile include typed mock adapters (`NEXT_PUBLIC_USE_MOCKS=true` / `EXPO_PUBLIC_USE_MOCKS=true`) backed by `@cambiazo/shared` contracts.
+By default, Web Admin and Mobile include resilient typed mock adapters (`NEXT_PUBLIC_USE_MOCKS=true` / `EXPO_PUBLIC_USE_MOCKS=true`) backed by `@cambiazo/shared` contracts, with automatic fallback when the backend is offline.
 
-### 3. Build, Typecheck & Run Tests
+#### Local Services (Docker Compose)
+To run local PostgreSQL and Redis for `apps/api`:
+
+```bash
+# Inside apps/api or with docker compose file flag
+cd apps/api
+docker compose up -d
+```
+
+Services exposed:
+- **PostgreSQL 16**: `localhost:5432` (db: `cambiazo_dev`, user/password: `postgres`/`postgres`)
+- **Redis 7**: `localhost:6379`
+
+### 3. Running Applications in Development
+
+```bash
+# Backend NestJS API (runs on http://localhost:3000)
+pnpm --filter @cambiazo/api dev
+
+# Web Admin Next.js (runs on http://localhost:3001)
+pnpm --filter @cambiazo/web-admin dev
+
+# Mobile Expo App (Metro Bundler)
+pnpm --filter @cambiazo/mobile start -c
+```
+
+> **Note on Mobile (Expo Router + Metro):**
+> Metro is configured via `apps/mobile/metro.config.js` to watch the monorepo root and resolve `@cambiazo/shared` directly from TypeScript sources without hardcoded `.js` extensions. When running with Expo Go, make sure your mobile client is updated to match Expo SDK 58.
+
+### 4. Build, Typecheck & Run Tests
 
 ```bash
 # Build all packages and apps

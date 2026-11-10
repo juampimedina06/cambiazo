@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { QrPaymentTokenSchema } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client.js';
+import { mockApiClient } from '../src/shared/api/mock-client';
 
 describe('Student Ephemeral QR Payment Token (QrPaymentTokenSchema & 120s Expiry)', () => {
   const studentId = '22222222-2222-4222-8222-222222222222';

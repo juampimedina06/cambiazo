@@ -4,7 +4,7 @@ import {
   GrantParentalConsentSchema,
   RevokeParentalConsentSchema,
   SpendingLimitsSchema,
-} from '../src/schemas/consent.schema.js';
+} from '../src/schemas/consent.schema';
 
 describe('Consent & Parental Controls Schemas Validation', () => {
   describe('RegisterParentAndStudentSchema', () => {

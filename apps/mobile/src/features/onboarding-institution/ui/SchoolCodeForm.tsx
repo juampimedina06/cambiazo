@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../../shared/theme/colors.js';
-import { Button } from '../../../shared/ui/Button.js';
-import { Input } from '../../../shared/ui/Input.js';
-import { InstitutionBanner } from '../../../entities/institution/ui/InstitutionBanner.js';
-import { useSchoolCode } from '../hooks/useSchoolCode.js';
+import { colors } from '../../../shared/theme/colors';
+import { Button } from '../../../shared/ui/Button';
+import { Input } from '../../../shared/ui/Input';
+import { InstitutionBanner } from '../../../entities/institution/ui/InstitutionBanner';
+import { useSchoolCode } from '../hooks/useSchoolCode';
 
 export interface SchoolCodeFormProps {
   onSuccess: (code: string, institutionName: string) => void;

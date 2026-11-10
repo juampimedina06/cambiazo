@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors.js';
+import { colors } from '../theme/colors';
 
 export interface LogoPencilCProps {
   size?: 'sm' | 'md' | 'lg';
