@@ -211,7 +211,24 @@ export class ApiClient {
       headers: this.getHeaders('SCHOOL_ADMIN', institutionId),
     });
     if (!res.ok) return [];
-    return res.json();
+    const raw = await res.json().catch(() => []);
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: any) => ({
+      id: item.id || `rost-${item.studentId || item.id || Math.random()}`,
+      studentId: item.studentId || item.id || '',
+      institutionId: item.institutionId || institutionId || '',
+      studentName: item.studentName || item.fullName || item.name || 'Alumno sin nombre',
+      studentDni: item.studentDni || item.dni || '',
+      grade: item.grade || item.year || item.course || 'Sin curso',
+      parentName: item.parentName || item.guardianName || 'Tutor',
+      parentEmail: item.parentEmail || item.email || '',
+      parentPhone: item.parentPhone || item.phone || '',
+      consentStatus: item.consentStatus || item.status || 'PENDING',
+      consentAudit: item.consentAudit || {},
+      walletBalanceCents: item.walletBalanceCents ?? item.balanceArsCents ?? 0,
+      communityPoints: item.communityPoints ?? 0,
+      createdAt: item.createdAt || new Date().toISOString(),
+    }));
   }
 
   async updateStudentConsent(

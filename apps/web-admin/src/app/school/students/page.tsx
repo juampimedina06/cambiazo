@@ -30,9 +30,10 @@ export default function SchoolStudentsPage() {
           ? localStorage.getItem('cambiazo_institution_id') || DEFAULT_SCHOOL_ID
           : DEFAULT_SCHOOL_ID;
       const data = await apiClient.getStudentsRoster(activeId);
-      setStudents(data);
+      setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load students roster:', err);
+      setStudents([]);
     } finally {
       setIsLoading(false);
     }
@@ -58,13 +59,22 @@ export default function SchoolStudentsPage() {
   };
 
   // Filtered students
-  const filteredStudents = students.filter((s) => {
+  const studentList = Array.isArray(students) ? students : [];
+  const filteredStudents = studentList.filter((s) => {
+    if (!s) return false;
+    const name = (s.studentName || (s as any).fullName || (s as any).name || '').toLowerCase();
+    const dni = (s.studentDni || (s as any).dni || '');
+    const parentName = (s.parentName || (s as any).guardianName || '').toLowerCase();
+    const parentEmail = (s.parentEmail || (s as any).email || '').toLowerCase();
+    const grade = (s.grade || '').toLowerCase();
+    const q = (searchQuery || '').toLowerCase();
+
     const matchesSearch =
-      s.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.studentDni.includes(searchQuery) ||
-      s.parentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.parentEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.grade.toLowerCase().includes(searchQuery.toLowerCase());
+      name.includes(q) ||
+      dni.includes(searchQuery) ||
+      parentName.includes(q) ||
+      parentEmail.includes(q) ||
+      grade.includes(q);
 
     const matchesStatus =
       statusFilter === 'ALL' || s.consentStatus === statusFilter;
@@ -73,10 +83,10 @@ export default function SchoolStudentsPage() {
   });
 
   // Metrics
-  const totalStudents = students.length;
-  const grantedCount = students.filter((s) => s.consentStatus === 'GRANTED').length;
-  const pendingCount = students.filter((s) => s.consentStatus === 'PENDING').length;
-  const revokedCount = students.filter((s) => s.consentStatus === 'REVOKED').length;
+  const totalStudents = studentList.length;
+  const grantedCount = studentList.filter((s) => s?.consentStatus === 'GRANTED').length;
+  const pendingCount = studentList.filter((s) => s?.consentStatus === 'PENDING').length;
+  const revokedCount = studentList.filter((s) => s?.consentStatus === 'REVOKED').length;
 
   return (
     <div className="flex flex-col gap-6">

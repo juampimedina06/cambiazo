@@ -10,9 +10,9 @@ async function bootstrap() {
     credentials: true,
     allowedHeaders: '*',
   });
-  const port = process.env['PORT'] ?? 3000;
-  await app.listen(port);
-  console.log(`CAMBIAZO API running on port ${port}`);
+  const port = Number(process.env['PORT'] ?? 3000);
+  await app.listen(port, '0.0.0.0');
+  console.log(`CAMBIAZO API running on http://0.0.0.0:${port}`);
 }
 
 if (process.env['NODE_ENV'] !== 'test') {

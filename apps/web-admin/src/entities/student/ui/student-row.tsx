@@ -36,7 +36,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
     style: 'currency',
     currency: 'ARS',
     maximumFractionDigits: 0,
-  }).format(student.walletBalanceCents / 100);
+  }).format((student.walletBalanceCents ?? 0) / 100);
 
   const getStatusBadge = () => {
     switch (student.consentStatus) {
@@ -92,17 +92,17 @@ export const StudentRow: React.FC<StudentRowProps> = ({
           </div>
           <div>
             <h4 className="font-bold text-text-primary text-base leading-tight">
-              {student.studentName}
+              {student.studentName || (student as any).fullName || (student as any).name || 'Alumno sin nombre'}
             </h4>
             <p className="text-xs text-text-secondary mt-0.5">
-              {student.grade} • DNI {student.studentDni}
+              {student.grade || 'Sin curso'} • DNI {student.studentDni || (student as any).dni || '-'}
             </p>
             <div className="flex items-center gap-3 mt-1.5 text-xs font-semibold">
               <span className="text-emerald-600">
                 Saldo: {formattedBalance}
               </span>
               <span className="text-amber-600">
-                ⭐ {student.communityPoints} Pts
+                ⭐ {student.communityPoints ?? 0} Pts
               </span>
             </div>
           </div>
@@ -114,10 +114,10 @@ export const StudentRow: React.FC<StudentRowProps> = ({
             Tutor / Responsable
           </span>
           <span className="font-bold text-text-primary text-sm mt-0.5">
-            {student.parentName}
+            {student.parentName || (student as any).guardianName || 'Tutor'}
           </span>
           <span className="text-xs text-text-secondary mt-0.5">
-            {student.parentEmail} • {student.parentPhone}
+            {student.parentEmail || '-'} • {student.parentPhone || '-'}
           </span>
         </div>
 

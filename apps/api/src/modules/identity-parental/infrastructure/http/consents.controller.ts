@@ -7,6 +7,7 @@ import {
   Query,
   Req,
   Inject,
+  Optional,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -29,6 +30,18 @@ import { GrantParentalConsentUseCase } from '../../application/use-cases/grant-p
 import { RevokeParentalConsentUseCase } from '../../application/use-cases/revoke-parental-consent.use-case.js';
 import { CheckStudentConsentUseCase } from '../../application/use-cases/check-student-consent.use-case.js';
 import { GetParentalConsentAuditUseCase } from '../../application/use-cases/get-parental-consent-audit.use-case.js';
+import {
+  type UserRepositoryPort,
+  USER_REPOSITORY,
+} from '../../domain/ports/user.repository.port.js';
+import {
+  type ParentStudentLinkRepositoryPort,
+  PARENT_STUDENT_LINK_REPOSITORY,
+} from '../../domain/ports/parent-student-link.repository.port.js';
+import {
+  type ParentalConsentRepositoryPort,
+  PARENTAL_CONSENT_REPOSITORY,
+} from '../../domain/ports/parental-consent.repository.port.js';
 
 @Controller('api/v1/consents')
 @UseGuards(AuthGuard, RolesGuard, TenantGuard)
@@ -42,6 +55,15 @@ export class ConsentsController {
     private readonly checkStudentConsentUseCase: CheckStudentConsentUseCase,
     @Inject(GetParentalConsentAuditUseCase)
     private readonly getParentalConsentAuditUseCase: GetParentalConsentAuditUseCase,
+    @Inject(USER_REPOSITORY)
+    @Optional()
+    private readonly userRepo?: UserRepositoryPort,
+    @Inject(PARENT_STUDENT_LINK_REPOSITORY)
+    @Optional()
+    private readonly linkRepo?: ParentStudentLinkRepositoryPort,
+    @Inject(PARENTAL_CONSENT_REPOSITORY)
+    @Optional()
+    private readonly consentRepo?: ParentalConsentRepositoryPort,
   ) {}
 
   @Post('grant')
@@ -90,28 +112,46 @@ export class ConsentsController {
     @Query('institutionId') queryInstitutionId?: string,
   ) {
     const instId = user.institutionId || queryInstitutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
-    return [
-      {
-        id: 'rost-22222222',
-        studentId: '22222222-2222-4222-8222-222222222222',
-        institutionId: instId,
-        studentName: 'Mateo Gómez',
-        studentDni: '52.345.678',
-        grade: '6° Primaria',
-        parentName: 'Carolina Gómez',
-        parentEmail: 'carolina.gomez@ejemplo.com',
-        parentPhone: '+54 11 2233-4455',
-        consentStatus: 'GRANTED',
-        consentAudit: {
-          acceptedTermsVersion: 'v1.0-2026-AR-LEY25326',
-          signedAt: new Date(Date.now() - 86400000).toISOString(),
-          signatureIp: '127.0.0.1',
-        },
-        walletBalanceCents: 450000,
-        communityPoints: 120,
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    const { userRepo, linkRepo, consentRepo } = this;
+    if (!userRepo || !linkRepo || !consentRepo) {
+      return [];
+    }
+    const users = await userRepo.findAllByInstitution(instId);
+    const students = users.filter((u) => u.role === 'STUDENT');
+    const parents = new Map(users.filter((u) => u.role === 'PARENT').map((p) => [p.id, p]));
+
+    const roster = await Promise.all(
+      students.map(async (s) => {
+        const link = await linkRepo.findByStudentId(s.id);
+        const parent = link ? parents.get(link.parentUserId) : undefined;
+        const consent = await consentRepo.getLatestConsent(s.id);
+
+        return {
+          id: `rost-${s.id}`,
+          studentId: s.id,
+          institutionId: instId,
+          studentName: s.fullName,
+          studentDni: s.dni || '',
+          grade: s.grade || 'Sin curso',
+          parentName: parent?.fullName || 'Tutor',
+          parentEmail: parent?.email || '',
+          parentPhone: parent?.phone || '',
+          consentStatus: consent ? consent.action : (s.isActive ? 'GRANTED' : 'PENDING'),
+          consentAudit: consent
+            ? {
+                acceptedTermsVersion: consent.termsVersion,
+                signedAt: consent.createdAt.toISOString(),
+                signatureIp: consent.ipAddress,
+              }
+            : {},
+          walletBalanceCents: 450000,
+          communityPoints: 120,
+          createdAt: s.createdAt.toISOString(),
+        };
+      })
+    );
+
+    return roster;
   }
 
   @Get('audit/:studentId')

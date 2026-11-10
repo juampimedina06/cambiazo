@@ -7,6 +7,7 @@ export interface UserRepositoryPort {
   findByDniAndInstitution(dni: string, institutionId: string): Promise<User | null>;
   updateIsActive(id: string, isActive: boolean): Promise<void>;
   countActiveStudentsByInstitution(institutionId: string): Promise<number>;
+  findAllByInstitution(institutionId: string): Promise<User[]>;
 }
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
