@@ -6,6 +6,7 @@ export interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   helperText?: string;
+  numericOnly?: boolean;
   testID?: string;
 }
 
@@ -13,10 +14,22 @@ export const Input: React.FC<InputProps> = ({
   label,
   error,
   helperText,
+  numericOnly = false,
+  onChangeText,
+  keyboardType,
   testID,
   style,
   ...textInputProps
 }) => {
+  const handleChangeText = (text: string) => {
+    if (!onChangeText) return;
+    if (numericOnly) {
+      onChangeText(text.replace(/\D/g, ''));
+    } else {
+      onChangeText(text);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -27,6 +40,8 @@ export const Input: React.FC<InputProps> = ({
           style,
         ]}
         placeholderTextColor={colors.text.muted}
+        keyboardType={numericOnly ? 'number-pad' : keyboardType}
+        onChangeText={handleChangeText}
         testID={testID}
         {...textInputProps}
       />

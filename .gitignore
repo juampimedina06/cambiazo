@@ -14,6 +14,7 @@ coverage/
 # Turbo & Agent Scratch
 .turbo/
 .agents/
+.data/
 
 # Environment
 .env

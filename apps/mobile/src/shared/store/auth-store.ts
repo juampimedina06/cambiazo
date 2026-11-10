@@ -14,6 +14,7 @@ export interface AuthState {
   institution: MockInstitution | null;
   parent: MockParentUser | null;
   student: MockStudentUser | null;
+  students: MockStudentUser[];
 }
 
 type Listener = (state: AuthState) => void;
@@ -24,6 +25,7 @@ class AuthStore {
     institution: null,
     parent: null,
     student: null,
+    students: [],
   };
 
   private listeners: Set<Listener> = new Set();
@@ -51,14 +53,38 @@ class AuthStore {
     this.notify();
   }
 
-  public setParentSession(parent: MockParentUser, student?: MockStudentUser) {
+  public setParentSession(
+    parent: MockParentUser,
+    student?: MockStudentUser,
+    allStudents?: MockStudentUser[]
+  ) {
+    const resolvedList =
+      allStudents && allStudents.length > 0
+        ? allStudents
+        : student
+        ? [student]
+        : this.state.students;
     this.state = {
       ...this.state,
       currentRole: 'PARENT',
       parent,
-      student: student ?? this.state.student,
+      student: student ?? resolvedList[0] ?? this.state.student,
+      students: resolvedList,
     };
     this.notify();
+  }
+
+  public selectStudent(studentId: string) {
+    const found =
+      this.state.students.find((s) => s.id === studentId) ||
+      mockApiClient.getStudent(studentId);
+    if (found) {
+      this.state = {
+        ...this.state,
+        student: { ...found },
+      };
+      this.notify();
+    }
   }
 
   public setStudentSession(student: MockStudentUser) {
@@ -76,9 +102,13 @@ class AuthStore {
         ...this.state.student,
         consentStatus: status,
       };
+      const updatedList = this.state.students.map((s) =>
+        s.id === updatedStudent.id ? updatedStudent : s
+      );
       this.state = {
         ...this.state,
         student: updatedStudent,
+        students: updatedList,
       };
       this.notify();
     }
@@ -87,9 +117,13 @@ class AuthStore {
   public refreshStudentFromClient(studentId: string) {
     const s = mockApiClient.getStudent(studentId);
     if (s) {
+      const updatedList = this.state.students.map((item) =>
+        item.id === s.id ? { ...s } : item
+      );
       this.state = {
         ...this.state,
         student: { ...s },
+        students: updatedList,
       };
       this.notify();
     }
@@ -106,6 +140,7 @@ class AuthStore {
       institution: null,
       parent: null,
       student: null,
+      students: [],
     };
     this.notify();
   }

@@ -22,10 +22,14 @@ describe('Mobile Backend Connectivity & Resilient Fallback', () => {
 
     const client = new MockMobileApiClient();
 
-    // 1. Validate School Code
+    // 1. Validate School Code (including SAP2026)
     const codeRes = await client.validateInviteCode('BELGRANO2026');
     expect(codeRes.success).toBe(true);
     expect(codeRes.institution?.name).toBe('Colegio Manuel Belgrano');
+
+    const sapRes = await client.validateInviteCode('SAP2026');
+    expect(sapRes.success).toBe(true);
+    expect(sapRes.institution?.code).toBe('SAP2026');
 
     // 2. Register Family
     const regRes = await client.registerFamily({

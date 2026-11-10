@@ -1,14 +1,49 @@
 import { Injectable } from '@nestjs/common';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { Institution } from '../../domain/entities/institution.entity.js';
 import type { InstitutionRepositoryPort } from '../../domain/ports/institution.repository.port.js';
 
 @Injectable()
 export class InMemoryInstitutionRepository implements InstitutionRepositoryPort {
   private readonly institutions = new Map<string, Institution>();
+  private readonly storageFile = path.resolve(process.cwd(), '.data', 'institutions.json');
 
   constructor() {
     if (process.env.NODE_ENV !== 'test') {
       this.seedDefault();
+      this.loadFromDisk();
+    }
+  }
+
+  private loadFromDisk(): void {
+    try {
+      if (fs.existsSync(this.storageFile)) {
+        const raw = fs.readFileSync(this.storageFile, 'utf-8');
+        const parsed = JSON.parse(raw) as Array<Institution & { createdAt: string }>;
+        for (const item of parsed) {
+          this.institutions.set(item.id, {
+            ...item,
+            createdAt: new Date(item.createdAt),
+          });
+        }
+      }
+    } catch {
+      // Ignore disk read errors in dev
+    }
+  }
+
+  private saveToDisk(): void {
+    if (process.env.NODE_ENV === 'test') return;
+    try {
+      const dir = path.dirname(this.storageFile);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const data = Array.from(this.institutions.values());
+      fs.writeFileSync(this.storageFile, JSON.stringify(data, null, 2), 'utf-8');
+    } catch {
+      // Ignore disk write errors in dev
     }
   }
 
@@ -63,15 +98,18 @@ export class InMemoryInstitutionRepository implements InstitutionRepositoryPort 
   async create(institution: Institution): Promise<Institution> {
     const clone = { ...institution };
     this.institutions.set(clone.id, clone);
+    this.saveToDisk();
     return clone;
   }
 
   async findById(id: string): Promise<Institution | null> {
+    this.loadFromDisk();
     const institution = this.institutions.get(id);
     return institution ? { ...institution } : null;
   }
 
   async findByCuit(cuit: string): Promise<Institution | null> {
+    this.loadFromDisk();
     for (const inst of this.institutions.values()) {
       if (inst.cuit === cuit) {
         return { ...inst };
@@ -81,6 +119,7 @@ export class InMemoryInstitutionRepository implements InstitutionRepositoryPort 
   }
 
   async findAll(): Promise<Institution[]> {
+    this.loadFromDisk();
     return Array.from(this.institutions.values()).map((inst) => ({ ...inst }));
   }
 

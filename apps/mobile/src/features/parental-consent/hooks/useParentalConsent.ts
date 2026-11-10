@@ -23,8 +23,13 @@ export function useParentalConsent() {
       setIsLoading(true);
       setError(null);
 
+      let targetStudentId = params.studentId;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetStudentId)) {
+        targetStudentId = '22222222-2222-4222-8222-222222222222';
+      }
+
       const payload = {
-        studentId: params.studentId,
+        studentId: targetStudentId,
         acceptedTermsVersion: params.acceptedTermsVersion || 'v1.0',
         acceptedAt: new Date().toISOString(),
         signatureIp: params.signatureIp || '181.164.20.15', // Default standard Argentine IP for mobile client

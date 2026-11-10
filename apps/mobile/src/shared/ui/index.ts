@@ -5,3 +5,6 @@ export * from './Pill';
 export * from './Surface';
 export * from './FlatListItem';
 export * from './DramaticSplashScreen';
+export * from './DatePickerField';
+export * from './SelectPickerField';
+export * from './NumericStepperField';

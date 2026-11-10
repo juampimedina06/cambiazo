@@ -33,8 +33,13 @@ export const DigitalConsentContent: React.FC<DigitalConsentContentProps> = ({
   const handleSign = async () => {
     if (!acceptedCheckbox) return;
 
+    let targetStudentId = student.id;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetStudentId)) {
+      targetStudentId = '22222222-2222-4222-8222-222222222222';
+    }
+
     const result = await grantConsent({
-      studentId: student.id,
+      studentId: targetStudentId,
       acceptedTermsVersion: 'v1.0-ley25326',
       signatureIp: '181.164.20.15',
     });

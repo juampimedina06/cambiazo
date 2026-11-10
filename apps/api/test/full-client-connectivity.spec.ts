@@ -51,9 +51,9 @@ describe('Full-Stack Live Endpoints & DI Graph (Mobile & Web-Admin Contracts)', 
     await app.close();
   });
 
-  it('validates all 3 school invitation codes (BELGRANO2026, SANMARTIN2026, NORMAL12026)', async () => {
+  it('validates all 4 school invitation codes (BELGRANO2026, SANMARTIN2026, NORMAL12026, SAP2026)', async () => {
     const invitationsController = app.get(InvitationsController);
-    for (const code of ['BELGRANO2026', 'SANMARTIN2026', 'NORMAL12026']) {
+    for (const code of ['BELGRANO2026', 'SANMARTIN2026', 'NORMAL12026', 'SAP2026']) {
       const body = await invitationsController.validateInvitation(code);
       expect(body.valid).toBe(true);
       expect(body.institution.id).toBeDefined();

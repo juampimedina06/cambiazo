@@ -44,6 +44,17 @@ export type RegisterParentAndStudentInput = RegisterParentAndStudentDto;
 export type GrantParentalConsentInput = GrantParentalConsentDto;
 export type RevokeParentalConsentInput = RevokeParentalConsentDto;
 
+export function generateUuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export interface MockInstitution {
   id: string;
   name: string;
@@ -175,15 +186,18 @@ export class MockMobileApiClient {
       candidates.push(this.resolvedBaseUrl);
     }
 
-    // Attempt to extract the LAN IP from React Native's SourceCode.scriptURL or Expo hostUri
+    // Attempt to extract the LAN IP from React Native's SourceCode TurboModule/NativeModule or Expo hostUri
     try {
       const rn = require('react-native');
-      const scriptURL: string | undefined = rn?.NativeModules?.SourceCode?.scriptURL;
+      const scriptURL: string | undefined =
+        rn?.TurboModuleRegistry?.get?.('SourceCode')?.getConstants?.()?.scriptURL ||
+        rn?.NativeModules?.SourceCode?.getConstants?.()?.scriptURL ||
+        rn?.NativeModules?.SourceCode?.scriptURL;
       if (scriptURL) {
         const match = scriptURL.match(/^https?:\/\/([^:/]+)/);
         const host = match?.[1];
         if (host && host !== 'localhost' && host !== '127.0.0.1') {
-          const lanUrl = this.baseUrl.replace(/localhost|127\.0\.0\.1/, host);
+          const lanUrl = `http://${host}:3000/api/v1`;
           if (!candidates.includes(lanUrl)) {
             candidates.push(lanUrl);
           }
@@ -197,10 +211,15 @@ export class MockMobileApiClient {
       candidates.push(this.baseUrl);
     }
 
-    if (this.baseUrl.includes('localhost') || this.baseUrl.includes('127.0.0.1')) {
-      const androidEmulatorUrl = this.baseUrl.replace(/localhost|127\.0\.0\.1/, '10.0.2.2');
-      if (!candidates.includes(androidEmulatorUrl)) {
-        candidates.push(androidEmulatorUrl);
+    const fallbackUrls = [
+      'http://192.168.0.122:3000/api/v1',
+      'http://localhost:3000/api/v1',
+      'http://127.0.0.1:3000/api/v1',
+      'http://10.0.2.2:3000/api/v1',
+    ];
+    for (const url of fallbackUrls) {
+      if (!candidates.includes(url)) {
+        candidates.push(url);
       }
     }
 
@@ -262,6 +281,11 @@ export class MockMobileApiClient {
       id: 'a10dd30c-88ab-6b0a-9294-4fa405f77003',
       name: 'Escuela Normal N° 1',
       code: 'NORMAL12026',
+    },
+    {
+      id: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      name: 'Colegio Manuel Belgrano',
+      code: 'SAP2026',
     },
   ];
 
@@ -541,7 +565,7 @@ export class MockMobileApiClient {
           json.parent?.institutionId ||
           'e28bb18a-66fe-4f8e-9092-2df283f55001';
         const parentUser: MockParentUser = {
-          id: json.parentId || json.parent?.id || `p-${Date.now()}`,
+          id: json.parentId || json.parent?.id || generateUuid(),
           institutionId: resolvedInstitutionId,
           fullName: json.parent?.fullName || validation.data.parent.fullName,
           email: json.parent?.email || validation.data.parent.email,
@@ -549,7 +573,7 @@ export class MockMobileApiClient {
           phone: json.parent?.phone || validation.data.parent.phone,
         };
         const studentUser: MockStudentUser = {
-          id: json.studentId || json.student?.id || `s-${Date.now()}`,
+          id: json.studentId || json.student?.id || generateUuid(),
           institutionId: json.student?.institutionId || resolvedInstitutionId,
           parentId: parentUser.id,
           fullName: json.student?.fullName || validation.data.student.fullName,
@@ -579,8 +603,8 @@ export class MockMobileApiClient {
     }
 
     const institutionId = inviteResult.institution.id;
-    const parentId = `p-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const studentId = `s-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const parentId = generateUuid();
+    const studentId = generateUuid();
 
     const parent: MockParentUser = {
       id: parentId,
@@ -617,6 +641,108 @@ export class MockMobileApiClient {
   }
 
   /**
+   * Registers a Parent and multiple Students (1..N children) in a single family onboarding flow.
+   */
+  public async registerFamilyWithMultipleStudents(input: {
+    inviteCode: string;
+    parent: RegisterParentAndStudentInput['parent'];
+    students: Array<RegisterParentAndStudentInput['student']>;
+  }): Promise<{
+    success: boolean;
+    parent?: MockParentUser;
+    student?: MockStudentUser;
+    students?: MockStudentUser[];
+    error?: string;
+  }> {
+    if (!input.students || input.students.length === 0) {
+      return {
+        success: false,
+        error: 'Debés incluir al menos un alumno.',
+      };
+    }
+
+    // Validate all student payloads first
+    for (let i = 0; i < input.students.length; i++) {
+      const check = RegisterParentAndStudentSchema.safeParse({
+        inviteCode: input.inviteCode,
+        parent: input.parent,
+        student: input.students[i],
+      });
+      if (!check.success) {
+        return {
+          success: false,
+          error: `Hijo/a ${i + 1}: ${check.error.errors[0]?.message || 'Datos inválidos'}`,
+        };
+      }
+    }
+
+    // Check duplicate DNIs among siblings
+    const seenDnis = new Set<string>();
+    for (let i = 0; i < input.students.length; i++) {
+      const dni = input.students[i]!.dni.trim();
+      if (seenDnis.has(dni)) {
+        return {
+          success: false,
+          error: `El DNI ${dni} está repetido entre los hermanos.`,
+        };
+      }
+      seenDnis.add(dni);
+    }
+
+    // Register parent + first child
+    const firstResult = await this.registerFamily({
+      inviteCode: input.inviteCode,
+      parent: input.parent,
+      student: input.students[0]!,
+    });
+
+    if (!firstResult.success || !firstResult.parent || !firstResult.student) {
+      return firstResult;
+    }
+
+    const parent = firstResult.parent;
+    const registeredStudents: MockStudentUser[] = [firstResult.student];
+
+    // Register remaining siblings (2..N) linked to the same parent
+    for (let i = 1; i < input.students.length; i++) {
+      const sInput = input.students[i]!;
+      const sibling: MockStudentUser = {
+        id: generateUuid(),
+        institutionId: parent.institutionId,
+        parentId: parent.id,
+        fullName: sInput.fullName.trim(),
+        dni: sInput.dni.trim(),
+        grade: sInput.grade.trim(),
+        dateOfBirth: sInput.dateOfBirth.trim(),
+        consentStatus: 'PENDING',
+        balanceArsCents: 0,
+        dailyLimitCents: 150000,
+        dailySpentCents: 0,
+        communityPoints: 0,
+      };
+      this.students.set(sibling.id, sibling);
+      registeredStudents.push(sibling);
+    }
+
+    return {
+      success: true,
+      parent,
+      student: registeredStudents[0],
+      students: registeredStudents,
+    };
+  }
+
+  public getStudentsByParent(parentId: string): MockStudentUser[] {
+    const list: MockStudentUser[] = [];
+    for (const s of this.students.values()) {
+      if (s.parentId === parentId) {
+        list.push({ ...s });
+      }
+    }
+    return list;
+  }
+
+  /**
    * Grants digital parental consent under Ley 25.326 using GrantParentalConsentSchema.
    */
   public async grantParentalConsent(input: GrantParentalConsentInput): Promise<{
@@ -648,7 +774,7 @@ export class MockMobileApiClient {
         if (student) {
           student.consentStatus = 'GRANTED';
           const record: MockConsentRecord = {
-            id: json.consentId || json.id || `c-${Date.now()}`,
+            id: json.consentId || json.id || generateUuid(),
             studentId: student.id,
             parentId: student.parentId,
             status: 'GRANTED',
@@ -673,7 +799,7 @@ export class MockMobileApiClient {
     }
 
     student.consentStatus = 'GRANTED';
-    const consentId = `c-${Date.now()}`;
+    const consentId = generateUuid();
     const consentRecord: MockConsentRecord = {
       id: consentId,
       studentId: student.id,
@@ -725,7 +851,7 @@ export class MockMobileApiClient {
         if (student) {
           student.consentStatus = 'REVOKED';
           const record: MockConsentRecord = {
-            id: json.consentId || json.id || `c-rev-${Date.now()}`,
+            id: json.consentId || json.id || generateUuid(),
             studentId: student.id,
             parentId: student.parentId,
             status: 'REVOKED',
@@ -755,7 +881,7 @@ export class MockMobileApiClient {
     let consentRecord = this.consents.get(student.id);
     if (!consentRecord) {
       consentRecord = {
-        id: `c-rev-${Date.now()}`,
+        id: generateUuid(),
         studentId: student.id,
         parentId: student.parentId,
         status: 'REVOKED',
