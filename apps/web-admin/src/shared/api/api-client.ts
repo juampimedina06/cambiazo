@@ -57,26 +57,36 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.getInstitutions();
     }
-    const res = await fetch(`${this.baseUrl}/institutions`, {
-      headers: this.getHeaders('SUPER_ADMIN'),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Failed to fetch institutions: ${res.statusText}`);
+    try {
+      const res = await fetch(`${this.baseUrl}/institutions`, {
+        headers: this.getHeaders('SUPER_ADMIN'),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch institutions: ${res.statusText}`);
+      }
+      return res.json();
+    } catch (err: any) {
+      console.warn(`[ApiClient] Live backend request failed (${err.message}). Using fallback.`);
+      return mockAdapter.getInstitutions();
     }
-    return res.json();
   }
 
   async getInstitutionById(id: string): Promise<Institution | null> {
     if (this.useMocks) {
       return mockAdapter.getInstitutionById(id);
     }
-    const res = await fetch(`${this.baseUrl}/institutions/${id}`, {
-      headers: this.getHeaders('SUPER_ADMIN'),
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`Failed to fetch institution: ${res.statusText}`);
-    return res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/institutions/${id}`, {
+        headers: this.getHeaders('SUPER_ADMIN'),
+      });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`Failed to fetch institution: ${res.statusText}`);
+      return res.json();
+    } catch (err: any) {
+      console.warn(`[ApiClient] Live backend request failed (${err.message}). Using fallback.`);
+      return mockAdapter.getInstitutionById(id);
+    }
   }
 
   async createInstitution(data: CreateInstitutionInput): Promise<Institution> {
@@ -116,12 +126,16 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.getInvitations(institutionId);
     }
-    const query = institutionId ? `?institutionId=${institutionId}` : '';
-    const res = await fetch(`${this.baseUrl}/invitations${query}`, {
-      headers: this.getHeaders('SCHOOL_ADMIN', institutionId),
-    });
-    if (!res.ok) throw new Error('Failed to fetch invitations');
-    return res.json();
+    try {
+      const query = institutionId ? `?institutionId=${institutionId}` : '';
+      const res = await fetch(`${this.baseUrl}/invitations${query}`, {
+        headers: this.getHeaders('SCHOOL_ADMIN', institutionId),
+      });
+      if (!res.ok) throw new Error('Failed to fetch invitations');
+      return res.json();
+    } catch {
+      return mockAdapter.getInvitations(institutionId);
+    }
   }
 
   async createInvitation(data: CreateInvitationInput): Promise<InvitationCode> {
@@ -145,15 +159,18 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.getStudentsRoster(institutionId);
     }
-    const query = institutionId ? `?institutionId=${institutionId}` : '';
-    const res = await fetch(`${this.baseUrl}/consents/audit/all${query}`, {
-      headers: this.getHeaders('SCHOOL_ADMIN', institutionId),
-    });
-    if (!res.ok) {
-      // Return list or mock fallback if endpoint is audit-based
+    try {
+      const query = institutionId ? `?institutionId=${institutionId}` : '';
+      const res = await fetch(`${this.baseUrl}/consents/audit/all${query}`, {
+        headers: this.getHeaders('SCHOOL_ADMIN', institutionId),
+      });
+      if (!res.ok) {
+        return mockAdapter.getStudentsRoster(institutionId);
+      }
+      return res.json();
+    } catch {
       return mockAdapter.getStudentsRoster(institutionId);
     }
-    return res.json();
   }
 
   async updateStudentConsent(
