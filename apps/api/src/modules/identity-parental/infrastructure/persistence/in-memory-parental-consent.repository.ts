@@ -10,6 +10,27 @@ export class InMemoryParentalConsentRepository
   // Ley 25.326: Append-only immutable log
   private readonly consents: ParentalConsent[] = [];
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  public seedDefault(): void {
+    const defaultConsent: ParentalConsent = {
+      id: 'consent-default-1',
+      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      parentUserId: '11111111-1111-4111-8111-111111111111',
+      studentUserId: '22222222-2222-4222-8222-222222222222',
+      action: 'GRANTED',
+      termsVersion: 'v1.0-2026-AR-LEY25326',
+      ipAddress: '127.0.0.1',
+      userAgent: 'Seed Default',
+      createdAt: new Date(Date.now() - 86400000),
+    };
+    this.consents.push(Object.freeze(defaultConsent));
+  }
+
   async append(consent: ParentalConsent): Promise<ParentalConsent> {
     const record: ParentalConsent = {
       ...consent,

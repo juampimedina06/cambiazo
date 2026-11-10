@@ -19,6 +19,50 @@ export class InMemoryLedgerRepository implements LedgerRepositoryPort {
   private readonly idempotencyMap = new Map<string, LedgerTransaction>();
   private readonly entries: LedgerEntry[] = [];
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  public seedDefault(): void {
+    const institutionId = 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    const now = new Date();
+    const studentAcc: Account = {
+      id: 'acc-student-default',
+      institutionId,
+      userId: '22222222-2222-4222-8222-222222222222',
+      type: 'STUDENT_ALLOCATION',
+      currency: 'ARS',
+      balanceCents: 730000, // $4.500 spendable + $2.800 reserved in savings goals
+      createdAt: now,
+      updatedAt: now,
+    };
+    const kioskAcc: Account = {
+      id: 'acc-kiosk-default',
+      institutionId,
+      userId: 'kiosk-user-1',
+      type: 'KIOSK_BALANCE',
+      currency: 'ARS',
+      balanceCents: 8500000,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const clearingAcc: Account = {
+      id: 'acc-clearing-default',
+      institutionId,
+      userId: null,
+      type: 'PLATFORM_CLEARING',
+      currency: 'ARS',
+      balanceCents: -9230000,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.accounts.set(studentAcc.id, studentAcc);
+    this.accounts.set(kioskAcc.id, kioskAcc);
+    this.accounts.set(clearingAcc.id, clearingAcc);
+  }
+
   async getAccountById(id: string): Promise<Account | null> {
     const acc = this.accounts.get(id);
     return acc ? { ...acc } : null;

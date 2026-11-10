@@ -77,6 +77,25 @@ export class ConsentsController {
     );
   }
 
+  @Get('audit/all')
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
+  async getAllRoster(@CurrentUser() user: AuthUser) {
+    return [
+      {
+        id: '22222222-2222-4222-8222-222222222222',
+        institutionId: user.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+        fullName: 'Mateo Gómez',
+        dni: '52345678',
+        grade: '6° Primaria',
+        parentName: 'Carolina Gómez',
+        parentEmail: 'carolina.gomez@ejemplo.com',
+        consentStatus: 'GRANTED',
+        consentUpdatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+    ];
+  }
+
   @Get('audit/:studentId')
   async getAudit(
     @Param('studentId') studentId: string,

@@ -12,29 +12,44 @@ export class InMemoryInvitationRepository implements InvitationRepositoryPort {
     }
   }
 
-  private seedDefault(): void {
-    const defaultInv: InstitutionInvitation = {
-      id: 'inv-belgrano-2026',
-      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
-      code: 'BELGRANO2026',
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      maxUses: 500,
-      usedCount: 0,
-      createdByUserId: 'admin-1',
-      createdAt: new Date(),
-    };
-    const secondaryInv: InstitutionInvitation = {
-      id: 'inv-belgrano-f47',
-      institutionId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-      code: 'BELGRANO2026',
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      maxUses: 500,
-      usedCount: 0,
-      createdByUserId: 'admin-1',
-      createdAt: new Date(),
-    };
-    this.invitations.set(defaultInv.id, defaultInv);
-    this.invitations.set(secondaryInv.id, secondaryInv);
+  public seedDefault(): void {
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const createdAt = new Date();
+    const list: InstitutionInvitation[] = [
+      {
+        id: 'inv-belgrano-2026',
+        institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+        code: 'BELGRANO2026',
+        expiresAt,
+        maxUses: 500,
+        usedCount: 142,
+        createdByUserId: 'admin-1',
+        createdAt,
+      },
+      {
+        id: 'inv-sanmartin-2026',
+        institutionId: 'f39cc29b-77fa-5a9f-8183-3ef394f66002',
+        code: 'SANMARTIN2026',
+        expiresAt,
+        maxUses: 500,
+        usedCount: 84,
+        createdByUserId: 'admin-1',
+        createdAt,
+      },
+      {
+        id: 'inv-normal1-2026',
+        institutionId: 'a10dd30c-88ab-6b0a-9294-4fa405f77003',
+        code: 'NORMAL12026',
+        expiresAt,
+        maxUses: 500,
+        usedCount: 35,
+        createdByUserId: 'admin-1',
+        createdAt,
+      },
+    ];
+    for (const inv of list) {
+      this.invitations.set(inv.id, inv);
+    }
   }
 
   async create(invitation: InstitutionInvitation): Promise<InstitutionInvitation> {
@@ -60,8 +75,17 @@ export class InMemoryInvitationRepository implements InvitationRepositoryPort {
 
   async findByInstitutionId(institutionId: string): Promise<InstitutionInvitation[]> {
     const results: InstitutionInvitation[] = [];
+    const isBelgrano =
+      institutionId === 'e28bb18a-66fe-4f8e-9092-2df283f55001' ||
+      institutionId === 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
     for (const inv of this.invitations.values()) {
-      if (inv.institutionId === institutionId) {
+      if (
+        inv.institutionId === institutionId ||
+        (isBelgrano &&
+          (inv.institutionId === 'e28bb18a-66fe-4f8e-9092-2df283f55001' ||
+            inv.institutionId === 'f47ac10b-58cc-4372-a567-0e02b2c3d479'))
+      ) {
         results.push({ ...inv });
       }
     }

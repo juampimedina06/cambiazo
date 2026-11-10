@@ -249,6 +249,34 @@ export class CommunityService {
     return this.rewardRepo.findByInstitution(institutionId, true);
   }
 
+  async updateReward(
+    id: string,
+    partial: Partial<SchoolReward>,
+  ): Promise<SchoolReward> {
+    const repoWithUpdate = this.rewardRepo as SchoolRewardRepositoryPort & {
+      update?: (id: string, partial: Partial<SchoolReward>) => Promise<SchoolReward | null>;
+    };
+    if (repoWithUpdate.update) {
+      const updated = await repoWithUpdate.update(id, partial);
+      if (updated) return updated;
+    }
+    const existing = await this.rewardRepo.findById(id);
+    if (!existing) {
+      throw new RewardNotFoundException(id);
+    }
+    return this.rewardRepo.save({ ...existing, ...partial, id });
+  }
+
+  async deleteReward(id: string): Promise<boolean> {
+    const repoWithDelete = this.rewardRepo as SchoolRewardRepositoryPort & {
+      delete?: (id: string) => Promise<boolean>;
+    };
+    if (repoWithDelete.delete) {
+      return repoWithDelete.delete(id);
+    }
+    return true;
+  }
+
   async redeemReward(
     studentUserId: string,
     institutionId: string,

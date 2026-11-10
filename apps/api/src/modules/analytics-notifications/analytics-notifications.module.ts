@@ -16,11 +16,11 @@ import { IdentityParentalModule } from '../identity-parental/identity-parental.m
   ],
   controllers: [ParentWeeklySummaryController],
   providers: [
+    InMemoryBlockedPurchaseRepository,
     {
       provide: BLOCKED_PURCHASE_REPOSITORY,
-      useClass: InMemoryBlockedPurchaseRepository,
+      useExisting: InMemoryBlockedPurchaseRepository,
     },
-    InMemoryBlockedPurchaseRepository,
     WeeklySummaryService,
     WeeklySummaryWorker,
   ],

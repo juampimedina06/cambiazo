@@ -36,7 +36,11 @@ export default function SchoolReportsPage() {
     const loadMetrics = async () => {
       setIsLoading(true);
       try {
-        const data = await apiClient.getSchoolReportMetrics();
+        const activeId =
+          typeof window !== 'undefined'
+            ? localStorage.getItem('cambiazo_institution_id') || 'e28bb18a-66fe-4f8e-9092-2df283f55001'
+            : 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+        const data = await apiClient.getSchoolReportMetrics(activeId);
         setMetrics(data);
       } catch (err) {
         console.error('Error loading school report metrics:', err);

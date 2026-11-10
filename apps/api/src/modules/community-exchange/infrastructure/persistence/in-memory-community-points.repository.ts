@@ -9,6 +9,46 @@ import type {
 export class InMemoryCommunityPointsRepository implements CommunityPointsRepositoryPort {
   private readonly entries: CommunityPointsEntry[] = [];
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  public seedDefault(): void {
+    const institutionId = 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    const now = new Date();
+    this.entries.push(
+      {
+        id: 'pts-seed-1',
+        institutionId,
+        studentUserId: '77777777-7777-4777-8777-111111111111',
+        pointsDelta: 250,
+        reason: 'EXCHANGE_DELIVERED',
+        referenceId: 'item-1',
+        createdAt: now,
+      },
+      {
+        id: 'pts-seed-2',
+        institutionId,
+        studentUserId: '22222222-2222-4222-8222-222222222222',
+        pointsDelta: 120,
+        reason: 'EXCHANGE_DELIVERED',
+        referenceId: 'item-3',
+        createdAt: now,
+      },
+      {
+        id: 'pts-seed-3',
+        institutionId,
+        studentUserId: '77777777-7777-4777-8777-333333333333',
+        pointsDelta: 95,
+        reason: 'EXCHANGE_DELIVERED',
+        referenceId: 'item-2',
+        createdAt: now,
+      },
+    );
+  }
+
   async save(entry: CommunityPointsEntry): Promise<CommunityPointsEntry> {
     const copy = { ...entry };
     this.entries.push(copy);

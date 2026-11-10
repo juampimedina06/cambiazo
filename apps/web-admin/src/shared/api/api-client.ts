@@ -129,10 +129,37 @@ export class ApiClient {
     return res.json();
   }
 
+  private normalizeInvitation(inv: any): InvitationCode {
+    const rawDate = inv.expiresAt;
+    const expiresAt = rawDate
+      ? typeof rawDate === 'string'
+        ? rawDate
+        : new Date(rawDate).toISOString()
+      : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
+    const createdAt = inv.createdAt
+      ? typeof inv.createdAt === 'string'
+        ? inv.createdAt
+        : new Date(inv.createdAt).toISOString()
+      : new Date().toISOString();
+
+    return {
+      id: inv.id,
+      institutionId: inv.institutionId,
+      code: inv.code,
+      maxUses: typeof inv.maxUses === 'number' ? inv.maxUses : 100,
+      currentUses: typeof inv.currentUses === 'number' ? inv.currentUses : (inv.usedCount ?? 0),
+      expiresAt,
+      createdAt,
+      isActive: inv.isActive !== undefined ? Boolean(inv.isActive) : true,
+    };
+  }
+
   // Invitations (School Admin)
   async getInvitations(institutionId?: string): Promise<InvitationCode[]> {
     if (this.useMocks) {
-      return mockAdapter.getInvitations(institutionId);
+      const list = await mockAdapter.getInvitations(institutionId);
+      return list.map((inv) => this.normalizeInvitation(inv));
     }
     try {
       const query = institutionId ? `?institutionId=${institutionId}` : '';
@@ -140,15 +167,22 @@ export class ApiClient {
         headers: this.getHeaders('SCHOOL_ADMIN', institutionId),
       });
       if (!res.ok) throw new Error('Failed to fetch invitations');
-      return res.json();
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return data.map((inv) => this.normalizeInvitation(inv));
+      }
+      const list = await mockAdapter.getInvitations(institutionId);
+      return list.map((inv) => this.normalizeInvitation(inv));
     } catch {
-      return mockAdapter.getInvitations(institutionId);
+      const list = await mockAdapter.getInvitations(institutionId);
+      return list.map((inv) => this.normalizeInvitation(inv));
     }
   }
 
   async createInvitation(data: CreateInvitationInput): Promise<InvitationCode> {
     if (this.useMocks) {
-      return mockAdapter.createInvitation(data);
+      const created = await mockAdapter.createInvitation(data);
+      return this.normalizeInvitation(created);
     }
     const res = await fetch(`${this.baseUrl}/invitations`, {
       method: 'POST',
@@ -159,7 +193,8 @@ export class ApiClient {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Error creating invitation');
     }
-    return res.json();
+    const raw = await res.json();
+    return this.normalizeInvitation(raw);
   }
 
   // Student and Family Roster (School Admin)

@@ -8,6 +8,23 @@ export class InMemoryParentStudentLinkRepository
 {
   private readonly links = new Map<string, ParentStudentLink>();
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  public seedDefault(): void {
+    const defaultLink: ParentStudentLink = {
+      id: 'link-default-1',
+      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      parentUserId: '11111111-1111-4111-8111-111111111111',
+      studentUserId: '22222222-2222-4222-8222-222222222222',
+      createdAt: new Date(),
+    };
+    this.links.set(defaultLink.id, defaultLink);
+  }
+
   async create(link: ParentStudentLink): Promise<ParentStudentLink> {
     const clone = { ...link };
     this.links.set(clone.id, clone);

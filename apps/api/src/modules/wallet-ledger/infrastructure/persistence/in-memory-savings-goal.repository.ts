@@ -6,6 +6,45 @@ import type { SavingsGoalRepositoryPort } from '../../domain/ports/savings-goal.
 export class InMemorySavingsGoalRepository implements SavingsGoalRepositoryPort {
   private readonly goals = new Map<string, StudentSavingsGoal>();
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  public seedDefault(): void {
+    const institutionId = 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    const studentUserId = '22222222-2222-4222-8222-222222222222';
+    const now = new Date();
+    const defaultGoals: StudentSavingsGoal[] = [
+      {
+        id: 'goal-1',
+        institutionId,
+        studentUserId,
+        title: 'Libro de Aventuras Escolar',
+        targetAmountCents: 300000,
+        reservedAmountCents: 180000,
+        isAchieved: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'goal-2',
+        institutionId,
+        studentUserId,
+        title: 'Almuerzo Especial de Fin de Mes',
+        targetAmountCents: 250000,
+        reservedAmountCents: 100000,
+        isAchieved: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+    for (const g of defaultGoals) {
+      this.goals.set(g.id, g);
+    }
+  }
+
   async save(goal: StudentSavingsGoal): Promise<StudentSavingsGoal> {
     const copy = { ...goal };
     this.goals.set(goal.id, copy);

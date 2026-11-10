@@ -11,6 +11,92 @@ import type { CatalogProductRepositoryPort } from '../../domain/ports/catalog-pr
 export class InMemoryCatalogProductRepository implements CatalogProductRepositoryPort {
   private readonly products = new Map<string, CatalogProduct>();
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  public seedDefault(): void {
+    const institutionId = 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    const now = new Date();
+    const defaultProducts: CatalogProduct[] = [
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        institutionId,
+        name: 'Alfajor Triple Chocolate',
+        category: 'CANDY',
+        priceCents: 120000,
+        stock: 50,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000002',
+        institutionId,
+        name: 'Tostado Jamón y Queso',
+        category: 'HOT_MEAL',
+        priceCents: 200000,
+        stock: 30,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000003',
+        institutionId,
+        name: 'Jugo Natural de Naranja',
+        category: 'DRINK',
+        priceCents: 100000,
+        stock: 45,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000004',
+        institutionId,
+        name: 'Manzana Roja Fresca',
+        category: 'HEALTHY_SNACK',
+        priceCents: 60000,
+        stock: 40,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000005',
+        institutionId,
+        name: 'Barra de Cereal con Miel',
+        category: 'HEALTHY_SNACK',
+        priceCents: 80000,
+        stock: 35,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000006',
+        institutionId,
+        name: 'Cuaderno Rayado Escolar',
+        category: 'STATIONERY',
+        priceCents: 150000,
+        stock: 20,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+    for (const p of defaultProducts) {
+      this.products.set(p.id, p);
+    }
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.products.delete(id);
+  }
+
   async create(product: CatalogProduct): Promise<CatalogProduct> {
     this.products.set(product.id, { ...product });
     return { ...product };

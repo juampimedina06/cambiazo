@@ -14,7 +14,7 @@ import { apiClient } from '@/shared/api/api-client';
 import { Surface } from '@/shared/ui/Surface';
 import { StudentRow } from '@/entities/student';
 
-const DEFAULT_SCHOOL_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'; // Colegio Belgrano Day School
+const DEFAULT_SCHOOL_ID = 'e28bb18a-66fe-4f8e-9092-2df283f55001'; // Colegio Belgrano Day School
 
 export default function SchoolStudentsPage() {
   const [students, setStudents] = useState<StudentRosterItem[]>([]);
@@ -25,7 +25,11 @@ export default function SchoolStudentsPage() {
   const loadStudents = async () => {
     setIsLoading(true);
     try {
-      const data = await apiClient.getStudentsRoster(DEFAULT_SCHOOL_ID);
+      const activeId =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('cambiazo_institution_id') || DEFAULT_SCHOOL_ID
+          : DEFAULT_SCHOOL_ID;
+      const data = await apiClient.getStudentsRoster(activeId);
       setStudents(data);
     } catch (err) {
       console.error('Failed to load students roster:', err);

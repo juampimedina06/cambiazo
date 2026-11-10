@@ -19,16 +19,16 @@ import { IdentityParentalModule } from '../identity-parental/identity-parental.m
     ListInstitutionsUseCase,
     CreateInvitationUseCase,
     ValidateInvitationUseCase,
+    InMemoryInstitutionRepository,
+    InMemoryInvitationRepository,
     {
       provide: INSTITUTION_REPOSITORY,
-      useClass: InMemoryInstitutionRepository,
+      useExisting: InMemoryInstitutionRepository,
     },
     {
       provide: INVITATION_REPOSITORY,
-      useClass: InMemoryInvitationRepository,
+      useExisting: InMemoryInvitationRepository,
     },
-    InMemoryInstitutionRepository,
-    InMemoryInvitationRepository,
   ],
   exports: [
     INSTITUTION_REPOSITORY,

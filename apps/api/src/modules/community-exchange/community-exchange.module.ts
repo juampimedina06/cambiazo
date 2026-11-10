@@ -15,26 +15,26 @@ import { IdentityParentalModule } from '../identity-parental/identity-parental.m
   imports: [forwardRef(() => IdentityParentalModule)],
   controllers: [CommunityController],
   providers: [
-    {
-      provide: EXCHANGE_ITEM_REPOSITORY,
-      useClass: InMemoryExchangeItemRepository,
-    },
-    {
-      provide: COMMUNITY_POINTS_REPOSITORY,
-      useClass: InMemoryCommunityPointsRepository,
-    },
-    {
-      provide: SCHOOL_REWARD_REPOSITORY,
-      useClass: InMemorySchoolRewardRepository,
-    },
-    {
-      provide: REWARD_REDEMPTION_REPOSITORY,
-      useClass: InMemoryRewardRedemptionRepository,
-    },
     InMemoryExchangeItemRepository,
     InMemoryCommunityPointsRepository,
     InMemorySchoolRewardRepository,
     InMemoryRewardRedemptionRepository,
+    {
+      provide: EXCHANGE_ITEM_REPOSITORY,
+      useExisting: InMemoryExchangeItemRepository,
+    },
+    {
+      provide: COMMUNITY_POINTS_REPOSITORY,
+      useExisting: InMemoryCommunityPointsRepository,
+    },
+    {
+      provide: SCHOOL_REWARD_REPOSITORY,
+      useExisting: InMemorySchoolRewardRepository,
+    },
+    {
+      provide: REWARD_REDEMPTION_REPOSITORY,
+      useExisting: InMemoryRewardRedemptionRepository,
+    },
     CommunityService,
   ],
   exports: [

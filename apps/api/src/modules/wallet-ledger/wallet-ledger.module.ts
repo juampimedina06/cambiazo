@@ -27,21 +27,21 @@ import { SavingsGoalsController } from './infrastructure/http/savings-goals.cont
     SavingsGoalsController,
   ],
   providers: [
-    {
-      provide: LEDGER_REPOSITORY,
-      useClass: InMemoryLedgerRepository,
-    },
-    {
-      provide: PAYMENT_GATEWAY,
-      useClass: MercadoPagoMockGateway,
-    },
-    {
-      provide: SAVINGS_GOAL_REPOSITORY,
-      useClass: InMemorySavingsGoalRepository,
-    },
     InMemoryLedgerRepository,
     InMemorySavingsGoalRepository,
     MercadoPagoMockGateway,
+    {
+      provide: LEDGER_REPOSITORY,
+      useExisting: InMemoryLedgerRepository,
+    },
+    {
+      provide: PAYMENT_GATEWAY,
+      useExisting: MercadoPagoMockGateway,
+    },
+    {
+      provide: SAVINGS_GOAL_REPOSITORY,
+      useExisting: InMemorySavingsGoalRepository,
+    },
     LedgerService,
     SavingsGoalService,
     CreateTopUpPreferenceUseCase,

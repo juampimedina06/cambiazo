@@ -28,36 +28,36 @@ import { TenantsModule } from '../tenants/tenants.module.js';
   imports: [forwardRef(() => TenantsModule)],
   controllers: [OnboardingController, ConsentsController, ParentalControlsController],
   providers: [
-    {
-      provide: USER_REPOSITORY,
-      useClass: InMemoryUserRepository,
-    },
-    {
-      provide: PARENT_STUDENT_LINK_REPOSITORY,
-      useClass: InMemoryParentStudentLinkRepository,
-    },
-    {
-      provide: PARENTAL_CONSENT_REPOSITORY,
-      useClass: InMemoryParentalConsentRepository,
-    },
-    {
-      provide: SPENDING_LIMITS_REPOSITORY,
-      useClass: InMemorySpendingLimitsRepository,
-    },
-    {
-      provide: USER_PROVISIONING_PORT,
-      useClass: UserProvisioningAdapter,
-    },
-    {
-      provide: STUDENT_COUNTER_PORT,
-      useClass: StudentCounterAdapter,
-    },
     InMemoryUserRepository,
     InMemoryParentStudentLinkRepository,
     InMemoryParentalConsentRepository,
     InMemorySpendingLimitsRepository,
     UserProvisioningAdapter,
     StudentCounterAdapter,
+    {
+      provide: USER_REPOSITORY,
+      useExisting: InMemoryUserRepository,
+    },
+    {
+      provide: PARENT_STUDENT_LINK_REPOSITORY,
+      useExisting: InMemoryParentStudentLinkRepository,
+    },
+    {
+      provide: PARENTAL_CONSENT_REPOSITORY,
+      useExisting: InMemoryParentalConsentRepository,
+    },
+    {
+      provide: SPENDING_LIMITS_REPOSITORY,
+      useExisting: InMemorySpendingLimitsRepository,
+    },
+    {
+      provide: USER_PROVISIONING_PORT,
+      useExisting: UserProvisioningAdapter,
+    },
+    {
+      provide: STUDENT_COUNTER_PORT,
+      useExisting: StudentCounterAdapter,
+    },
     RegisterFamilyUseCase,
     GrantParentalConsentUseCase,
     RevokeParentalConsentUseCase,

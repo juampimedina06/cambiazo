@@ -27,16 +27,16 @@ import { AnalyticsNotificationsModule } from '../analytics-notifications/analyti
     KioskPosController,
   ],
   providers: [
+    InMemoryCatalogProductRepository,
+    InMemoryPaymentTokenRepository,
     {
       provide: CATALOG_PRODUCT_REPOSITORY,
-      useClass: InMemoryCatalogProductRepository,
+      useExisting: InMemoryCatalogProductRepository,
     },
     {
       provide: PAYMENT_TOKEN_REPOSITORY,
-      useClass: InMemoryPaymentTokenRepository,
+      useExisting: InMemoryPaymentTokenRepository,
     },
-    InMemoryCatalogProductRepository,
-    InMemoryPaymentTokenRepository,
     CreateCatalogProductUseCase,
     ListCatalogProductsUseCase,
     GenerateStudentPaymentTokenUseCase,

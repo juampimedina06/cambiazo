@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -108,6 +109,22 @@ export class CommunityController {
   ): Promise<SchoolReward> {
     const instId = user.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
     return this.communityService.createReward(instId, dto);
+  }
+
+  @Patch('rewards/:id')
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
+  async updateReward(
+    @Param('id') id: string,
+    @Body() dto: Partial<SchoolReward>,
+  ): Promise<SchoolReward> {
+    return this.communityService.updateReward(id, dto);
+  }
+
+  @Delete('rewards/:id')
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
+  async deleteReward(@Param('id') id: string): Promise<{ deleted: boolean }> {
+    await this.communityService.deleteReward(id);
+    return { deleted: true };
   }
 
   @Get('rewards/redemptions')

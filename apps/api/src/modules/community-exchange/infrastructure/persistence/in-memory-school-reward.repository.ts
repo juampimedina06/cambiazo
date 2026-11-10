@@ -12,29 +12,66 @@ export class InMemorySchoolRewardRepository implements SchoolRewardRepositoryPor
     }
   }
 
-  private seedDefault(): void {
-    const reward1: SchoolReward = {
-      id: 'reward-demo-1',
-      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
-      title: 'Llavero Conmemorativo Belgrano 2026',
-      description: 'Edición limitada en acrílico con el logo de la escuela.',
-      pointsCost: 50,
-      stock: 30,
-      isActive: true,
-      createdAt: new Date(),
-    };
-    const reward2: SchoolReward = {
-      id: 'reward-demo-2',
-      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
-      title: 'Pase Libre a la Biblioteca por 1 Mes',
-      description: 'Prioridad de reserva en salas de computación y préstamo especial.',
-      pointsCost: 120,
-      stock: 15,
-      isActive: true,
-      createdAt: new Date(),
-    };
-    this.rewards.set(reward1.id, reward1);
-    this.rewards.set(reward2.id, reward2);
+  public seedDefault(): void {
+    const institutionId = 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    const now = new Date();
+    const rewardsList: SchoolReward[] = [
+      {
+        id: '66666666-6666-4666-8666-111111111111',
+        institutionId,
+        title: 'Pase Libre de Biblioteca por 1 Mes',
+        description: 'Acceso ilimitado a préstamo especial de libros y cómics escolares.',
+        pointsCost: 50,
+        stock: 15,
+        isActive: true,
+        createdAt: now,
+      },
+      {
+        id: '66666666-6666-4666-8666-222222222222',
+        institutionId,
+        title: 'Kit de Marcadores Ecológicos',
+        description: 'Set de 6 marcadores escolares recargables con tinta al agua.',
+        pointsCost: 80,
+        stock: 8,
+        isActive: true,
+        createdAt: now,
+      },
+      {
+        id: '66666666-6666-4666-8666-333333333333',
+        institutionId,
+        title: 'Mención de Honor al Mérito Solidario',
+        description: 'Diploma escolar oficial firmado por dirección en el acto escolar.',
+        pointsCost: 100,
+        stock: 25,
+        isActive: true,
+        createdAt: now,
+      },
+      {
+        id: '66666666-6666-4666-8666-444444444444',
+        institutionId,
+        title: 'Almuerzo Saludable Especial en Kiosco',
+        description: 'Tostado especial + jugo natural en el recreo largo como reconocimiento escolar.',
+        pointsCost: 150,
+        stock: 5,
+        isActive: true,
+        createdAt: now,
+      },
+    ];
+    for (const r of rewardsList) {
+      this.rewards.set(r.id, r);
+    }
+  }
+
+  async update(id: string, partial: Partial<SchoolReward>): Promise<SchoolReward | null> {
+    const current = this.rewards.get(id);
+    if (!current) return null;
+    const updated: SchoolReward = { ...current, ...partial, id: current.id };
+    this.rewards.set(id, updated);
+    return { ...updated };
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.rewards.delete(id);
   }
 
   async save(reward: SchoolReward): Promise<SchoolReward> {
