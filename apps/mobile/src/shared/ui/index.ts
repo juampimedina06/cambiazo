@@ -4,3 +4,4 @@ export * from './Input';
 export * from './Pill';
 export * from './Surface';
 export * from './FlatListItem';
+export * from './DramaticSplashScreen';

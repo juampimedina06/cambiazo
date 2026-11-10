@@ -179,9 +179,27 @@ declare module 'react-native' {
   export const ScrollView: (props: ScrollViewProps) => JSX.Element;
   export const Modal: (props: ModalProps) => JSX.Element;
   export const SafeAreaView: (props: ViewProps) => JSX.Element;
+  export const Image: (props: any) => JSX.Element;
+  export const ImageBackground: (props: any) => JSX.Element;
+
+  export const Dimensions: {
+    get(dim: 'window' | 'screen'): { width: number; height: number };
+  };
+
+  export const Easing: {
+    linear: any;
+    ease: any;
+    quad: any;
+    cubic: any;
+    inOut: (easing: any) => any;
+    out: (easing: any) => any;
+  };
+
+  export const Animated: any;
 
   export const StyleSheet: {
     create<T extends Record<string, ViewStyle | TextStyle>>(styles: T): T;
+    absoluteFillObject: any;
   };
 }
 
