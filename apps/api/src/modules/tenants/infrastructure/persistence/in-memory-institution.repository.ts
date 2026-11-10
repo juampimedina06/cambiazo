@@ -6,6 +6,26 @@ import type { InstitutionRepositoryPort } from '../../domain/ports/institution.r
 export class InMemoryInstitutionRepository implements InstitutionRepositoryPort {
   private readonly institutions = new Map<string, Institution>();
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  private seedDefault(): void {
+    const defaultInst: Institution = {
+      id: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      name: 'Colegio Belgrano Day School',
+      cuit: '30-11223344-5',
+      address: 'Juramento 2100, CABA',
+      billingPlanType: 'FIXED_MONTHLY',
+      monthlyFeeCents: 4500000,
+      status: 'ACTIVE',
+      createdAt: new Date(),
+    };
+    this.institutions.set(defaultInst.id, defaultInst);
+  }
+
   async create(institution: Institution): Promise<Institution> {
     const clone = { ...institution };
     this.institutions.set(clone.id, clone);

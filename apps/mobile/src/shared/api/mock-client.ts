@@ -158,6 +158,28 @@ export interface MockBlockedAttempt {
 }
 
 export class MockMobileApiClient {
+  private baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+
+  private shouldUseRealBackend(): boolean {
+    return process.env.NODE_ENV !== 'test' && process.env.EXPO_PUBLIC_USE_MOCKS === 'false';
+  }
+
+  private getHeaders(role: string = 'STUDENT', institutionId?: string, userId?: string) {
+    const instId = institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001';
+    let uid = userId;
+    if (!uid) {
+      if (role === 'PARENT') uid = '11111111-1111-4111-8111-111111111111';
+      else if (role === 'KIOSK') uid = 'kiosk-user-1';
+      else uid = '22222222-2222-4222-8222-222222222222';
+    }
+    return {
+      'Content-Type': 'application/json',
+      'x-user-id': uid,
+      'x-user-role': role,
+      'x-institution-id': instId,
+    };
+  }
+
   private institutions: MockInstitution[] = [
     {
       id: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
@@ -377,6 +399,29 @@ export class MockMobileApiClient {
       };
     }
 
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/invitations/validate/${encodeURIComponent(validation.data.code)}`);
+        const json = await res.json();
+        if (!res.ok) {
+          return {
+            success: false,
+            error: json.message || 'El código no corresponde a ninguna institución activa.',
+          };
+        }
+        return {
+          success: true,
+          institution: {
+            id: json.institutionId,
+            name: json.institutionName,
+            code: validation.data.code,
+          },
+        };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     const institution = this.institutions.find(
       (inst) => inst.code.toUpperCase() === validation.data.code
     );
@@ -410,6 +455,47 @@ export class MockMobileApiClient {
         success: false,
         error: validation.error.errors[0]?.message || 'Datos de registro inválidos',
       };
+    }
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/onboarding/register-family`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error registrando familia' };
+        }
+        const parentUser: MockParentUser = {
+          id: json.parent?.id || `p-${Date.now()}`,
+          institutionId: json.parent?.institutionId || '',
+          fullName: json.parent?.fullName || validation.data.parent.fullName,
+          email: json.parent?.email || validation.data.parent.email,
+          dni: json.parent?.dni || validation.data.parent.dni,
+          phone: json.parent?.phone || validation.data.parent.phone,
+        };
+        const studentUser: MockStudentUser = {
+          id: json.student?.id || `s-${Date.now()}`,
+          institutionId: json.student?.institutionId || parentUser.institutionId,
+          parentId: parentUser.id,
+          fullName: json.student?.fullName || validation.data.student.fullName,
+          dni: json.student?.dni || validation.data.student.dni,
+          grade: json.student?.grade || validation.data.student.grade,
+          dateOfBirth: json.student?.dateOfBirth || validation.data.student.dateOfBirth,
+          consentStatus: json.student?.consentStatus || 'PENDING',
+          balanceArsCents: 0,
+          dailyLimitCents: 150000,
+          dailySpentCents: 0,
+          communityPoints: 0,
+        };
+        this.parents.set(parentUser.id, parentUser);
+        this.students.set(studentUser.id, studentUser);
+        return { success: true, parent: parentUser, student: studentUser };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
     }
 
     const inviteResult = await this.validateInviteCode(validation.data.inviteCode);
@@ -475,6 +561,25 @@ export class MockMobileApiClient {
     }
 
     const student = this.students.get(validation.data.studentId);
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/consents/grant`, {
+          method: 'POST',
+          headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al firmar consentimiento' };
+        }
+        if (student) student.consentStatus = 'GRANTED';
+        return { success: true, consentRecord: json };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     if (!student) {
       return {
         success: false,
@@ -520,6 +625,25 @@ export class MockMobileApiClient {
     }
 
     const student = this.students.get(validation.data.studentId);
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/consents/revoke`, {
+          method: 'POST',
+          headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al revocar consentimiento' };
+        }
+        if (student) student.consentStatus = 'REVOKED';
+        return { success: true, consentRecord: json };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     if (!student) {
       return {
         success: false,
@@ -644,6 +768,33 @@ export class MockMobileApiClient {
     }
 
     const student = this.students.get(studentId);
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/students/${studentId}/limits`, {
+          method: 'PUT',
+          headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al actualizar límites de gasto' };
+        }
+        const updated: MockSpendingLimits = {
+          studentId,
+          dailyLimitCents: json.dailyLimitCents ?? validation.data.dailyLimitCents,
+          weeklyLimitCents: json.weeklyLimitCents ?? validation.data.weeklyLimitCents,
+          blockedCategories: json.blockedCategories ?? validation.data.blockedCategories,
+          isPaused: json.isPaused ?? validation.data.isPaused,
+        };
+        this.spendingLimits.set(studentId, updated);
+        if (student) student.dailyLimitCents = updated.dailyLimitCents;
+        return { success: true, limits: updated };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     if (!student) {
       return {
         success: false,
@@ -693,6 +844,30 @@ export class MockMobileApiClient {
     }
 
     const student = this.students.get(validation.data.studentId);
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/wallet/top-up-preference`, {
+          method: 'POST',
+          headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al generar preferencia de recarga' };
+        }
+        return {
+          success: true,
+          preferenceId: json.preferenceId,
+          initPoint: json.initPoint,
+          amountCents: validation.data.amountCents,
+          studentId: validation.data.studentId,
+        };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     if (!student) {
       return {
         success: false,
@@ -769,6 +944,34 @@ export class MockMobileApiClient {
     error?: string;
   }> {
     const student = this.students.get(studentId);
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/student/payment-token`, {
+          method: 'POST',
+          headers: this.getHeaders('STUDENT', student?.institutionId, studentId),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al generar código QR' };
+        }
+        const qrToken: QrPaymentTokenDto = {
+          token: json.ephemeralToken || json.qrPayload,
+          studentId,
+          institutionId: student?.institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+          expiresAt: json.expiresAt,
+        };
+        return {
+          success: true,
+          qrToken,
+          backupCode: json.backupCode,
+          expiresInSeconds: json.expiresInSeconds || 120,
+        };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     if (!student) {
       return {
         success: false,
@@ -839,6 +1042,30 @@ export class MockMobileApiClient {
         success: false,
         error: validation.error.errors[0]?.message || 'Solicitud de cobro inválida',
       };
+    }
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/kiosk/charge`, {
+          method: 'POST',
+          headers: this.getHeaders('KIOSK', undefined, 'kiosk-user-1'),
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al procesar cobro' };
+        }
+        return {
+          success: true,
+          chargeId: json.transactionId,
+          totalChargedCents: json.totalAmountCents,
+          studentName: json.studentName || 'Alumno',
+          remainingDailyLimitCents: json.remainingDailyLimitCents,
+          itemsSummary: validation.data.items.map((i) => `${this.catalog.get(i.productId)?.name || 'Producto'} (x${i.quantity})`).join(', '),
+        };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
     }
 
     const { paymentTokenOrCode, items, idempotencyKey } = validation.data;
@@ -1104,6 +1331,36 @@ export class MockMobileApiClient {
       return { success: false, error: 'El monto objetivo debe ser mayor a cero.' };
     }
 
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/wallet/savings-goals`, {
+          method: 'POST',
+          headers: this.getHeaders('STUDENT', undefined, studentId),
+          body: JSON.stringify({
+            title: input.title.trim(),
+            targetAmountCents: input.targetAmountCents,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al crear meta de ahorro' };
+        }
+        const goal: MockSavingsGoal = {
+          id: json.id,
+          studentId: json.studentUserId || studentId,
+          title: json.title,
+          targetAmountCents: json.targetAmountCents,
+          savedAmountCents: json.savedAmountCents || 0,
+          icon: input.icon || '🎯',
+          createdAt: json.createdAt || new Date().toISOString(),
+        };
+        this.savingsGoals.set(goal.id, goal);
+        return { success: true, goal };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     const student = this.students.get(studentId);
     if (!student) {
       return { success: false, error: 'Alumno no encontrado.' };
@@ -1131,6 +1388,27 @@ export class MockMobileApiClient {
   ): Promise<{ success: boolean; goal?: MockSavingsGoal; error?: string }> {
     if (amountCents <= 0) {
       return { success: false, error: 'El monto a separar debe ser mayor a cero.' };
+    }
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/wallet/savings-goals/${goalId}/deposit`, {
+          method: 'POST',
+          headers: this.getHeaders('STUDENT', undefined, studentId),
+          body: JSON.stringify({ amountCents }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al guardar dinero en la meta' };
+        }
+        const goal = this.savingsGoals.get(goalId);
+        if (goal) {
+          goal.savedAmountCents = json.savedAmountCents ?? (goal.savedAmountCents + amountCents);
+        }
+        return { success: true, goal: goal || json };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
     }
 
     const student = this.students.get(studentId);
@@ -1164,6 +1442,26 @@ export class MockMobileApiClient {
   ): Promise<{ success: boolean; goal?: MockSavingsGoal; error?: string }> {
     if (amountCents <= 0) {
       return { success: false, error: 'El monto a liberar debe ser mayor a cero.' };
+    }
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/wallet/savings-goals/${goalId}`, {
+          method: 'DELETE',
+          headers: this.getHeaders('STUDENT', undefined, studentId),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          return { success: false, error: json.message || 'Error al liberar fondos de la meta' };
+        }
+        const goal = this.savingsGoals.get(goalId);
+        if (goal) {
+          goal.savedAmountCents = Math.max(0, goal.savedAmountCents - amountCents);
+        }
+        return { success: true, goal };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
     }
 
     const student = this.students.get(studentId);
@@ -1293,6 +1591,38 @@ export class MockMobileApiClient {
       };
     }
 
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/community/items`, {
+          method: 'POST',
+          headers: this.getHeaders('STUDENT', institutionId, studentId),
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al publicar artículo' };
+        }
+        const item: MockExchangeItem = {
+          id: json.id,
+          studentId: json.studentUserId || studentId,
+          institutionId: json.institutionId || institutionId,
+          studentAlias: 'Alumno',
+          title: json.title,
+          description: json.description,
+          category: json.category,
+          mode: json.mode,
+          status: json.moderationStatus || json.status || 'PENDING',
+          photoUrls: json.photoUrls || [],
+          pickupLocation: json.pickupLocation || 'Punto de Entrega Escolar',
+          createdAt: json.createdAt || new Date().toISOString(),
+        };
+        this.exchangeItems.set(item.id, item);
+        return { success: true, item };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     const student = this.students.get(studentId);
     const studentAlias = student
       ? student.fullName.split(' ')[0] + ' ' + (student.fullName.split(' ')[1]?.[0] || '') + '.'
@@ -1373,6 +1703,18 @@ export class MockMobileApiClient {
   }
 
   public async getLeaderboard(institutionId: string): Promise<LeaderboardEntryDto[]> {
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/community/leaderboard`, {
+          headers: this.getHeaders('STUDENT', institutionId),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json) && json.length > 0) return json;
+        }
+      } catch {}
+    }
+
     const defaultStudentId = '22222222-2222-4222-8222-222222222222';
     const student = this.students.get(defaultStudentId);
     const studentPoints = student?.communityPoints ?? 120;
@@ -1420,6 +1762,18 @@ export class MockMobileApiClient {
   }
 
   public async getSchoolRewards(institutionId: string): Promise<SchoolRewardDto[]> {
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/community/rewards`, {
+          headers: this.getHeaders('STUDENT', institutionId),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json) && json.length > 0) return json;
+        }
+      } catch {}
+    }
+
     return Array.from(this.schoolRewards.values()).filter(
       (r) => r.isActive && r.institutionId === institutionId
     );
@@ -1454,6 +1808,27 @@ export class MockMobileApiClient {
     }
 
     const student = this.students.get(validation.data.studentId);
+
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/community/rewards/redeem`, {
+          method: 'POST',
+          headers: this.getHeaders('STUDENT', undefined, validation.data.studentId),
+          body: JSON.stringify(validation.data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          return { success: false, error: json.message || 'Error al canjear recompensa' };
+        }
+        return {
+          success: true,
+          remainingPoints: json.remainingPoints ?? 0,
+        };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error conectando con el servidor' };
+      }
+    }
+
     if (!student) {
       return {
         success: false,
@@ -1477,6 +1852,81 @@ export class MockMobileApiClient {
       success: true,
       remainingPoints: student.communityPoints,
     };
+  }
+
+  public async fetchCatalogProducts(institutionId?: string): Promise<MockCatalogProduct[]> {
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/kiosk/products`, {
+          headers: this.getHeaders('KIOSK', institutionId),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json) && json.length > 0) {
+            const mapped: MockCatalogProduct[] = json.map((p) => ({
+              id: p.id,
+              institutionId: p.institutionId || institutionId || 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+              name: p.name,
+              category: p.category,
+              priceCents: p.priceCents,
+              stock: p.stock ?? 10,
+              isActive: p.isActive ?? true,
+              icon: p.icon || '🥪',
+            }));
+            mapped.forEach((p) => this.catalog.set(p.id, p));
+            return mapped;
+          }
+        }
+      } catch {}
+    }
+    return this.getCatalogProducts(institutionId);
+  }
+
+  public async fetchExchangeItems(institutionId: string, modeFilter?: ExchangeMode): Promise<MockExchangeItem[]> {
+    if (this.shouldUseRealBackend()) {
+      try {
+        const res = await fetch(`${this.baseUrl}/community/items?status=APPROVED`, {
+          headers: this.getHeaders('STUDENT', institutionId),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json) && json.length > 0) {
+            const mapped: MockExchangeItem[] = json.map((item) => ({
+              id: item.id,
+              studentId: item.studentUserId,
+              institutionId: item.institutionId,
+              studentAlias: 'Alumno',
+              title: item.title,
+              description: item.description,
+              category: item.category,
+              mode: item.mode,
+              status: item.moderationStatus || 'APPROVED',
+              photoUrls: item.photoUrls || [],
+              pickupLocation: item.pickupLocation || 'Punto de Entrega Escolar',
+              createdAt: item.createdAt || new Date().toISOString(),
+            }));
+            mapped.forEach((item) => this.exchangeItems.set(item.id, item));
+            return this.getExchangeItems(institutionId, modeFilter);
+          }
+        }
+      } catch {}
+    }
+    return this.getExchangeItems(institutionId, modeFilter);
+  }
+
+  public async fetchWeeklyParentSummary(studentId: string): Promise<WeeklyParentSummaryDto> {
+    if (this.shouldUseRealBackend()) {
+      try {
+        const student = this.students.get(studentId);
+        const res = await fetch(`${this.baseUrl}/parents/children/${studentId}/weekly-summary`, {
+          headers: this.getHeaders('PARENT', student?.institutionId, student?.parentId),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch {}
+    }
+    return this.getWeeklyParentSummary(studentId);
   }
 }
 

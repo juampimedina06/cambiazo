@@ -6,6 +6,26 @@ import type { InvitationRepositoryPort } from '../../domain/ports/invitation.rep
 export class InMemoryInvitationRepository implements InvitationRepositoryPort {
   private readonly invitations = new Map<string, InstitutionInvitation>();
 
+  constructor() {
+    if (process.env.NODE_ENV !== 'test') {
+      this.seedDefault();
+    }
+  }
+
+  private seedDefault(): void {
+    const defaultInv: InstitutionInvitation = {
+      id: 'inv-belgrano-2026',
+      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      code: 'BELGRANO2026',
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      maxUses: 500,
+      usedCount: 0,
+      createdByUserId: 'admin-1',
+      createdAt: new Date(),
+    };
+    this.invitations.set(defaultInv.id, defaultInv);
+  }
+
   async create(invitation: InstitutionInvitation): Promise<InstitutionInvitation> {
     const clone = { ...invitation };
     this.invitations.set(clone.id, clone);

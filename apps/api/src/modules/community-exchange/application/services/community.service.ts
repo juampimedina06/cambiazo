@@ -316,6 +316,19 @@ export class CommunityService {
     return this.redemptionRepo.save(redemption);
   }
 
+  async listRedemptions(institutionId: string): Promise<RewardRedemption[]> {
+    return this.redemptionRepo.findByInstitution(institutionId);
+  }
+
+  async fulfillRedemption(institutionId: string, redemptionId: string): Promise<RewardRedemption> {
+    const redemption = await this.redemptionRepo.findById(redemptionId);
+    if (!redemption || (institutionId && redemption.institutionId !== institutionId)) {
+      throw new Error('Canje no encontrado');
+    }
+    redemption.status = 'COLLECTED';
+    return this.redemptionRepo.save(redemption);
+  }
+
   // Strict economy separation rule enforcement
   attemptConvertPointsToMoney(): never {
     throw new ProhibitedCommunityConversionException(

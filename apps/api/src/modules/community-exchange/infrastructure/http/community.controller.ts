@@ -95,6 +95,25 @@ export class CommunityController {
     return this.communityService.createReward(user.institutionId!, dto);
   }
 
+  @Get('rewards/redemptions')
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
+  async listRedemptions(
+    @CurrentUser() user: AuthUser,
+    @Query('institutionId') institutionId?: string,
+  ): Promise<RewardRedemption[]> {
+    const instId = user.role === 'SUPER_ADMIN' ? (institutionId || user.institutionId || '') : (user.institutionId || '');
+    return this.communityService.listRedemptions(instId);
+  }
+
+  @Patch('rewards/redemptions/:id/fulfill')
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
+  async fulfillRedemption(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ): Promise<RewardRedemption> {
+    return this.communityService.fulfillRedemption(user.institutionId || '', id);
+  }
+
   @Post('rewards/redeem')
   @Roles('STUDENT')
   @UsePipes(new ZodValidationPipe(RedeemRewardSchema))
