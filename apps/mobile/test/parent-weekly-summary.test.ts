@@ -123,4 +123,33 @@ describe('Parent Weekly Summary & Habits View (WAVE-3-MOBILE-03)', () => {
     const updated = mockApiClient.getWeeklyParentSummary(studentId);
     expect(updated.communityPointsEarned).toBe(170);
   });
+
+  it('generates a valid weekly summary for a newly registered student and normalizes legacy non-UUID student IDs without ZodError', async () => {
+    const reg = await mockApiClient.registerFamily({
+      inviteCode: 'BELGRANO2026',
+      parent: {
+        fullName: 'Laura Pérez',
+        email: 'laura.perez@ejemplo.com',
+        password: 'Password1234',
+        dni: '30112233',
+      },
+      student: {
+        fullName: 'Tomás Pérez',
+        dni: '54112233',
+        grade: '4° Primaria A',
+        dateOfBirth: '2016-03-10',
+      },
+    });
+
+    expect(reg.success).toBe(true);
+    expect(reg.student?.id).toBeDefined();
+
+    // Must not throw ZodError for newly registered student
+    const newStudentSummary = mockApiClient.getWeeklyParentSummary(reg.student!.id);
+    expect(WeeklyParentSummaryDtoSchema.safeParse(newStudentSummary).success).toBe(true);
+
+    // Must not throw ZodError even if passed a legacy non-UUID studentId
+    const legacySummary = mockApiClient.getWeeklyParentSummary('s-1762815000000-abc12');
+    expect(WeeklyParentSummaryDtoSchema.safeParse(legacySummary).success).toBe(true);
+  });
 });

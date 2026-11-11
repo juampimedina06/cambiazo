@@ -1,6 +1,8 @@
 import React from 'react';
+import { ShieldCheck, Clock, ShieldAlert } from 'lucide-react-native';
 import { type ConsentStatus } from '@cambiazo/shared';
 import { Pill, PillVariant } from '../../../shared/ui/Pill';
+import { colors } from '../../../shared/theme/colors';
 
 export interface ConsentStatusBadgeProps {
   status: ConsentStatus;
@@ -11,21 +13,21 @@ export const ConsentStatusBadge: React.FC<ConsentStatusBadgeProps> = ({
   status,
   testID = 'consent-status-badge',
 }) => {
-  const config: Record<ConsentStatus, { label: string; variant: PillVariant; icon: string }> = {
+  const config: Record<ConsentStatus, { label: string; variant: PillVariant; icon: React.ReactNode }> = {
     GRANTED: {
       label: 'Consentimiento Activo',
       variant: 'mint',
-      icon: '✅',
+      icon: <ShieldCheck size={13} color={colors.economy.moneyMintDark} />,
     },
     PENDING: {
       label: 'Firma Pendiente',
       variant: 'warning',
-      icon: '⏳',
+      icon: <Clock size={13} color="#C2410C" />,
     },
     REVOKED: {
       label: 'Consentimiento Revocado',
       variant: 'danger',
-      icon: '🛑',
+      icon: <ShieldAlert size={13} color={colors.status.danger} />,
     },
   };
 

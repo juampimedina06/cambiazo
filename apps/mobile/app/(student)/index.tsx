@@ -1,12 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  PauseCircle,
+  QrCode,
+  Lock,
+  Target,
+  Sparkles,
+  ShoppingBag,
+  Candy,
+  CupSoda,
+  Utensils,
+  Apple,
+  Pencil,
+} from 'lucide-react-native';
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
 import { FlatListItem } from '../../src/shared/ui/FlatListItem';
 import { StudentHeader } from '../../src/entities/student-profile/ui/StudentHeader';
 import { authStore, type AuthState } from '../../src/shared/store/auth-store';
 import { mockApiClient } from '../../src/shared/api/mock-client';
+
+const renderPurchaseIcon = (category?: string) => {
+  switch (category) {
+    case 'CANDY':
+      return <Candy size={20} color={colors.brand.primary} />;
+    case 'DRINK':
+      return <CupSoda size={20} color={colors.brand.primary} />;
+    case 'HOT_MEAL':
+      return <Utensils size={20} color={colors.brand.primary} />;
+    case 'HEALTHY_SNACK':
+      return <Apple size={20} color={colors.economy.moneyMintDark} />;
+    case 'STATIONERY':
+      return <Pencil size={20} color={colors.economy.pointsYellowDark} />;
+    default:
+      return <ShoppingBag size={20} color={colors.brand.primary} />;
+  }
+};
 
 export default function StudentHomeScreen() {
   const router = useRouter();
@@ -69,7 +99,7 @@ export default function StudentHomeScreen() {
       {/* Paused Account Alert */}
       {isPaused && (
         <View style={styles.pausedBanner} testID="banner-student-account-paused">
-          <Text style={styles.pausedIcon}>⏸️</Text>
+          <PauseCircle size={28} color={colors.status.warning} />
           <View style={styles.pausedTextWrapper}>
             <Text style={styles.pausedTitle}>Cuenta Pausada por tu Tutor</Text>
             <Text style={styles.pausedSubtitle}>
@@ -102,6 +132,7 @@ export default function StudentHomeScreen() {
         {/* Protagonist touch button (56px height, rounded-2xl) */}
         <Button
           label={isPaused ? 'Pagos Pausados por Tutor' : 'Pagar en Kiosco (QR)'}
+          icon={!isPaused ? <QrCode size={18} color="#FFFFFF" /> : undefined}
           onPress={() => {
             if (!isPaused) {
               router.push('/(student)/pay-qr');
@@ -115,8 +146,9 @@ export default function StudentHomeScreen() {
 
         {/* Prohibited Transfers/Withdrawals Rule */}
         <View style={styles.prohibitedRuleBox} testID="rule-no-transfer-withdraw">
+          <Lock size={12} color={colors.text.muted} />
           <Text style={styles.prohibitedRuleText}>
-            🔒 Saldo exclusivo para consumos escolares. Prohibido transferir saldo o retirar efectivo.
+            Saldo exclusivo para consumos escolares. Prohibido transferir saldo o retirar efectivo.
           </Text>
         </View>
       </View>
@@ -137,7 +169,7 @@ export default function StudentHomeScreen() {
               return (
                 <FlatListItem
                   key={purchase.id || `rec-${index}`}
-                  icon={purchase.icon || '🛍️'}
+                  icon={renderPurchaseIcon(purchase.category)}
                   title={purchase.itemsSummary}
                   highlightValue={`-$${amountFormatted}`}
                   valueType="neutral"
@@ -154,13 +186,15 @@ export default function StudentHomeScreen() {
         <Text style={styles.sectionTitle}>Comunidad y Educación Financiera</Text>
         <View style={styles.modulesGrid}>
           <Button
-            label="🐖 Mis Metas de Ahorro"
+            label="Mis Metas de Ahorro"
+            icon={<Target size={18} color="#FFFFFF" />}
             onPress={() => router.push('/(student)/wallet/savings-goals')}
             variant="mint"
             testID="btn-student-savings-goals"
           />
           <Button
-            label="🤝 Comunidad de Intercambio Escolar"
+            label="Comunidad de Intercambio Escolar"
+            icon={<Sparkles size={18} color="#FFFFFF" />}
             onPress={() => router.push('/(student)/community')}
             variant="primary"
             testID="btn-student-community"
@@ -275,6 +309,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   prohibitedRuleBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
@@ -286,6 +324,7 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     textAlign: 'center',
     fontWeight: '600',
+    flexShrink: 1,
   },
   recentSection: {
     marginTop: 28,

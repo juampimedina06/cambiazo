@@ -1,11 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  ArrowLeft,
+  PiggyBank,
+  Lightbulb,
+  Lock,
+  Plus,
+  Target,
+  CheckCircle2,
+  BookOpen,
+  Utensils,
+  Palette,
+  Trophy,
+  Briefcase,
+  Pencil,
+} from 'lucide-react-native';
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
+import { NumericStepperField } from '../../../src/shared/ui/NumericStepperField';
 import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
 import { mockApiClient, type MockSavingsGoal } from '../../../src/shared/api/mock-client';
+
+interface GoalIconOption {
+  key: string;
+  label: string;
+  Icon: React.ComponentType<{ size?: number; color?: string }>;
+}
+
+const GOAL_ICON_OPTIONS: GoalIconOption[] = [
+  { key: 'target', label: 'Meta', Icon: Target },
+  { key: 'book', label: 'Libros', Icon: BookOpen },
+  { key: 'food', label: 'Almuerzo', Icon: Utensils },
+  { key: 'art', label: 'Arte', Icon: Palette },
+  { key: 'sport', label: 'Deporte', Icon: Trophy },
+  { key: 'backpack', label: 'Mochila', Icon: Briefcase },
+];
+
+const renderGoalIcon = (iconKey?: string) => {
+  switch (iconKey) {
+    case 'book':
+    case '📚':
+      return <BookOpen size={22} color={colors.brand.primary} />;
+    case 'food':
+    case '🥪':
+      return <Utensils size={22} color={colors.brand.primary} />;
+    case 'art':
+    case '🎨':
+      return <Palette size={22} color={colors.brand.primary} />;
+    case 'sport':
+    case '⚽':
+      return <Trophy size={22} color={colors.brand.primary} />;
+    case 'backpack':
+    case '🎒':
+      return <Briefcase size={22} color={colors.brand.primary} />;
+    case '📐':
+      return <Pencil size={22} color={colors.brand.primary} />;
+    case 'target':
+    case '🎯':
+    default:
+      return <Target size={22} color={colors.brand.primary} />;
+  }
+};
 
 export default function SavingsGoalsScreen() {
   const router = useRouter();
@@ -18,7 +75,7 @@ export default function SavingsGoalsScreen() {
   // Form states for creating goal
   const [newTitle, setNewTitle] = useState('');
   const [newTargetPesos, setNewTargetPesos] = useState('');
-  const [newIcon, setNewIcon] = useState('🎯');
+  const [newIcon, setNewIcon] = useState('target');
   const [createError, setCreateError] = useState('');
 
   // Form states for depositing to goal
@@ -123,9 +180,14 @@ export default function SavingsGoalsScreen() {
           style={styles.backButton}
           testID="btn-savings-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Metas Educativas" variant="primary" icon="🐖" />
+        <Pill
+          label="Metas Educativas"
+          variant="primary"
+          icon={<PiggyBank size={13} color={colors.brand.primary} />}
+        />
       </View>
 
       <Text style={styles.title}>Mis Alcancías</Text>
@@ -139,14 +201,17 @@ export default function SavingsGoalsScreen() {
         <Text style={styles.balanceAmount} testID="text-savings-available-balance">
           ${availableBalanceArs}
         </Text>
-        <Text style={styles.balanceNote}>
-          💡 Podés separar dinero de tu saldo hacia tus metas en cualquier momento.
-        </Text>
+        <View style={styles.balanceNoteRow}>
+          <Lightbulb size={13} color={colors.text.muted} />
+          <Text style={styles.balanceNote}>
+            Podés separar dinero de tu saldo hacia tus metas en cualquier momento.
+          </Text>
+        </View>
       </View>
 
       {/* Invariant Educational Rule Banner */}
       <View style={styles.ruleBanner} testID="banner-educational-savings-rule">
-        <Text style={styles.ruleIcon}>🔒</Text>
+        <Lock size={16} color={colors.brand.primaryDark} />
         <Text style={styles.ruleText}>
           Tus metas de ahorro son educativas y no alteran la regla institucional: el saldo solo se gasta dentro del kiosco escolar y no puede retirarse en efectivo ni transferirse.
         </Text>
@@ -155,7 +220,8 @@ export default function SavingsGoalsScreen() {
       {/* Action to create new goal */}
       <View style={styles.createBtnWrapper}>
         <Button
-          label="+ Crear Nueva Meta de Ahorro"
+          label="Crear Nueva Meta de Ahorro"
+          icon={<Plus size={16} color="#FFFFFF" />}
           onPress={() => setShowCreateModal(true)}
           variant="primary"
           testID="btn-open-create-goal"
@@ -168,7 +234,7 @@ export default function SavingsGoalsScreen() {
 
         {goals.length === 0 ? (
           <View style={styles.emptyContainer} testID="empty-savings-goals">
-            <Text style={styles.emptyIcon}>🎯</Text>
+            <Target size={44} color={colors.text.muted} />
             <Text style={styles.emptyTitle}>Todavía no tenés metas de ahorro</Text>
             <Text style={styles.emptySubtitle}>
               Creá tu primera alcancía para ahorrar para un libro, útiles especiales o un almuerzo saludable en el recreo.
@@ -196,7 +262,7 @@ export default function SavingsGoalsScreen() {
               >
                 <View style={styles.goalHeaderRow}>
                   <View style={styles.goalIconCircle}>
-                    <Text style={styles.goalIconText}>{goal.icon || '🎯'}</Text>
+                    {renderGoalIcon(goal.icon)}
                   </View>
                   <View style={styles.goalTitleWrapper}>
                     <Text style={styles.goalTitle}>{goal.title}</Text>
@@ -205,7 +271,11 @@ export default function SavingsGoalsScreen() {
                     </Text>
                   </View>
                   {isCompleted && (
-                    <Pill label="¡Cumplida!" variant="mint" icon="🎉" />
+                    <Pill
+                      label="¡Cumplida!"
+                      variant="mint"
+                      icon={<CheckCircle2 size={12} color={colors.economy.moneyMintDark} />}
+                    />
                   )}
                 </View>
 
@@ -274,28 +344,37 @@ export default function SavingsGoalsScreen() {
               testID="input-goal-title"
             />
 
-            <Text style={styles.fieldLabel}>Monto a alcanzar ($ ARS)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ej. 2500"
-              placeholderTextColor={colors.text.muted}
-              keyboardType="numeric"
-              value={newTargetPesos}
-              onChangeText={setNewTargetPesos}
+            <NumericStepperField
+              label="Monto a alcanzar ($ ARS)"
+              value={parseInt(newTargetPesos.replace(/\D/g, ''), 10) || 1500}
+              onChange={(val) => setNewTargetPesos(String(val))}
+              min={100}
+              max={100000}
+              step={500}
+              prefix="$"
+              presets={[1500, 2500, 5000, 10000]}
+              allowDirectInput={true}
               testID="input-goal-target"
             />
 
             <Text style={styles.fieldLabel}>Elegí un ícono</Text>
             <View style={styles.iconsPickerRow}>
-              {['📚', '🥪', '🎨', '⚽', '🎯', '🎒'].map((ic) => (
-                <TouchableOpacity
-                  key={ic}
-                  style={[styles.iconPickBtn, newIcon === ic && styles.iconPickBtnSelected]}
-                  onPress={() => setNewIcon(ic)}
-                >
-                  <Text style={styles.iconPickText}>{ic}</Text>
-                </TouchableOpacity>
-              ))}
+              {GOAL_ICON_OPTIONS.map((opt) => {
+                const IconComp = opt.Icon;
+                const isSelected = newIcon === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[styles.iconPickBtn, isSelected && styles.iconPickBtnSelected]}
+                    onPress={() => setNewIcon(opt.key)}
+                  >
+                    <IconComp
+                      size={20}
+                      color={isSelected ? colors.brand.primaryDark : colors.text.secondary}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <View style={styles.modalButtonsRow}>
@@ -328,28 +407,18 @@ export default function SavingsGoalsScreen() {
 
             {depositError ? <Text style={styles.errorText}>{depositError}</Text> : null}
 
-            <Text style={styles.fieldLabel}>¿Cuánto querés separar hoy? ($ ARS)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ej. 500"
-              placeholderTextColor={colors.text.muted}
-              keyboardType="numeric"
-              value={depositPesos}
-              onChangeText={setDepositPesos}
+            <NumericStepperField
+              label="¿Cuánto querés separar hoy? ($ ARS)"
+              value={parseInt(depositPesos.replace(/\D/g, ''), 10) || 500}
+              onChange={(val) => setDepositPesos(String(val))}
+              min={50}
+              max={100000}
+              step={100}
+              prefix="$"
+              presets={[200, 500, 1000, 2000]}
+              allowDirectInput={true}
               testID="input-deposit-amount"
             />
-
-            <View style={styles.quickChipsRow}>
-              {[200, 500, 1000].map((quick) => (
-                <TouchableOpacity
-                  key={quick}
-                  style={styles.quickChip}
-                  onPress={() => setDepositPesos(String(quick))}
-                >
-                  <Text style={styles.quickChipText}>+${quick}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
 
             <View style={styles.modalButtonsRow}>
               <Button
@@ -387,6 +456,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -429,6 +501,11 @@ const styles = StyleSheet.create({
     color: colors.brand.primaryDark,
     marginBottom: 6,
   },
+  balanceNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   balanceNote: {
     fontSize: 12,
     color: colors.text.muted,
@@ -442,9 +519,6 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'center',
     marginBottom: 20,
-  },
-  ruleIcon: {
-    fontSize: 20,
   },
   ruleText: {
     fontSize: 12,
@@ -483,9 +557,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  goalIconText: {
-    fontSize: 22,
   },
   goalTitleWrapper: {
     flex: 1,
@@ -543,9 +614,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
     gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 40,
   },
   emptyTitle: {
     fontSize: 16,
@@ -616,25 +684,6 @@ const styles = StyleSheet.create({
   iconPickBtnSelected: {
     borderColor: colors.brand.primary,
     backgroundColor: colors.brand.primarySoft,
-  },
-  iconPickText: {
-    fontSize: 22,
-  },
-  quickChipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginVertical: 4,
-  },
-  quickChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: colors.brand.primarySoft,
-    borderRadius: 10,
-  },
-  quickChipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.brand.primary,
   },
   modalButtonsRow: {
     flexDirection: 'row',

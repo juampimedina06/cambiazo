@@ -7,6 +7,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
+import { Calendar } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { Button } from './Button';
 
@@ -134,7 +135,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         testID={testID}
       >
         <View style={styles.triggerLeft}>
-          <Text style={styles.calendarIcon}>📅</Text>
+          <Calendar size={20} color={colors.brand.primary} />
           <View>
             <Text style={humanReadable ? styles.valueText : styles.placeholderText}>
               {humanReadable || placeholder}
@@ -409,3 +410,4 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 });
+

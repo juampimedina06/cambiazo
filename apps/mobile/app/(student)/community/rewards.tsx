@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  ArrowLeft,
+  Star,
+  Lock,
+  CheckCircle2,
+  Gift,
+} from 'lucide-react-native';
+import {
   type SchoolRewardDto,
   SchoolRewardSchema,
   RedeemRewardSchema,
@@ -90,9 +97,14 @@ export default function RewardsCatalogScreen() {
           style={styles.backButton}
           testID="btn-rewards-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label={`${pointsCount} Pts`} variant="neutral" icon="⭐" />
+        <Pill
+          label={`${pointsCount} Pts`}
+          variant="neutral"
+          icon={<Star size={13} color={colors.economy.pointsYellowDark} fill={colors.economy.pointsYellow} />}
+        />
       </View>
 
       <Text style={styles.title}>Canjes Escolares</Text>
@@ -103,17 +115,23 @@ export default function RewardsCatalogScreen() {
       {/* Points Balance Banner */}
       <View style={styles.pointsBanner} testID="banner-rewards-balance">
         <Text style={styles.pointsLabel}>Tu Saldo de Puntos Disponibles</Text>
-        <Text style={styles.pointsValue} testID="text-rewards-points-count">
-          ⭐ {pointsCount} Puntos de Comunidad
-        </Text>
-        <Text style={styles.pointsNote}>
-          🔒 Puntos no monetarios acumulados por trueques y donaciones escolares.
-        </Text>
+        <View style={styles.pointsValueRow}>
+          <Star size={24} color={colors.economy.pointsYellowDark} fill={colors.economy.pointsYellow} />
+          <Text style={styles.pointsValue} testID="text-rewards-points-count">
+            {pointsCount} Puntos de Comunidad
+          </Text>
+        </View>
+        <View style={styles.pointsNoteRow}>
+          <Lock size={12} color="#854D0E" />
+          <Text style={styles.pointsNote}>
+            Puntos no monetarios acumulados por trueques y donaciones escolares.
+          </Text>
+        </View>
       </View>
 
       {redeemSuccessMessage ? (
         <View style={styles.successBanner} testID="banner-redeem-success">
-          <Text style={styles.successIcon}>🎉</Text>
+          <CheckCircle2 size={32} color={colors.economy.moneyMintDark} />
           <View style={styles.successTextWrapper}>
             <Text style={styles.successTitle}>¡Canje Confirmado!</Text>
             <Text style={styles.successText}>{redeemSuccessMessage}</Text>
@@ -127,7 +145,7 @@ export default function RewardsCatalogScreen() {
 
         {rewards.length === 0 ? (
           <View style={styles.emptyContainer} testID="empty-rewards-catalog">
-            <Text style={styles.emptyIcon}>🎁</Text>
+            <Gift size={44} color={colors.text.muted} />
             <Text style={styles.emptyTitle}>No hay recompensas activas</Text>
             <Text style={styles.emptySubtitle}>
               Próximamente la institución habilitará nuevos reconocimientos escolares.
@@ -198,13 +216,7 @@ export default function RewardsCatalogScreen() {
               <Text style={styles.modalError}>{errorMessage}</Text>
             ) : null}
 
-            <View style={styles.modalDisclaimer}>
-              <Text style={styles.modalDisclaimerText}>
-                Al confirmar, se descontarán {selectedReward?.pointsCost} puntos de tu saldo comunitario.
-              </Text>
-            </View>
-
-            <View style={styles.modalButtonsRow}>
+            <View style={styles.modalActionsRow}>
               <Button
                 label="Cancelar"
                 onPress={() => setShowConfirmModal(false)}
@@ -240,6 +252,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -277,11 +292,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 4,
   },
+  pointsValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   pointsValue: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     color: colors.economy.pointsYellowDark,
-    marginBottom: 4,
+  },
+  pointsNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
   },
   pointsNote: {
     fontSize: 11,
@@ -298,9 +324,6 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
     marginBottom: 20,
-  },
-  successIcon: {
-    fontSize: 28,
   },
   successTextWrapper: {
     flex: 1,
@@ -360,7 +383,7 @@ const styles = StyleSheet.create({
   costBadge: {
     backgroundColor: colors.economy.pointsYellowSoft,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.economy.pointsYellow,
@@ -375,9 +398,6 @@ const styles = StyleSheet.create({
     paddingVertical: 36,
     gap: 8,
   },
-  emptyIcon: {
-    fontSize: 40,
-  },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '800',
@@ -387,22 +407,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     textAlign: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     lineHeight: 18,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(30, 27, 75, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   modalContent: {
     backgroundColor: colors.background.surface,
-    borderRadius: 24,
     padding: 24,
+    borderRadius: 24,
     width: '100%',
-    maxWidth: 400,
     gap: 12,
   },
   modalTitle: {
@@ -413,24 +432,17 @@ const styles = StyleSheet.create({
   modalSubtitle: {
     fontSize: 14,
     color: colors.text.secondary,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   modalError: {
-    fontSize: 12,
+    backgroundColor: '#FEF2F2',
     color: colors.status.danger,
+    padding: 10,
+    borderRadius: 10,
+    fontSize: 12,
     fontWeight: '600',
   },
-  modalDisclaimer: {
-    backgroundColor: colors.background.divider,
-    padding: 12,
-    borderRadius: 12,
-  },
-  modalDisclaimerText: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    lineHeight: 16,
-  },
-  modalButtonsRow: {
+  modalActionsRow: {
     flexDirection: 'row',
     gap: 10,
     marginTop: 8,

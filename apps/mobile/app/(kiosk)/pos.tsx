@@ -1,11 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  Zap,
+  CheckCircle2,
+  QrCode,
+  AlertCircle,
+  ArrowLeft,
+  Candy,
+  CupSoda,
+  Utensils,
+  Apple,
+  Pencil,
+  ShoppingBag,
+} from 'lucide-react-native';
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
 import { Pill } from '../../src/shared/ui/Pill';
 import { mockApiClient, type MockCatalogProduct } from '../../src/shared/api/mock-client';
 import { ChargeQrRequestSchema } from '@cambiazo/shared';
+
+const renderCatalogIcon = (category: string) => {
+  switch (category) {
+    case 'CANDY':
+      return <Candy size={26} color={colors.brand.primary} />;
+    case 'DRINK':
+      return <CupSoda size={26} color={colors.brand.primary} />;
+    case 'HOT_MEAL':
+      return <Utensils size={26} color={colors.brand.primary} />;
+    case 'HEALTHY_SNACK':
+      return <Apple size={26} color={colors.economy.moneyMintDark} />;
+    case 'STATIONERY':
+      return <Pencil size={26} color={colors.economy.pointsYellowDark} />;
+    default:
+      return <ShoppingBag size={26} color={colors.brand.primary} />;
+  }
+};
 
 interface SelectedItem {
   product: MockCatalogProduct;
@@ -173,9 +203,14 @@ export default function KioskPosScreen() {
           style={styles.backButton}
           testID="btn-pos-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Cobro Recreo < 5s" variant="mint" icon="⚡" />
+        <Pill
+          label="Cobro Recreo < 5s"
+          variant="mint"
+          icon={<Zap size={13} color={colors.economy.moneyMintDark} fill={colors.economy.moneyMintDark} />}
+        />
       </View>
 
       <Text style={styles.title}>Modo Kiosquero POS</Text>
@@ -187,7 +222,7 @@ export default function KioskPosScreen() {
       {chargeSuccess ? (
         <View style={styles.confirmationSurface} testID="surface-charge-success">
           <View style={styles.successBadge}>
-            <Text style={styles.successIcon}>✅</Text>
+            <CheckCircle2 size={44} color={colors.economy.moneyMintDark} />
             <Text style={styles.successTitle}>¡Cobro Exitoso!</Text>
           </View>
 
@@ -247,7 +282,9 @@ export default function KioskPosScreen() {
                     activeOpacity={0.7}
                     testID={`btn-product-${product.id}`}
                   >
-                    <Text style={styles.productIcon}>{product.icon}</Text>
+                    <View style={styles.productIconWrapper}>
+                      {renderCatalogIcon(product.category)}
+                    </View>
                     <Text style={styles.productName} numberOfLines={1}>
                       {product.name}
                     </Text>
@@ -288,7 +325,7 @@ export default function KioskPosScreen() {
               activeOpacity={0.8}
               testID="btn-quick-scan-sim"
             >
-              <Text style={styles.quickScanIcon}>📷</Text>
+              <QrCode size={18} color={colors.brand.primary} />
               <Text style={styles.quickScanText}>Simular Escaneo Instantáneo QR</Text>
             </TouchableOpacity>
 
@@ -331,7 +368,8 @@ export default function KioskPosScreen() {
           {/* Error Message */}
           {errorMessage && (
             <View style={styles.errorBox} testID="box-pos-error">
-              <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+              <AlertCircle size={16} color={colors.status.danger} />
+              <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
 
@@ -369,6 +407,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -439,9 +480,14 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.primary,
     backgroundColor: colors.brand.primarySoft,
   },
-  productIcon: {
-    fontSize: 30,
-    marginBottom: 4,
+  productIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.brand.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   productName: {
     fontSize: 13,
@@ -551,6 +597,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#FEF2F2',
     borderWidth: 1.5,
     borderColor: colors.status.danger,

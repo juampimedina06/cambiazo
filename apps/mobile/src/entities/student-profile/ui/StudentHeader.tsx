@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Star, School } from 'lucide-react-native';
 import { colors } from '../../../shared/theme/colors';
 import { Pill } from '../../../shared/ui/Pill';
 import { LogoPencilC } from '../../../shared/ui/LogoPencilC';
@@ -30,16 +31,19 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
       <View style={styles.brandAndGreeting}>
         <LogoPencilC size="sm" showLabel={false} testID={`${testID}-logo`} />
         <View style={styles.left}>
-          <Text style={styles.greeting}>¡Hola, {firstName}! 👋</Text>
-          <Text style={styles.schoolBadge} numberOfLines={1}>
-            🏫 {institutionName}
-          </Text>
+          <Text style={styles.greeting}>¡Hola, {firstName}!</Text>
+          <View style={styles.schoolRow}>
+            <School size={12} color={colors.text.secondary} />
+            <Text style={styles.schoolBadge} numberOfLines={1}>
+              {institutionName}
+            </Text>
+          </View>
         </View>
       </View>
       <View style={styles.rightActions}>
         <Pill
           label={`${communityPoints} Pts`}
-          icon="⭐"
+          icon={<Star size={13} color={colors.economy.pointsYellowDark} fill={colors.economy.pointsYellow} />}
           variant="points"
           testID={`${testID}-points-pill`}
         />
@@ -91,10 +95,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text.primary,
   },
+  schoolRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
   schoolBadge: {
     fontSize: 13,
     color: colors.text.secondary,
-    marginTop: 2,
     fontWeight: '500',
   },
 });

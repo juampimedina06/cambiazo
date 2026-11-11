@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Zap, QrCode } from 'lucide-react-native';
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
 import { Pill } from '../../src/shared/ui/Pill';
@@ -13,11 +14,17 @@ export default function KioskHomeScreen() {
     <View style={styles.container} testID="screen-kiosk-home">
       <View style={styles.header}>
         <LogoPencilC size="md" showLabel={true} />
-        <Pill label="Modo Kiosco POS" variant="points" icon="⚡" />
+        <Pill
+          label="Modo Kiosco POS"
+          variant="points"
+          icon={<Zap size={13} color={colors.economy.pointsYellowDark} fill={colors.economy.pointsYellowDark} />}
+        />
       </View>
 
       <View style={styles.scannerCard}>
-        <Text style={styles.scannerIcon}>📷</Text>
+        <View style={styles.scannerIconWrapper}>
+          <QrCode size={56} color={colors.brand.primary} />
+        </View>
         <Text style={styles.scannerTitle}>Lector de Código QR</Text>
         <Text style={styles.scannerSubtitle}>
           Cobrá en menos de 3 toques y menos de 5 segundos durante el recreo.
@@ -48,13 +55,24 @@ const styles = StyleSheet.create({
   },
   scannerCard: {
     backgroundColor: colors.background.surface,
-    padding: 24,
+    padding: 28,
     borderRadius: 24,
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  scannerIcon: {
-    fontSize: 48,
+  scannerIconWrapper: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.brand.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   scannerTitle: {
     fontSize: 20,

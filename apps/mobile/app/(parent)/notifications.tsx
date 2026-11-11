@@ -1,11 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  Bell,
+  ArrowLeft,
+  ShoppingBag,
+  Candy,
+  CupSoda,
+  Utensils,
+  Apple,
+  Pencil,
+} from 'lucide-react-native';
 import { colors } from '../../src/shared/theme/colors';
 import { Pill } from '../../src/shared/ui/Pill';
 import { FlatListItem } from '../../src/shared/ui/FlatListItem';
 import { authStore, type AuthState } from '../../src/shared/store/auth-store';
 import { mockApiClient, type MockPurchase } from '../../src/shared/api/mock-client';
+
+const renderPurchaseIcon = (category: string) => {
+  switch (category) {
+    case 'CANDY':
+      return <Candy size={20} color={colors.brand.primary} />;
+    case 'DRINK':
+      return <CupSoda size={20} color={colors.brand.primary} />;
+    case 'HOT_MEAL':
+      return <Utensils size={20} color={colors.brand.primary} />;
+    case 'HEALTHY_SNACK':
+      return <Apple size={20} color={colors.economy.moneyMintDark} />;
+    case 'STATIONERY':
+      return <Pencil size={20} color={colors.economy.pointsYellowDark} />;
+    default:
+      return <ShoppingBag size={20} color={colors.brand.primary} />;
+  }
+};
 
 export default function ParentNotificationsScreen() {
   const router = useRouter();
@@ -42,9 +69,14 @@ export default function ParentNotificationsScreen() {
           style={styles.backButton}
           testID="btn-notifications-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Notificaciones" variant="primary" icon="🔔" />
+        <Pill
+          label="Notificaciones"
+          variant="primary"
+          icon={<Bell size={13} color={colors.brand.primary} />}
+        />
       </View>
 
       <Text style={styles.title}>Alertas de Compra</Text>
@@ -56,7 +88,7 @@ export default function ParentNotificationsScreen() {
       <View style={styles.purchasesContainer} testID="notifications-flat-list">
         {purchases.length === 0 ? (
           <View style={styles.emptyContainer} testID="empty-notifications">
-            <Text style={styles.emptyIcon}>🛍️</Text>
+            <ShoppingBag size={48} color={colors.brand.primarySoft} />
             <Text style={styles.emptyTitle}>Sin consumos registrados</Text>
             <Text style={styles.emptySubtitle}>
               Las compras que realice tu hijo/a en el recreo se mostrarán aquí de forma inmediata.
@@ -71,7 +103,7 @@ export default function ParentNotificationsScreen() {
             return (
               <FlatListItem
                 key={purchase.id || `purchase-${index}`}
-                icon={purchase.icon || '🛍️'}
+                icon={renderPurchaseIcon(purchase.category)}
                 title={`${purchase.itemsSummary} • ${purchase.timestamp}`}
                 highlightValue={`-$${amountFormatted}`}
                 valueType="neutral"

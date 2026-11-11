@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Banknote, ShieldCheck, CheckCircle2, CreditCard, ArrowLeft } from 'lucide-react-native';
 import { colors } from '../../../src/shared/theme/colors';
 import { Button } from '../../../src/shared/ui/Button';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient } from '../../../src/shared/api/mock-client';
+import { ensureUuid, mockApiClient } from '../../../src/shared/api/mock-client';
 import { TopUpPreferenceRequestSchema } from '@cambiazo/shared';
 
 const PRESET_AMOUNTS = [1000, 2000, 5000, 10000];
@@ -51,9 +52,11 @@ export default function ParentTopUpScreen() {
 
     const amountCents = effectiveAmount * 100;
 
+    const validStudentId = ensureUuid(student.id);
+
     // Validate with TopUpPreferenceRequestSchema
     const validation = TopUpPreferenceRequestSchema.safeParse({
-      studentId: student.id,
+      studentId: validStudentId,
       amountCents,
     });
 
@@ -66,7 +69,7 @@ export default function ParentTopUpScreen() {
     setErrorMessage(null);
 
     const res = await mockApiClient.createTopUpPreference({
-      studentId: student.id,
+      studentId: validStudentId,
       amountCents,
     });
 
@@ -121,9 +124,14 @@ export default function ParentTopUpScreen() {
           style={styles.backButton}
           testID="btn-topup-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Carga de Saldo 1 a 1" variant="mint" icon="💵" />
+        <Pill
+          label="Carga de Saldo 1 a 1"
+          variant="mint"
+          icon={<Banknote size={13} color={colors.economy.moneyMintDark} />}
+        />
       </View>
 
       <Text style={styles.title}>Cargar Saldo Escolar</Text>
@@ -133,7 +141,7 @@ export default function ParentTopUpScreen() {
 
       {/* 1:1 Guarantee Banner */}
       <View style={styles.guaranteeBanner} testID="banner-one-to-one">
-        <Text style={styles.guaranteeIcon}>🛡️</Text>
+        <ShieldCheck size={28} color={colors.economy.moneyMintDark} />
         <View style={styles.guaranteeContent}>
           <Text style={styles.guaranteeTitle}>1 a 1 en Pesos Reales ARS</Text>
           <Text style={styles.guaranteeText}>
@@ -197,7 +205,10 @@ export default function ParentTopUpScreen() {
       {/* Success View */}
       {successResult && (
         <View style={styles.successBox} testID="box-topup-success">
-          <Text style={styles.successTitle}>✅ ¡Carga Exitosa!</Text>
+          <View style={styles.successTitleRow}>
+            <CheckCircle2 size={20} color={colors.economy.moneyMintDark} />
+            <Text style={styles.successTitle}>¡Carga Exitosa!</Text>
+          </View>
           <Text style={styles.successText}>
             Acreditaste ${successResult.amountLoaded.toLocaleString('es-AR')} a la billetera de {student?.fullName}.
           </Text>
@@ -219,6 +230,7 @@ export default function ParentTopUpScreen() {
         <View style={styles.ctaContainer}>
           <Button
             label={isProcessing ? 'Conectando...' : `Pagar $${effectiveAmount.toLocaleString('es-AR')} con Mercado Pago`}
+            icon={<CreditCard size={18} color="#FFFFFF" />}
             onPress={handleStartCheckout}
             variant="primary"
             disabled={isProcessing || effectiveAmount <= 0}
@@ -231,7 +243,10 @@ export default function ParentTopUpScreen() {
       {checkoutModalVisible && preferenceData && (
         <View style={styles.checkoutModal} testID="modal-mp-checkout">
           <View style={styles.checkoutHeader}>
-            <Text style={styles.mpLogo}>💙 Mercado Pago</Text>
+            <View style={styles.mpLogoRow}>
+              <CreditCard size={18} color="#009EE3" />
+              <Text style={styles.mpLogo}>Mercado Pago</Text>
+            </View>
             <Text style={styles.checkoutTitle}>Checkout Seguro</Text>
           </View>
           <Text style={styles.checkoutSummary}>
@@ -280,6 +295,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -432,6 +450,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
+  successTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   successTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -468,6 +491,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  mpLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   mpLogo: {
     fontSize: 16,

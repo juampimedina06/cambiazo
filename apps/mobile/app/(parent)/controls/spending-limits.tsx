@@ -1,25 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  ArrowLeft,
+  Candy,
+  CupSoda,
+  Utensils,
+  Apple,
+  Pencil,
+  Ban,
+  CheckCircle2,
+  AlertCircle,
+  Play,
+  Pause,
+} from 'lucide-react-native';
 import { colors } from '../../../src/shared/theme/colors';
 import { Button } from '../../../src/shared/ui/Button';
 import { Pill } from '../../../src/shared/ui/Pill';
+import { NumericStepperField } from '../../../src/shared/ui/NumericStepperField';
 import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient, type MockSpendingLimits } from '../../../src/shared/api/mock-client';
+import { ensureUuid, mockApiClient, type MockSpendingLimits } from '../../../src/shared/api/mock-client';
 import { SpendingLimitsSchema, type ProductCategory } from '@cambiazo/shared';
 
 interface CategoryOption {
   key: ProductCategory;
   label: string;
-  emoji: string;
+  IconComponent: React.ComponentType<{ size?: number; color?: string }>;
 }
 
 const CATEGORY_OPTIONS: CategoryOption[] = [
-  { key: 'CANDY', label: 'Golosinas', emoji: '🍬' },
-  { key: 'DRINK', label: 'Bebidas', emoji: '🥤' },
-  { key: 'HOT_MEAL', label: 'Comidas Calientes', emoji: '🥪' },
-  { key: 'HEALTHY_SNACK', label: 'Snacks Saludables', emoji: '🍎' },
-  { key: 'STATIONERY', label: 'Librería y Útiles', emoji: '✏️' },
+  { key: 'CANDY', label: 'Golosinas', IconComponent: Candy },
+  { key: 'DRINK', label: 'Bebidas', IconComponent: CupSoda },
+  { key: 'HOT_MEAL', label: 'Comidas Calientes', IconComponent: Utensils },
+  { key: 'HEALTHY_SNACK', label: 'Snacks Saludables', IconComponent: Apple },
+  { key: 'STATIONERY', label: 'Librería y Útiles', IconComponent: Pencil },
 ];
 
 export default function SpendingLimitsScreen() {
@@ -78,7 +95,7 @@ export default function SpendingLimitsScreen() {
     const weeklyVal = parseInt(weeklyLimitText.replace(/\D/g, ''), 10) || 0;
 
     const payload = {
-      studentId,
+      studentId: ensureUuid(studentId),
       dailyLimitCents: dailyVal * 100,
       weeklyLimitCents: weeklyVal * 100,
       blockedCategories,
@@ -119,9 +136,14 @@ export default function SpendingLimitsScreen() {
           style={styles.backButton}
           testID="btn-limits-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Control Parental" variant="primary" icon="🛡️" />
+        <Pill
+          label="Control Parental"
+          variant="primary"
+          icon={<Shield size={13} color={colors.brand.primary} />}
+        />
       </View>
 
       <Text style={styles.title}>Límites y Controles</Text>
@@ -138,7 +160,11 @@ export default function SpendingLimitsScreen() {
         testID="card-pause-account"
       >
         <View style={styles.pauseHeader}>
-          <Text style={styles.pauseEmoji}>{isPaused ? '🛑' : '🟢'}</Text>
+          {isPaused ? (
+            <ShieldAlert size={36} color={colors.status.danger} />
+          ) : (
+            <ShieldCheck size={36} color={colors.economy.moneyMintDark} />
+          )}
           <View style={styles.pauseTextContainer}>
             <Text style={styles.pauseTitle}>
               {isPaused ? 'Cuenta Pausada' : 'Cuenta Activa'}
@@ -157,9 +183,16 @@ export default function SpendingLimitsScreen() {
           testID="btn-toggle-pause"
           activeOpacity={0.8}
         >
-          <Text style={styles.pauseToggleText}>
-            {isPaused ? '▶️ Reactivar Cuenta Escolar' : '⏸️ Pausar Cuenta Inmediatamente'}
-          </Text>
+          <View style={styles.pauseBtnContent}>
+            {isPaused ? (
+              <Play size={16} color={colors.text.inverse} fill={colors.text.inverse} />
+            ) : (
+              <Pause size={16} color={colors.text.inverse} fill={colors.text.inverse} />
+            )}
+            <Text style={styles.pauseToggleText}>
+              {isPaused ? 'Reactivar Cuenta Escolar' : 'Pausar Cuenta Inmediatamente'}
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -167,46 +200,42 @@ export default function SpendingLimitsScreen() {
       <View style={styles.sectionSurface} testID="surface-spending-inputs">
         <Text style={styles.sectionTitle}>Topes de Gasto en Pesos (ARS)</Text>
         <Text style={styles.sectionHelp}>
-          Topes de dinero que el alumno tiene permitido gastar en el kiosco.
+          Usá los botones + / − o elegí un monto rápido para fijar cuánto puede gastar por día y por semana.
         </Text>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Tope de Gasto Diario ($ ARS)</Text>
-          <View style={styles.inputRow}>
-            <Text style={styles.currencyPrefix}>$</Text>
-            <TextInput
-              value={dailyLimitText}
-              onChangeText={(text) => {
-                setDailyLimitText(text);
-                setSuccessMessage(null);
-              }}
-              keyboardType="numeric"
-              placeholder="2000"
-              style={styles.numericInput}
-              testID="input-daily-limit"
-            />
-          </View>
-          <Text style={styles.inputHint}>Monto máximo permitido por día de clases</Text>
-        </View>
+        <NumericStepperField
+          label="Tope de Gasto Diario ($ ARS)"
+          value={parseInt(dailyLimitText.replace(/\D/g, ''), 10) || 0}
+          onChange={(val) => {
+            setDailyLimitText(String(val));
+            setSuccessMessage(null);
+          }}
+          min={0}
+          max={100000}
+          step={500}
+          prefix="$"
+          presets={[1500, 2000, 3500, 5000]}
+          allowDirectInput={true}
+          helperText="Monto máximo permitido por día de clases"
+          testID="input-daily-limit"
+        />
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Tope de Gasto Semanal ($ ARS)</Text>
-          <View style={styles.inputRow}>
-            <Text style={styles.currencyPrefix}>$</Text>
-            <TextInput
-              value={weeklyLimitText}
-              onChangeText={(text) => {
-                setWeeklyLimitText(text);
-                setSuccessMessage(null);
-              }}
-              keyboardType="numeric"
-              placeholder="10000"
-              style={styles.numericInput}
-              testID="input-weekly-limit"
-            />
-          </View>
-          <Text style={styles.inputHint}>Monto acumulado máximo para los 5 días de la semana</Text>
-        </View>
+        <NumericStepperField
+          label="Tope de Gasto Semanal ($ ARS)"
+          value={parseInt(weeklyLimitText.replace(/\D/g, ''), 10) || 0}
+          onChange={(val) => {
+            setWeeklyLimitText(String(val));
+            setSuccessMessage(null);
+          }}
+          min={0}
+          max={500000}
+          step={1000}
+          prefix="$"
+          presets={[5000, 10000, 15000, 25000]}
+          allowDirectInput={true}
+          helperText="Monto acumulado máximo para los 5 días de la semana"
+          testID="input-weekly-limit"
+        />
       </View>
 
       {/* Emoji Category Blocking Chips */}
@@ -230,18 +259,33 @@ export default function SpendingLimitsScreen() {
                 testID={`chip-category-${cat.key}`}
                 activeOpacity={0.7}
               >
-                <Text style={styles.chipEmoji}>{cat.emoji}</Text>
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    isBlocked ? styles.chipLabelBlocked : styles.chipLabelAllowed,
-                  ]}
-                >
-                  {cat.label}
-                </Text>
-                <Text style={styles.chipStatusIndicator}>
-                  {isBlocked ? '🚫 Bloqueada' : '✅ Permitida'}
-                </Text>
+                <View style={styles.chipLeft}>
+                  <cat.IconComponent
+                    size={20}
+                    color={isBlocked ? colors.status.danger : colors.brand.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      isBlocked ? styles.chipLabelBlocked : styles.chipLabelAllowed,
+                    ]}
+                  >
+                    {cat.label}
+                  </Text>
+                </View>
+                <View style={styles.chipStatusIndicatorWrapper}>
+                  {isBlocked ? (
+                    <>
+                      <Ban size={13} color={colors.status.danger} />
+                      <Text style={styles.chipStatusBlockedText}>Bloqueada</Text>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={13} color={colors.economy.moneyMintDark} />
+                      <Text style={styles.chipStatusAllowedText}>Permitida</Text>
+                    </>
+                  )}
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -251,12 +295,14 @@ export default function SpendingLimitsScreen() {
       {/* Feedback Messages */}
       {errorMessage && (
         <View style={styles.errorBox} testID="box-limits-error">
-          <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+          <AlertCircle size={16} color={colors.status.danger} />
+          <Text style={styles.errorText}>{errorMessage}</Text>
         </View>
       )}
 
       {successMessage && (
         <View style={styles.successBox} testID="box-limits-success">
+          <CheckCircle2 size={16} color={colors.economy.moneyMintDark} />
           <Text style={styles.successText}>{successMessage}</Text>
         </View>
       )}
@@ -352,6 +398,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  pauseBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   btnPause: {
     backgroundColor: colors.status.danger,
   },
@@ -438,9 +490,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderColor: colors.status.danger,
   },
-  chipEmoji: {
-    fontSize: 20,
-    marginRight: 10,
+  chipLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
   },
   chipLabel: {
     fontSize: 15,
@@ -454,12 +508,25 @@ const styles = StyleSheet.create({
     color: colors.status.danger,
     textDecorationLine: 'line-through',
   },
-  chipStatusIndicator: {
+  chipStatusIndicatorWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chipStatusAllowedText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.text.secondary,
+    color: colors.economy.moneyMintDark,
+  },
+  chipStatusBlockedText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.status.danger,
   },
   errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: colors.status.danger,
@@ -471,8 +538,13 @@ const styles = StyleSheet.create({
     color: colors.status.danger,
     fontSize: 13,
     fontWeight: '600',
+    flex: 1,
   },
   successBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: colors.economy.moneyMintSoft,
     borderWidth: 1.5,
     borderColor: colors.economy.moneyMint,

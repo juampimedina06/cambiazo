@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RegisterParentAndStudentSchema } from '@cambiazo/shared';
 import { mockApiClient } from '../src/shared/api/mock-client';
+import { authStore } from '../src/shared/store/auth-store';
 
 describe('Family Registration (RegisterParentAndStudentSchema)', () => {
   beforeEach(() => {
@@ -74,5 +75,41 @@ describe('Family Registration (RegisterParentAndStudentSchema)', () => {
     expect(result.parent?.fullName).toBe('Carolina Gómez');
     expect(result.student?.fullName).toBe('Mateo Gómez');
     expect(result.student?.consentStatus).toBe('PENDING');
+  });
+
+  it('registers a family with multiple students and allows switching active sibling in authStore', async () => {
+    const result = await mockApiClient.registerFamilyWithMultipleStudents({
+      inviteCode: 'BELGRANO2026',
+      parent: validRegistrationPayload.parent,
+      students: [
+        {
+          fullName: 'Mateo Gómez',
+          dni: '52345678',
+          grade: '6° Primaria A',
+          dateOfBirth: '2014-05-12',
+        },
+        {
+          fullName: 'Sofía Gómez',
+          dni: '55112233',
+          grade: '3° Primaria A',
+          dateOfBirth: '2017-08-24',
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.students?.length).toBe(2);
+    expect(result.student?.fullName).toBe('Mateo Gómez');
+    expect(result.students?.[1]?.fullName).toBe('Sofía Gómez');
+
+    if (result.parent && result.student && result.students) {
+      authStore.setParentSession(result.parent, result.student, result.students);
+      expect(authStore.getState().students.length).toBe(2);
+      expect(authStore.getState().student?.fullName).toBe('Mateo Gómez');
+
+      const sofiaId = result.students[1]!.id;
+      authStore.selectStudent(sofiaId);
+      expect(authStore.getState().student?.fullName).toBe('Sofía Gómez');
+    }
   });
 });

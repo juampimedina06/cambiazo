@@ -7,7 +7,7 @@ export type PillVariant = 'points' | 'primary' | 'mint' | 'warning' | 'danger' |
 export interface PillProps {
   label: string;
   variant?: PillVariant;
-  icon?: string;
+  icon?: React.ReactNode;
   style?: ViewStyle;
   testID?: string;
 }
@@ -53,7 +53,13 @@ export const Pill: React.FC<PillProps> = ({
 }) => {
   return (
     <View style={[styles.base, variantBoxStyles[variant], style]} testID={testID}>
-      {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+      {icon ? (
+        typeof icon === 'string' ? (
+          <Text style={styles.icon}>{icon}</Text>
+        ) : (
+          icon
+        )
+      ) : null}
       <Text style={[styles.text, variantTextStyles[variant]]}>
         {label}
       </Text>

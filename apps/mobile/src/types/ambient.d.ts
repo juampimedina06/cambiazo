@@ -80,8 +80,14 @@ declare module 'react-native' {
     marginLeft?: number;
     marginRight?: number;
     borderRadius?: number;
+    borderTopLeftRadius?: number;
+    borderTopRightRadius?: number;
+    borderBottomLeftRadius?: number;
+    borderBottomRightRadius?: number;
     borderWidth?: number;
     borderColor?: string;
+    borderTopWidth?: number;
+    borderTopColor?: string;
     borderBottomWidth?: number;
     borderBottomColor?: string;
     width?: DimensionValue;
@@ -117,11 +123,13 @@ declare module 'react-native' {
     textDecorationLine?: 'none' | 'underline' | 'line-through' | 'underline line-through';
     letterSpacing?: number;
     textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase';
+    fontVariant?: string[];
   }
 
   export interface ViewProps {
     style?: ViewStyle | TextStyle | (ViewStyle | TextStyle | undefined | null | false)[];
     children?: React.ReactNode;
+    onLayout?: (event: any) => void;
     testID?: string;
   }
 
@@ -138,7 +146,7 @@ declare module 'react-native' {
     placeholder?: string;
     placeholderTextColor?: string;
     secureTextEntry?: boolean;
-    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad';
     autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
     maxLength?: number;
     editable?: boolean;
@@ -162,6 +170,11 @@ declare module 'react-native' {
   export interface ScrollViewProps extends ViewProps {
     contentContainerStyle?: ViewStyle | (ViewStyle | undefined | null | false)[];
     showsVerticalScrollIndicator?: boolean;
+    showsHorizontalScrollIndicator?: boolean;
+    horizontal?: boolean;
+    pagingEnabled?: boolean;
+    onMomentumScrollEnd?: (event: any) => void;
+    ref?: any;
   }
 
   export interface ModalProps {

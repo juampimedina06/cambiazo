@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  ArrowLeft,
+  Trophy,
+  Star,
+  Lock,
+  Award,
+  Handshake,
+  Leaf,
+  Gift,
+} from 'lucide-react-native';
+import {
   type LeaderboardEntryDto,
   LeaderboardEntryDtoSchema,
 } from '@cambiazo/shared';
@@ -53,9 +63,14 @@ export default function LeaderboardScreen() {
           style={styles.backButton}
           testID="btn-leaderboard-back"
         >
-          <Text style={styles.backButtonText}>← Comunidad</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Comunidad</Text>
         </TouchableOpacity>
-        <Pill label="Ranking Solidario" variant="neutral" icon="🏆" />
+        <Pill
+          label="Ranking Solidario"
+          variant="neutral"
+          icon={<Trophy size={13} color={colors.brand.primaryDark} />}
+        />
       </View>
 
       <Text style={styles.title}>Mis Puntos y Ranking</Text>
@@ -66,12 +81,16 @@ export default function LeaderboardScreen() {
       {/* Points Surface (Strictly non-monetary community points) */}
       <View style={styles.pointsSurface} testID="surface-community-points">
         <Text style={styles.pointsLabel}>Tus Puntos de Comunidad</Text>
-        <Text style={styles.pointsValue} testID="text-my-community-points">
-          ⭐ {pointsCount} Pts
-        </Text>
+        <View style={styles.pointsRow}>
+          <Star size={28} color={colors.economy.pointsYellowDark} fill={colors.economy.pointsYellow} />
+          <Text style={styles.pointsValue} testID="text-my-community-points">
+            {pointsCount} Pts
+          </Text>
+        </View>
         <View style={styles.nonMonetaryBox} testID="banner-non-monetary-points">
+          <Lock size={12} color="#854D0E" />
           <Text style={styles.nonMonetaryText}>
-            🔒 Puntos solidarios no monetarios. No tienen valor en dinero ni son canjeables por pesos en efectivo.
+            Puntos solidarios no monetarios. No tienen valor en dinero ni son canjeables por pesos en efectivo.
           </Text>
         </View>
       </View>
@@ -81,17 +100,23 @@ export default function LeaderboardScreen() {
         <Text style={styles.sectionTitle}>Tus Medallas Desbloqueadas</Text>
         <View style={styles.badgesGrid}>
           <View style={styles.badgeCard}>
-            <Text style={styles.badgeIcon}>🏅</Text>
+            <View style={styles.badgeIconCircle}>
+              <Award size={22} color={colors.brand.primary} />
+            </View>
             <Text style={styles.badgeName}>Gran Donante</Text>
             <Text style={styles.badgeDesc}>Donaste útiles al colegio</Text>
           </View>
           <View style={styles.badgeCard}>
-            <Text style={styles.badgeIcon}>🤝</Text>
+            <View style={styles.badgeIconCircle}>
+              <Handshake size={22} color={colors.economy.moneyMintDark} />
+            </View>
             <Text style={styles.badgeName}>Primer Canje</Text>
             <Text style={styles.badgeDesc}>Completaste un intercambio</Text>
           </View>
           <View style={styles.badgeCard}>
-            <Text style={styles.badgeIcon}>🌱</Text>
+            <View style={styles.badgeIconCircle}>
+              <Leaf size={22} color={colors.economy.moneyMint} />
+            </View>
             <Text style={styles.badgeName}>Eco Alumno</Text>
             <Text style={styles.badgeDesc}>Cuidado del medio ambiente</Text>
           </View>
@@ -147,7 +172,8 @@ export default function LeaderboardScreen() {
       {/* Action to Rewards Catalog */}
       <View style={styles.rewardsActionWrapper}>
         <Button
-          label="🎁 Ver Catálogo de Canjes Escolares"
+          label="Ver Catálogo de Canjes Escolares"
+          icon={<Gift size={18} color="#FFFFFF" />}
           onPress={() => router.push('/(student)/community/rewards')}
           variant="mint"
           testID="btn-go-to-rewards"
@@ -171,6 +197,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -208,13 +237,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 4,
   },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
   pointsValue: {
     fontSize: 38,
     fontWeight: '800',
     color: colors.economy.pointsYellowDark,
-    marginBottom: 12,
   },
   nonMonetaryBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -226,6 +263,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
     lineHeight: 15,
+    flexShrink: 1,
   },
   badgesSection: {
     marginBottom: 24,
@@ -253,10 +291,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 16,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
-  badgeIcon: {
-    fontSize: 28,
+  badgeIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.brand.primarySoft,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badgeName: {
     fontSize: 12,

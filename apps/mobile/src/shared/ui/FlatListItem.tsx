@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from '
 import { colors } from '../theme/colors';
 
 export interface FlatListItemProps {
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   highlightValue: string;
   valueType?: 'money' | 'points' | 'neutral';
@@ -31,7 +31,11 @@ export const FlatListItem: React.FC<FlatListItemProps> = ({
     <View style={[styles.row, style]} testID={testID}>
       <View style={styles.left}>
         <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>{icon}</Text>
+          {typeof icon === 'string' ? (
+            <Text style={styles.iconText}>{icon}</Text>
+          ) : (
+            icon
+          )}
         </View>
         <Text style={styles.title} numberOfLines={1}>
           {title}

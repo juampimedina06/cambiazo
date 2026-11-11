@@ -1,6 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  ArrowLeft,
+  Star,
+  MapPin,
+  Plus,
+  Trophy,
+  Gift,
+  RefreshCw,
+  Handshake,
+  BookOpen,
+  Cpu,
+  Briefcase,
+  Pencil,
+  PackageOpen,
+} from 'lucide-react-native';
 import { type ExchangeMode } from '@cambiazo/shared';
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
@@ -9,6 +24,19 @@ import { authStore, type AuthState } from '../../../src/shared/store/auth-store'
 import { mockApiClient, type MockExchangeItem } from '../../../src/shared/api/mock-client';
 
 type FilterTab = 'ALL' | ExchangeMode;
+
+const renderCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'Libros':
+      return <BookOpen size={20} color={colors.brand.primary} />;
+    case 'Tecnología':
+      return <Cpu size={20} color={colors.brand.primary} />;
+    case 'Accesorios':
+      return <Briefcase size={20} color={colors.brand.primary} />;
+    default:
+      return <Pencil size={20} color={colors.brand.primary} />;
+  }
+};
 
 export default function CommunityFeedScreen() {
   const router = useRouter();
@@ -41,11 +69,23 @@ export default function CommunityFeedScreen() {
   const modeBadge = (mode: ExchangeMode) => {
     switch (mode) {
       case 'BARTER':
-        return { label: 'Trueque', variant: 'primary' as const, icon: '🔄' };
+        return {
+          label: 'Trueque',
+          variant: 'primary' as const,
+          icon: <RefreshCw size={11} color={colors.brand.primaryDark} />,
+        };
       case 'DONATION':
-        return { label: 'Donación', variant: 'mint' as const, icon: '🎁' };
+        return {
+          label: 'Donación',
+          variant: 'mint' as const,
+          icon: <Gift size={11} color={colors.economy.moneyMintDark} />,
+        };
       case 'LOAN':
-        return { label: 'Préstamo', variant: 'neutral' as const, icon: '🤝' };
+        return {
+          label: 'Préstamo',
+          variant: 'neutral' as const,
+          icon: <Handshake size={11} color={colors.text.secondary} />,
+        };
     }
   };
 
@@ -63,7 +103,8 @@ export default function CommunityFeedScreen() {
           style={styles.backButton}
           testID="btn-community-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
 
         {/* Non-monetary Points Pill */}
@@ -71,7 +112,11 @@ export default function CommunityFeedScreen() {
           onPress={() => router.push('/(student)/community/leaderboard')}
           activeOpacity={0.8}
         >
-          <Pill label={`${pointsCount} Pts`} variant="neutral" icon="⭐" />
+          <Pill
+            label={`${pointsCount} Pts`}
+            variant="neutral"
+            icon={<Star size={13} color={colors.economy.pointsYellowDark} fill={colors.economy.pointsYellow} />}
+          />
         </TouchableOpacity>
       </View>
 
@@ -82,7 +127,7 @@ export default function CommunityFeedScreen() {
 
       {/* Moderated Pickup Notice Banner */}
       <View style={styles.moderationBanner} testID="banner-moderated-pickup">
-        <Text style={styles.bannerIcon}>📍</Text>
+        <MapPin size={22} color="#2563EB" />
         <View style={styles.bannerTextWrapper}>
           <Text style={styles.bannerTitle}>Punto de Entrega Escolar Moderado</Text>
           <Text style={styles.bannerSubtitle}>
@@ -94,21 +139,24 @@ export default function CommunityFeedScreen() {
       {/* Quick Action Navigation Buttons */}
       <View style={styles.quickActionsRow}>
         <Button
-          label="+ Publicar Útil"
+          label="Publicar Útil"
+          icon={<Plus size={16} color="#FFFFFF" />}
           onPress={() => router.push('/(student)/community/create')}
           variant="primary"
           style={{ flex: 1 }}
           testID="btn-community-create"
         />
         <Button
-          label="🏆 Ranking"
+          label="Ranking"
+          icon={<Trophy size={16} color={colors.brand.primaryDark} />}
           onPress={() => router.push('/(student)/community/leaderboard')}
           variant="secondary"
           style={{ flex: 1 }}
           testID="btn-community-leaderboard"
         />
         <Button
-          label="🎁 Canjes"
+          label="Canjes"
+          icon={<Gift size={16} color="#FFFFFF" />}
           onPress={() => router.push('/(student)/community/rewards')}
           variant="mint"
           style={{ flex: 1 }}
@@ -124,10 +172,10 @@ export default function CommunityFeedScreen() {
             tab === 'ALL'
               ? 'Todos'
               : tab === 'BARTER'
-              ? '🔄 Trueque'
+              ? 'Trueques'
               : tab === 'DONATION'
-              ? '🎁 Donación'
-              : '🤝 Préstamo';
+              ? 'Donaciones'
+              : 'Préstamos';
 
           return (
             <TouchableOpacity
@@ -153,7 +201,7 @@ export default function CommunityFeedScreen() {
       <View style={styles.feedList} testID="community-items-list">
         {items.length === 0 ? (
           <View style={styles.emptyContainer} testID="empty-community-feed">
-            <Text style={styles.emptyIcon}>📦</Text>
+            <PackageOpen size={44} color={colors.text.muted} />
             <Text style={styles.emptyTitle}>No hay útiles en esta categoría</Text>
             <Text style={styles.emptySubtitle}>
               Sé el primero en publicar un útil escolar para compartir con tus compañeros de escuela.
@@ -170,15 +218,7 @@ export default function CommunityFeedScreen() {
               >
                 {/* 1. Icon / Avatar */}
                 <View style={styles.itemIconCircle}>
-                  <Text style={styles.itemIconText}>
-                    {item.category === 'Libros'
-                      ? '📖'
-                      : item.category === 'Tecnología'
-                      ? '🔢'
-                      : item.category === 'Accesorios'
-                      ? '🎒'
-                      : '📐'}
-                  </Text>
+                  {renderCategoryIcon(item.category)}
                 </View>
 
                 {/* 2. Short Title + Subtitle */}
@@ -216,6 +256,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -246,9 +289,6 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
     marginBottom: 16,
-  },
-  bannerIcon: {
-    fontSize: 24,
   },
   bannerTextWrapper: {
     flex: 1,
@@ -293,7 +333,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   feedList: {
-    // Flat on canvas, no card-in-card
     marginTop: 8,
   },
   itemRow: {
@@ -312,9 +351,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  itemIconText: {
-    fontSize: 22,
-  },
   itemContent: {
     flex: 1,
   },
@@ -332,9 +368,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 36,
     gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 40,
   },
   emptyTitle: {
     fontSize: 16,

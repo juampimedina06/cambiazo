@@ -44,9 +44,25 @@ export type RegisterParentAndStudentInput = RegisterParentAndStudentDto;
 export type GrantParentalConsentInput = GrantParentalConsentDto;
 export type RevokeParentalConsentInput = RevokeParentalConsentDto;
 
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function ensureUuid(
+  id?: string | null,
+  fallback = '22222222-2222-4222-8222-222222222222'
+): string {
+  if (!id) return fallback;
+  if (UUID_V4_REGEX.test(id)) return id;
+  let hex = '';
+  for (let i = 0; i < id.length; i++) {
+    hex += id.charCodeAt(i).toString(16).padStart(2, '0');
+  }
+  hex = hex.padEnd(32, '0').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 export function generateUuid(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
   }
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -565,7 +581,7 @@ export class MockMobileApiClient {
           json.parent?.institutionId ||
           'e28bb18a-66fe-4f8e-9092-2df283f55001';
         const parentUser: MockParentUser = {
-          id: json.parentId || json.parent?.id || generateUuid(),
+          id: ensureUuid(json.parentId || json.parent?.id, generateUuid()),
           institutionId: resolvedInstitutionId,
           fullName: json.parent?.fullName || validation.data.parent.fullName,
           email: json.parent?.email || validation.data.parent.email,
@@ -573,7 +589,7 @@ export class MockMobileApiClient {
           phone: json.parent?.phone || validation.data.parent.phone,
         };
         const studentUser: MockStudentUser = {
-          id: json.studentId || json.student?.id || generateUuid(),
+          id: ensureUuid(json.studentId || json.student?.id, generateUuid()),
           institutionId: json.student?.institutionId || resolvedInstitutionId,
           parentId: parentUser.id,
           fullName: json.student?.fullName || validation.data.student.fullName,
@@ -742,6 +758,21 @@ export class MockMobileApiClient {
     return list;
   }
 
+  private resolveStudent(studentId: string): MockStudentUser | undefined {
+    const direct = this.students.get(studentId);
+    if (direct) return direct;
+    const normalized = ensureUuid(studentId, '');
+    if (!normalized) return undefined;
+    const byNormalized = this.students.get(normalized);
+    if (byNormalized) return byNormalized;
+    for (const s of this.students.values()) {
+      if (ensureUuid(s.id, '') === normalized) {
+        return s;
+      }
+    }
+    return undefined;
+  }
+
   /**
    * Grants digital parental consent under Ley 25.326 using GrantParentalConsentSchema.
    */
@@ -758,7 +789,7 @@ export class MockMobileApiClient {
       };
     }
 
-    const student = this.students.get(validation.data.studentId);
+    const student = this.resolveStudent(validation.data.studentId);
 
     if (this.shouldUseRealBackend()) {
       try {
@@ -774,7 +805,7 @@ export class MockMobileApiClient {
         if (student) {
           student.consentStatus = 'GRANTED';
           const record: MockConsentRecord = {
-            id: json.consentId || json.id || generateUuid(),
+            id: json.consentId || json.id || `c-${Date.now()}`,
             studentId: student.id,
             parentId: student.parentId,
             status: 'GRANTED',
@@ -799,7 +830,7 @@ export class MockMobileApiClient {
     }
 
     student.consentStatus = 'GRANTED';
-    const consentId = generateUuid();
+    const consentId = `c-${Date.now()}`;
     const consentRecord: MockConsentRecord = {
       id: consentId,
       studentId: student.id,
@@ -835,7 +866,7 @@ export class MockMobileApiClient {
       };
     }
 
-    const student = this.students.get(validation.data.studentId);
+    const student = this.resolveStudent(validation.data.studentId);
 
     if (this.shouldUseRealBackend()) {
       try {
@@ -851,7 +882,7 @@ export class MockMobileApiClient {
         if (student) {
           student.consentStatus = 'REVOKED';
           const record: MockConsentRecord = {
-            id: json.consentId || json.id || generateUuid(),
+            id: json.consentId || json.id || `c-rev-${Date.now()}`,
             studentId: student.id,
             parentId: student.parentId,
             status: 'REVOKED',
@@ -881,7 +912,7 @@ export class MockMobileApiClient {
     let consentRecord = this.consents.get(student.id);
     if (!consentRecord) {
       consentRecord = {
-        id: generateUuid(),
+        id: `c-rev-${Date.now()}`,
         studentId: student.id,
         parentId: student.parentId,
         status: 'REVOKED',
@@ -914,7 +945,7 @@ export class MockMobileApiClient {
     student?: MockStudentUser;
     reason?: string;
   } {
-    const student = this.students.get(studentId);
+    const student = this.resolveStudent(studentId);
     if (!student) {
       return {
         allowed: false,
@@ -943,7 +974,7 @@ export class MockMobileApiClient {
   }
 
   public getStudent(studentId: string): MockStudentUser | undefined {
-    return this.students.get(studentId);
+    return this.resolveStudent(studentId);
   }
 
   public getParent(parentId: string): MockParentUser | undefined {
@@ -993,7 +1024,7 @@ export class MockMobileApiClient {
       };
     }
 
-    const student = this.students.get(studentId);
+    const student = this.resolveStudent(studentId);
 
     if (this.shouldUseRealBackend()) {
       try {
@@ -1069,7 +1100,7 @@ export class MockMobileApiClient {
       };
     }
 
-    const student = this.students.get(validation.data.studentId);
+    const student = this.resolveStudent(validation.data.studentId);
 
     if (this.shouldUseRealBackend()) {
       try {
@@ -1129,7 +1160,7 @@ export class MockMobileApiClient {
       };
     }
 
-    const student = this.students.get(studentId);
+    const student = this.resolveStudent(studentId);
     if (!student) {
       return {
         success: false,
@@ -1476,8 +1507,11 @@ export class MockMobileApiClient {
   }
 
   public getWeeklyParentSummary(studentId: string): WeeklyParentSummaryDto {
-    const student = this.students.get(studentId) || this.students.get('22222222-2222-4222-8222-222222222222');
-    const studentIdToUse = student ? student.id : '22222222-2222-4222-8222-222222222222';
+    const student =
+      this.resolveStudent(studentId) ||
+      this.students.get('22222222-2222-4222-8222-222222222222');
+    const rawStudentId = student ? student.id : '22222222-2222-4222-8222-222222222222';
+    const validStudentUuid = ensureUuid(rawStudentId);
 
     const now = new Date();
     const startOfWeek = new Date(now);
@@ -1490,10 +1524,12 @@ export class MockMobileApiClient {
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    const studentPurchases = this.purchases.filter((p) => p.studentId === studentIdToUse);
+    const studentPurchases = this.purchases.filter(
+      (p) => p.studentId === rawStudentId || p.studentId === validStudentUuid || p.studentId === studentId
+    );
 
     const recentPurchases: WeeklyPurchaseItemDto[] = studentPurchases.map((p, idx) => {
-      const id = p.id.includes('-') && p.id.length === 36
+      const id = UUID_V4_REGEX.test(p.id)
         ? p.id
         : `44444444-4444-4444-8444-${String(idx + 1).padStart(12, '0')}`;
 
@@ -1527,10 +1563,12 @@ export class MockMobileApiClient {
       };
     });
 
-    const studentBlocked = this.blockedAttempts.filter((b) => b.studentId === studentIdToUse);
+    const studentBlocked = this.blockedAttempts.filter(
+      (b) => b.studentId === rawStudentId || b.studentId === validStudentUuid || b.studentId === studentId
+    );
 
     const summary: WeeklyParentSummaryDto = {
-      studentId: studentIdToUse,
+      studentId: validStudentUuid,
       startDate: startOfWeek.toISOString().split('T')[0]!,
       endDate: endOfWeek.toISOString().split('T')[0]!,
       totalSpentCents,

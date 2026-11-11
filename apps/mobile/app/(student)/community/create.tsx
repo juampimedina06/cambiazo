@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  ArrowLeft,
+  Plus,
+  CheckCircle2,
+  AlertTriangle,
+  MapPin,
+  RefreshCw,
+  Gift,
+  Handshake,
+  BookOpen,
+  Pencil,
+  Cpu,
+  Briefcase,
+  Palette,
+} from 'lucide-react-native';
+import {
   CreateExchangeItemSchema,
   type ExchangeMode,
   type CreateExchangeItemDto,
@@ -9,10 +24,44 @@ import {
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
+import { SelectPickerField, type SelectOption } from '../../../src/shared/ui/SelectPickerField';
 import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
 import { mockApiClient } from '../../../src/shared/api/mock-client';
 
 const categoryOptions = ['Libros', 'Útiles', 'Tecnología', 'Accesorios', 'Arte y Música'];
+
+const categorySelectOptions: SelectOption[] = [
+  {
+    label: 'Libros y Manuales',
+    value: 'Libros',
+    subtitle: 'Novelas, diccionarios y textos escolares',
+    icon: <BookOpen size={18} color={colors.brand.primary} />,
+  },
+  {
+    label: 'Útiles Escolares',
+    value: 'Útiles',
+    subtitle: 'Reglas, cartucheras, compás, carpetas',
+    icon: <Pencil size={18} color={colors.brand.primary} />,
+  },
+  {
+    label: 'Tecnología Educativa',
+    value: 'Tecnología',
+    subtitle: 'Calculadoras científicas y accesorios',
+    icon: <Cpu size={18} color={colors.brand.primary} />,
+  },
+  {
+    label: 'Accesorios y Mochilas',
+    value: 'Accesorios',
+    subtitle: 'Mochilas, botellas térmicas, loncheras',
+    icon: <Briefcase size={18} color={colors.brand.primary} />,
+  },
+  {
+    label: 'Arte y Música',
+    value: 'Arte y Música',
+    subtitle: 'Acuarelas, pinceles, instrumentos',
+    icon: <Palette size={18} color={colors.brand.primary} />,
+  },
+];
 
 export default function CreateExchangeItemScreen() {
   const router = useRouter();
@@ -67,13 +116,16 @@ export default function CreateExchangeItemScreen() {
   if (isSuccess) {
     return (
       <View style={styles.successContainer} testID="success-create-item-screen">
-        <Text style={styles.successIcon}>🎉</Text>
+        <CheckCircle2 size={56} color={colors.economy.moneyMintDark} />
         <Text style={styles.successTitle}>¡Útil Enviado a Moderación!</Text>
         <Text style={styles.successSubtitle}>
           Tu publicación quedó registrada en estado PENDIENTE. Quedará visible en el feed escolar en cuanto el directivo o moderador escolar la apruebe.
         </Text>
         <View style={styles.successReminderBox}>
-          <Text style={styles.reminderTitle}>📍 Recordatorio de Entrega</Text>
+          <View style={styles.reminderTitleRow}>
+            <MapPin size={16} color="#1E40AF" />
+            <Text style={styles.reminderTitle}>Recordatorio de Entrega</Text>
+          </View>
           <Text style={styles.reminderText}>
             La entrega física de los útiles se realiza siempre en el Punto de Entrega Escolar Moderado del colegio bajo supervisión docente.
           </Text>
@@ -103,9 +155,14 @@ export default function CreateExchangeItemScreen() {
           style={styles.backButton}
           testID="btn-create-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Publicar" variant="primary" icon="📝" />
+        <Pill
+          label="Publicar"
+          variant="primary"
+          icon={<Plus size={13} color={colors.brand.primary} />}
+        />
       </View>
 
       <Text style={styles.title}>Publicar Útil Escolar</Text>
@@ -115,7 +172,7 @@ export default function CreateExchangeItemScreen() {
 
       {/* Mandatory Moderation Warning Banner */}
       <View style={styles.moderationNotice} testID="banner-moderation-disclaimer">
-        <Text style={styles.noticeIcon}>⚠️</Text>
+        <AlertTriangle size={22} color="#D97706" />
         <View style={styles.noticeTextWrapper}>
           <Text style={styles.noticeTitle}>Aviso de Moderación y Entrega Escolar</Text>
           <Text style={styles.noticeText}>
@@ -150,10 +207,12 @@ export default function CreateExchangeItemScreen() {
             const isSelected = mode === m;
             const label =
               m === 'BARTER'
-                ? '🔄 Trueque'
+                ? 'Trueque'
                 : m === 'DONATION'
-                ? '🎁 Donación'
-                : '🤝 Préstamo';
+                ? 'Donación'
+                : 'Préstamo';
+            const IconComp =
+              m === 'BARTER' ? RefreshCw : m === 'DONATION' ? Gift : Handshake;
 
             return (
               <TouchableOpacity
@@ -162,6 +221,10 @@ export default function CreateExchangeItemScreen() {
                 onPress={() => setMode(m)}
                 testID={`btn-mode-${m.toLowerCase()}`}
               >
+                <IconComp
+                  size={15}
+                  color={isSelected ? colors.brand.primaryDark : colors.text.secondary}
+                />
                 <Text
                   style={[
                     styles.modeButtonText,
@@ -176,7 +239,14 @@ export default function CreateExchangeItemScreen() {
         </View>
 
         {/* 3. Category */}
-        <Text style={styles.fieldLabel}>Categoría</Text>
+        <SelectPickerField
+          label="Categoría del Útil"
+          value={category}
+          options={categorySelectOptions}
+          onChange={setCategory}
+          placeholder="Seleccionar categoría"
+          testID="select-item-category"
+        />
         <View style={styles.categoriesRow}>
           {categoryOptions.map((cat) => {
             const isSelected = category === cat;
@@ -252,6 +322,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -282,9 +355,6 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
     marginBottom: 20,
-  },
-  noticeIcon: {
-    fontSize: 22,
   },
   noticeTextWrapper: {
     flex: 1,
@@ -330,12 +400,15 @@ const styles = StyleSheet.create({
   },
   modeButton: {
     flex: 1,
+    flexDirection: 'row',
+    gap: 6,
     paddingVertical: 12,
     borderRadius: 14,
     backgroundColor: colors.background.surface,
     borderWidth: 1.5,
     borderColor: colors.background.divider,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modeButtonSelected: {
     borderColor: colors.brand.primary,
@@ -394,9 +467,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  successIcon: {
-    fontSize: 48,
-  },
   successTitle: {
     fontSize: 22,
     fontWeight: '800',
@@ -418,6 +488,11 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 6,
     width: '100%',
+  },
+  reminderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   reminderTitle: {
     fontSize: 13,

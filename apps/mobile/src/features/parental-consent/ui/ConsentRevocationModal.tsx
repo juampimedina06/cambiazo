@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, SafeAreaView } from 'react-native';
+import { AlertTriangle } from 'lucide-react-native';
 import { RevokeParentalConsentSchema } from '@cambiazo/shared';
 import { colors } from '../../../shared/theme/colors';
 import { Button } from '../../../shared/ui/Button';
 import { Input } from '../../../shared/ui/Input';
 import { Pill } from '../../../shared/ui/Pill';
 import { useParentalConsent } from '../hooks/useParentalConsent';
+import { ensureUuid } from '../../../shared/api/mock-client';
 
 export interface ConsentRevocationModalProps {
   visible: boolean;
@@ -30,8 +32,9 @@ export const ConsentRevocationModal: React.FC<ConsentRevocationModalProps> = ({
 
   const handleConfirmRevocation = async () => {
     const trimmed = reason.trim();
+    const validStudentId = ensureUuid(studentId);
     const validation = RevokeParentalConsentSchema.safeParse({
-      studentId,
+      studentId: validStudentId,
       reason: trimmed,
     });
 
@@ -42,7 +45,7 @@ export const ConsentRevocationModal: React.FC<ConsentRevocationModalProps> = ({
 
     setReasonError(null);
     const result = await revokeConsent({
-      studentId,
+      studentId: validStudentId,
       reason: trimmed,
     });
 
@@ -62,7 +65,11 @@ export const ConsentRevocationModal: React.FC<ConsentRevocationModalProps> = ({
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container} testID={testID}>
-          <Pill label="Acción de Seguridad" variant="danger" icon="🛑" />
+          <Pill
+            label="Acción de Seguridad"
+            variant="danger"
+            icon={<AlertTriangle size={13} color={colors.status.danger} />}
+          />
 
           <Text style={styles.title}>Revocar Consentimiento Escolar</Text>
           <Text style={styles.subtitle}>
@@ -71,7 +78,10 @@ export const ConsentRevocationModal: React.FC<ConsentRevocationModalProps> = ({
           </Text>
 
           <View style={styles.warningBox}>
-            <Text style={styles.warningTitle}>⚠️ Efecto Inmediato (Ley 25.326)</Text>
+            <View style={styles.warningTitleRow}>
+              <AlertTriangle size={15} color={colors.status.danger} />
+              <Text style={styles.warningTitle}>Efecto Inmediato (Ley 25.326)</Text>
+            </View>
             <Text style={styles.warningText}>
               El saldo restante en pesos queda resguardado y seguro en la cuenta familiar. Podrás reactivar el
               consentimiento en cualquier momento.
@@ -149,11 +159,16 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 24,
   },
+  warningTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
   warningTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: '#C2410C',
-    marginBottom: 6,
   },
   warningText: {
     fontSize: 14,

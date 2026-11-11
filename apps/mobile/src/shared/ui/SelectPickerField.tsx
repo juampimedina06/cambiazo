@@ -7,13 +7,14 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
+import { ChevronDown, Check } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 
 export interface SelectOption {
   label: string;
   value: string;
   subtitle?: string;
-  icon?: string;
+  icon?: React.ReactNode;
 }
 
 export interface SelectPickerFieldProps {
@@ -57,7 +58,11 @@ export const SelectPickerField: React.FC<SelectPickerFieldProps> = ({
       >
         <View style={styles.triggerLeft}>
           {selectedOption?.icon ? (
-            <Text style={styles.optionIcon}>{selectedOption.icon}</Text>
+            typeof selectedOption.icon === 'string' ? (
+              <Text style={styles.optionIcon}>{selectedOption.icon}</Text>
+            ) : (
+              <View style={styles.optionIconWrapper}>{selectedOption.icon}</View>
+            )
           ) : null}
           <View>
             <Text style={selectedOption ? styles.valueText : styles.placeholderText}>
@@ -69,7 +74,7 @@ export const SelectPickerField: React.FC<SelectPickerFieldProps> = ({
           </View>
         </View>
         <View style={styles.chevronBadge}>
-          <Text style={styles.chevronText}>▼</Text>
+          <ChevronDown size={14} color={colors.brand.primaryDark} />
         </View>
       </TouchableOpacity>
 
@@ -104,7 +109,13 @@ export const SelectPickerField: React.FC<SelectPickerFieldProps> = ({
                     testID={`select-option-${opt.value}`}
                   >
                     <View style={styles.optionItemLeft}>
-                      {opt.icon ? <Text style={styles.optionItemIcon}>{opt.icon}</Text> : null}
+                      {opt.icon ? (
+                        typeof opt.icon === 'string' ? (
+                          <Text style={styles.optionItemIcon}>{opt.icon}</Text>
+                        ) : (
+                          <View style={styles.optionIconWrapper}>{opt.icon}</View>
+                        )
+                      ) : null}
                       <View>
                         <Text
                           style={[
@@ -119,7 +130,7 @@ export const SelectPickerField: React.FC<SelectPickerFieldProps> = ({
                         ) : null}
                       </View>
                     </View>
-                    {isSelected ? <Text style={styles.checkMark}>✓</Text> : null}
+                    {isSelected ? <Check size={18} color={colors.brand.primary} /> : null}
                   </TouchableOpacity>
                 );
               })}
@@ -166,6 +177,10 @@ const styles = StyleSheet.create({
   },
   optionIcon: {
     fontSize: 20,
+  },
+  optionIconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   valueText: {
     fontSize: 16,
@@ -298,3 +313,4 @@ const styles = StyleSheet.create({
     color: colors.brand.primary,
   },
 });
+

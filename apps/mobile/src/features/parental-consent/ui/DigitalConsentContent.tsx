@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Scale, Lock, ShoppingBag, RefreshCw, ShieldCheck } from 'lucide-react-native';
 import { colors } from '../../../shared/theme/colors';
 import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { useParentalConsent } from '../hooks/useParentalConsent';
-import { type MockStudentUser } from '../../../shared/api/mock-client';
+import { ensureUuid, type MockStudentUser } from '../../../shared/api/mock-client';
 
 export interface DigitalConsentContentProps {
   student: MockStudentUser;
@@ -33,10 +34,7 @@ export const DigitalConsentContent: React.FC<DigitalConsentContentProps> = ({
   const handleSign = async () => {
     if (!acceptedCheckbox) return;
 
-    let targetStudentId = student.id;
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetStudentId)) {
-      targetStudentId = '22222222-2222-4222-8222-222222222222';
-    }
+    const targetStudentId = ensureUuid(student.id);
 
     const result = await grantConsent({
       studentId: targetStudentId,
@@ -57,8 +55,16 @@ export const DigitalConsentContent: React.FC<DigitalConsentContentProps> = ({
       testID={testID}
     >
       <View style={styles.badgeRow}>
-        <Pill label="Ley Nacional 25.326" variant="primary" icon="⚖️" />
-        <Pill label="Firma Digital Auditable" variant="mint" icon="🔒" />
+        <Pill
+          label="Ley Nacional 25.326"
+          variant="primary"
+          icon={<Scale size={13} color={colors.brand.primaryDark} />}
+        />
+        <Pill
+          label="Firma Digital Auditable"
+          variant="mint"
+          icon={<Lock size={13} color={colors.economy.moneyMintDark} />}
+        />
       </View>
 
       <Text style={styles.title}>Autorización y Consentimiento Parental</Text>
@@ -82,7 +88,9 @@ export const DigitalConsentContent: React.FC<DigitalConsentContentProps> = ({
         <Text style={styles.legalHeading}>¿Qué autorizás en términos simples?</Text>
 
         <View style={styles.bulletItem}>
-          <Text style={styles.bulletIcon}>🍔</Text>
+          <View style={styles.bulletIconWrapper}>
+            <ShoppingBag size={22} color={colors.brand.primary} />
+          </View>
           <View style={styles.bulletTextWrapper}>
             <Text style={styles.bulletTitle}>Consumos del Kiosco Escolar</Text>
             <Text style={styles.bulletText}>
@@ -92,7 +100,9 @@ export const DigitalConsentContent: React.FC<DigitalConsentContentProps> = ({
         </View>
 
         <View style={styles.bulletItem}>
-          <Text style={styles.bulletIcon}>🔄</Text>
+          <View style={styles.bulletIconWrapper}>
+            <RefreshCw size={22} color={colors.brand.primary} />
+          </View>
           <View style={styles.bulletTextWrapper}>
             <Text style={styles.bulletTitle}>Comunidad de Útiles Escolares</Text>
             <Text style={styles.bulletText}>
@@ -102,7 +112,9 @@ export const DigitalConsentContent: React.FC<DigitalConsentContentProps> = ({
         </View>
 
         <View style={styles.bulletItem}>
-          <Text style={styles.bulletIcon}>🛡️</Text>
+          <View style={styles.bulletIconWrapper}>
+            <ShieldCheck size={22} color={colors.brand.primary} />
+          </View>
           <View style={styles.bulletTextWrapper}>
             <Text style={styles.bulletTitle}>Protección de Datos y Control Total</Text>
             <Text style={styles.bulletText}>
@@ -216,8 +228,13 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'flex-start',
   },
-  bulletIcon: {
-    fontSize: 24,
+  bulletIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.brand.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 2,
   },
   bulletTextWrapper: {

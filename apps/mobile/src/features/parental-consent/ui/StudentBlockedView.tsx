@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { ShieldAlert, FileText, Lightbulb } from 'lucide-react-native';
 import { type ConsentStatus } from '@cambiazo/shared';
 import { colors } from '../../../shared/theme/colors';
 import { Button } from '../../../shared/ui/Button';
@@ -38,7 +39,13 @@ export const StudentBlockedView: React.FC<StudentBlockedViewProps> = ({
       </View>
 
       <View style={styles.illustrationBox}>
-        <Text style={styles.bigEmoji}>{isRevoked ? '🛡️' : '📝'}</Text>
+        <View style={styles.iconCircle}>
+          {isRevoked ? (
+            <ShieldAlert size={44} color={colors.status.danger} />
+          ) : (
+            <FileText size={44} color={colors.brand.primary} />
+          )}
+        </View>
         <ConsentStatusBadge status={consentStatus} testID="blocked-consent-status-badge" />
       </View>
 
@@ -53,7 +60,9 @@ export const StudentBlockedView: React.FC<StudentBlockedViewProps> = ({
       </Text>
 
       <View style={styles.hintBox}>
-        <Text style={styles.hintIcon}>💡</Text>
+        <View style={styles.hintIconWrapper}>
+          <Lightbulb size={20} color={colors.economy.pointsYellowDark} />
+        </View>
         <View style={styles.hintTextWrapper}>
           <Text style={styles.hintTitle}>¿Qué podés hacer ahora?</Text>
           <Text style={styles.hintDesc}>
@@ -105,8 +114,14 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
   },
-  bigEmoji: {
-    fontSize: 56,
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: colors.brand.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   title: {
     fontSize: 24,
@@ -133,8 +148,13 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.primarySoft,
     marginBottom: 32,
   },
-  hintIcon: {
-    fontSize: 22,
+  hintIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.economy.pointsYellowSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 2,
   },
   hintTextWrapper: {

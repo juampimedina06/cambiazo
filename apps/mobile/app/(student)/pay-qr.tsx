@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { ArrowLeft, Zap, AlertTriangle, Clock, RefreshCw } from 'lucide-react-native';
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
 import { Pill } from '../../src/shared/ui/Pill';
@@ -92,9 +93,14 @@ export default function PayQrScreen() {
           style={styles.backButton}
           testID="btn-pay-qr-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Billetera Escolar" variant="primary" icon="⚡" />
+        <Pill
+          label="Billetera Escolar"
+          variant="primary"
+          icon={<Zap size={13} color={colors.brand.primary} fill={colors.brand.primary} />}
+        />
       </View>
 
       <Text style={styles.title}>Pagar en Kiosco</Text>
@@ -104,7 +110,10 @@ export default function PayQrScreen() {
 
       {errorMessage ? (
         <View style={styles.errorBox} testID="box-qr-error">
-          <Text style={styles.errorTitle}>⚠️ Pago No Disponible</Text>
+          <View style={styles.errorTitleRow}>
+            <AlertTriangle size={18} color={colors.status.danger} />
+            <Text style={styles.errorTitle}>Pago No Disponible</Text>
+          </View>
           <Text style={styles.errorText}>{errorMessage}</Text>
           <Button
             label="Volver a Mi Billetera"
@@ -120,7 +129,7 @@ export default function PayQrScreen() {
           <View style={[styles.qrFrame, isExpired && styles.qrFrameExpired]} testID="qr-code-frame">
             {isExpired ? (
               <View style={styles.expiredOverlay}>
-                <Text style={styles.expiredIcon}>⏳</Text>
+                <Clock size={44} color={colors.text.muted} />
                 <Text style={styles.expiredLabel}>Código Expirado</Text>
                 <Text style={styles.expiredHelp}>
                   Por seguridad, los códigos duran 2 minutos. Generá uno nuevo para pagar.
@@ -158,7 +167,11 @@ export default function PayQrScreen() {
 
           {/* 120s Countdown Timer */}
           <View style={styles.timerBadge} testID="badge-timer-countdown">
-            <Text style={styles.timerEmoji}>{isExpired ? '⚠️' : '⏱️'}</Text>
+            {isExpired ? (
+              <AlertTriangle size={16} color={colors.status.danger} />
+            ) : (
+              <Clock size={16} color={colors.brand.primary} />
+            )}
             <Text style={[styles.timerText, isExpired && styles.timerTextExpired]} testID="text-countdown-seconds">
               {isExpired ? 'Código vencido' : `Vence en ${secondsRemaining}s`}
             </Text>
@@ -179,7 +192,8 @@ export default function PayQrScreen() {
               style={styles.manualRefreshLink}
               testID="link-manual-refresh"
             >
-              <Text style={styles.manualRefreshText}>🔄 Actualizar código ahora</Text>
+              <RefreshCw size={14} color={colors.brand.primary} />
+              <Text style={styles.manualRefreshText}>Actualizar código ahora</Text>
             </TouchableOpacity>
           )}
 
@@ -218,6 +232,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -369,6 +386,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   manualRefreshLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: 8,
     marginBottom: 12,
   },
@@ -405,6 +425,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 8,
     alignItems: 'center',
+  },
+  errorTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   errorTitle: {
     fontSize: 16,

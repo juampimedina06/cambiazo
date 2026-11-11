@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, View, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors } from '../theme/colors';
 import { layout } from '../theme/layout';
 
@@ -11,6 +11,7 @@ export interface ButtonProps {
   variant?: ButtonVariant;
   disabled?: boolean;
   fullWidth?: boolean;
+  icon?: React.ReactNode;
   style?: ViewStyle;
   testID?: string;
 }
@@ -39,6 +40,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   disabled = false,
   fullWidth = true,
+  icon,
   style,
   testID,
 }) => {
@@ -64,7 +66,10 @@ export const Button: React.FC<ButtonProps> = ({
       style={containerStyles as any}
       testID={testID}
     >
-      <Text style={textStyles as any}>{label}</Text>
+      <View style={styles.contentRow}>
+        {icon}
+        <Text style={textStyles as any}>{label}</Text>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -77,6 +82,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 14,
+  },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   fullWidth: {
     width: '100%',

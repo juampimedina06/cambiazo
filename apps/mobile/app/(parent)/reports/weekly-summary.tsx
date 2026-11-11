@@ -2,6 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  BarChart3,
+  ArrowLeft,
+  Calendar,
+  Lock,
+  ShieldAlert,
+  CheckCircle2,
+  Star,
+  Award,
+  Sparkles,
+  Apple,
+  Utensils,
+  CupSoda,
+  Candy,
+  Pencil,
+  ShoppingBag,
+} from 'lucide-react-native';
+import {
   type WeeklyParentSummaryDto,
   WeeklyParentSummaryDtoSchema,
   type ProductCategory,
@@ -12,12 +29,20 @@ import { FlatListItem } from '../../../src/shared/ui/FlatListItem';
 import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
 import { mockApiClient, type MockBlockedAttempt } from '../../../src/shared/api/mock-client';
 
-const categoryLabels: Record<ProductCategory, { label: string; icon: string }> = {
-  HEALTHY_SNACK: { label: 'Snacks Saludables', icon: '🍎' },
-  HOT_MEAL: { label: 'Comida Caliente', icon: '🥪' },
-  DRINK: { label: 'Bebidas', icon: '🧃' },
-  CANDY: { label: 'Golosinas', icon: '🍫' },
-  STATIONERY: { label: 'Librería y Útiles', icon: '📓' },
+const categoryIcons: Record<ProductCategory, React.ComponentType<{ size?: number; color?: string }>> = {
+  HEALTHY_SNACK: Apple,
+  HOT_MEAL: Utensils,
+  DRINK: CupSoda,
+  CANDY: Candy,
+  STATIONERY: Pencil,
+};
+
+const categoryLabels: Record<ProductCategory, { label: string }> = {
+  HEALTHY_SNACK: { label: 'Snacks Saludables' },
+  HOT_MEAL: { label: 'Comida Caliente' },
+  DRINK: { label: 'Bebidas' },
+  CANDY: { label: 'Golosinas' },
+  STATIONERY: { label: 'Librería y Útiles' },
 };
 
 export default function WeeklySummaryScreen() {
@@ -72,18 +97,26 @@ export default function WeeklySummaryScreen() {
           style={styles.backButton}
           testID="btn-weekly-summary-back"
         >
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <ArrowLeft size={16} color={colors.brand.primary} />
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
-        <Pill label="Hábitos y Consumo" variant="primary" icon="📊" />
+        <Pill
+          label="Hábitos y Consumo"
+          variant="primary"
+          icon={<BarChart3 size={13} color={colors.brand.primary} />}
+        />
       </View>
 
       <Text style={styles.title}>Resumen Semanal</Text>
       <Text style={styles.subtitle}>
         Seguimiento de consumos escolares de {student?.fullName || 'Mateo Gómez'}
       </Text>
-      <Text style={styles.dateRangeText}>
-        📅 Período: {summary.startDate} al {summary.endDate}
-      </Text>
+      <View style={styles.dateRangeRow}>
+        <Calendar size={14} color={colors.text.secondary} />
+        <Text style={styles.dateRangeText}>
+          Período: {summary.startDate} al {summary.endDate}
+        </Text>
+      </View>
 
       {/* 1. TOTAL SPENT SURFACE (Clean surface, no card-in-card) */}
       <View style={styles.totalSurface} testID="surface-total-spent">
@@ -91,9 +124,12 @@ export default function WeeklySummaryScreen() {
         <Text style={styles.totalAmount} testID="text-total-spent-amount">
           ${totalSpentFormatted}
         </Text>
-        <Text style={styles.totalDisclaimer}>
-          🔒 Saldo prepago 1 a 1 consumido exclusivamente dentro de la institución escolar.
-        </Text>
+        <View style={styles.disclaimerRow}>
+          <Lock size={12} color={colors.text.muted} />
+          <Text style={styles.totalDisclaimer}>
+            Saldo prepago 1 a 1 consumido exclusivamente dentro de la institución escolar.
+          </Text>
+        </View>
       </View>
 
       {/* 2. CATEGORY BREAKDOWN SECTION */}
@@ -105,7 +141,8 @@ export default function WeeklySummaryScreen() {
 
         <View style={styles.breakdownList}>
           {summary.breakdownByCategory.map((catItem) => {
-            const meta = categoryLabels[catItem.category] || { label: catItem.category, icon: '📦' };
+            const CategoryIcon = categoryIcons[catItem.category] || ShoppingBag;
+            const catLabel = categoryLabels[catItem.category]?.label || catItem.category;
             const amountFormatted = (catItem.amountCents / 100).toLocaleString('es-AR', {
               minimumFractionDigits: 0,
               maximumFractionDigits: 0,
@@ -118,9 +155,10 @@ export default function WeeklySummaryScreen() {
                 testID={`breakdown-row-${catItem.category}`}
               >
                 <View style={styles.breakdownHeaderRow}>
-                  <Text style={styles.categoryName}>
-                    {meta.icon} {meta.label}
-                  </Text>
+                  <View style={styles.categoryNameRow}>
+                    <CategoryIcon size={16} color={colors.brand.primary} />
+                    <Text style={styles.categoryName}>{catLabel}</Text>
+                  </View>
                   <Text style={styles.categoryAmount}>
                     ${amountFormatted} ({catItem.percentage}%)
                   </Text>
@@ -155,9 +193,12 @@ export default function WeeklySummaryScreen() {
 
         {summary.blockedAttemptsCount > 0 ? (
           <View style={styles.alertBlockedBox} testID="alert-blocked-attempts">
-            <Text style={styles.alertBlockedTitle}>
-              🛡️ {summary.blockedAttemptsCount} intento(s) de compra frenado(s) esta semana
-            </Text>
+            <View style={styles.alertBlockedTitleRow}>
+              <ShieldAlert size={16} color={colors.status.danger} />
+              <Text style={styles.alertBlockedTitle}>
+                {summary.blockedAttemptsCount} intento(s) de compra frenado(s) esta semana
+              </Text>
+            </View>
             <Text style={styles.alertBlockedText}>
               Tus controles parentales protegieron la cuenta del alumno en el kiosco:
             </Text>
@@ -172,9 +213,12 @@ export default function WeeklySummaryScreen() {
           </View>
         ) : (
           <View style={styles.successBlockedBox} testID="box-zero-blocked-attempts">
-            <Text style={styles.successBlockedTitle}>
-              ✅ Sin intentos rechazados esta semana
-            </Text>
+            <View style={styles.successBlockedTitleRow}>
+              <CheckCircle2 size={16} color={colors.economy.moneyMintDark} />
+              <Text style={styles.successBlockedTitle}>
+                Sin intentos rechazados esta semana
+              </Text>
+            </View>
             <Text style={styles.successBlockedText}>
               Todos los consumos en el kiosco se mantuvieron dentro de los límites y categorías permitidas.
             </Text>
@@ -185,7 +229,14 @@ export default function WeeklySummaryScreen() {
       {/* 4. COMMUNITY IMPACT CARD (Non-monetary points & school solidarity) */}
       <View style={styles.communityImpactCard} testID="card-community-impact">
         <View style={styles.communityImpactHeader}>
-          <Text style={styles.communityImpactBadge}>⭐ PUNTOS DE COMUNIDAD</Text>
+          <View style={styles.communityBadgeRow}>
+            <Star
+              size={12}
+              color={colors.economy.pointsYellowDark}
+              fill={colors.economy.pointsYellow}
+            />
+            <Text style={styles.communityImpactBadge}>PUNTOS DE COMUNIDAD</Text>
+          </View>
           <Text style={styles.communityImpactTitle}>Impacto Solidario Escolar</Text>
         </View>
 
@@ -199,9 +250,21 @@ export default function WeeklySummaryScreen() {
         </Text>
 
         <View style={styles.badgesRow}>
-          <Pill label="Gran Donante" variant="neutral" icon="🏅" />
-          <Pill label="Primer Canje" variant="neutral" icon="🤝" />
-          <Pill label="Eco Alumno" variant="neutral" icon="🌱" />
+          <Pill
+            label="Gran Donante"
+            variant="neutral"
+            icon={<Award size={13} color={colors.brand.primary} />}
+          />
+          <Pill
+            label="Primer Canje"
+            variant="neutral"
+            icon={<Sparkles size={13} color={colors.economy.pointsYellowDark} />}
+          />
+          <Pill
+            label="Eco Alumno"
+            variant="neutral"
+            icon={<Sparkles size={13} color={colors.economy.moneyMintDark} />}
+          />
         </View>
       </View>
 
@@ -214,7 +277,7 @@ export default function WeeklySummaryScreen() {
             <Text style={styles.emptyText}>No se registraron compras esta semana.</Text>
           ) : (
             summary.recentPurchases.map((purchase, index) => {
-              const meta = categoryLabels[purchase.category] || { icon: '🛍️' };
+              const CategoryIcon = categoryIcons[purchase.category] || ShoppingBag;
               const amountFormatted = (purchase.amountCents / 100).toLocaleString('es-AR', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
@@ -223,7 +286,7 @@ export default function WeeklySummaryScreen() {
               return (
                 <FlatListItem
                   key={purchase.id || `pur-${index}`}
-                  icon={meta.icon}
+                  icon={<CategoryIcon size={20} color={colors.brand.primary} />}
                   title={purchase.productName}
                   highlightValue={`-$${amountFormatted}`}
                   valueType="neutral"
@@ -262,6 +325,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -282,11 +348,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 6,
   },
+  dateRangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 20,
+  },
   dateRangeText: {
     fontSize: 13,
     color: colors.brand.primaryDark,
     fontWeight: '600',
-    marginBottom: 20,
   },
   totalSurface: {
     backgroundColor: colors.background.surface,
@@ -309,6 +380,12 @@ const styles = StyleSheet.create({
     color: colors.brand.primaryDark,
     letterSpacing: -0.5,
     marginBottom: 8,
+  },
+  disclaimerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   totalDisclaimer: {
     fontSize: 11,
@@ -346,6 +423,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  categoryNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   categoryName: {
     fontSize: 14,
     fontWeight: '700',
@@ -372,6 +454,11 @@ const styles = StyleSheet.create({
     borderColor: colors.status.warning,
     padding: 16,
     borderRadius: 16,
+    gap: 6,
+  },
+  alertBlockedTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   alertBlockedTitle: {
@@ -408,6 +495,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 4,
   },
+  successBlockedTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   successBlockedTitle: {
     fontSize: 14,
     fontWeight: '800',
@@ -428,8 +520,13 @@ const styles = StyleSheet.create({
   },
   communityImpactHeader: {
     flexDirection: 'column',
-    gap: 2,
+    gap: 4,
     marginBottom: 6,
+  },
+  communityBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   communityImpactBadge: {
     fontSize: 11,

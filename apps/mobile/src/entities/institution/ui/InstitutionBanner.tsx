@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { School } from 'lucide-react-native';
 import { colors } from '../../../shared/theme/colors';
 import { Pill } from '../../../shared/ui/Pill';
 
@@ -19,7 +20,7 @@ export const InstitutionBanner: React.FC<InstitutionBannerProps> = ({
   return (
     <View style={styles.container} testID={testID}>
       <View style={styles.iconCircle}>
-        <Text style={styles.schoolIcon}>🏫</Text>
+        <School size={22} color={colors.brand.primary} />
       </View>
       <View style={styles.content}>
         <Text style={styles.schoolName} numberOfLines={1}>

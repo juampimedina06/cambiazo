@@ -96,8 +96,9 @@ class AuthStore {
     this.notify();
   }
 
-  public updateStudentConsent(status: ConsentStatus) {
-    if (this.state.student) {
+  public updateStudentConsent(status: ConsentStatus, studentId?: string) {
+    const targetId = studentId || this.state.student?.id;
+    if (this.state.student && (!targetId || this.state.student.id === targetId)) {
       const updatedStudent: MockStudentUser = {
         ...this.state.student,
         consentStatus: status,
@@ -108,6 +109,15 @@ class AuthStore {
       this.state = {
         ...this.state,
         student: updatedStudent,
+        students: updatedList,
+      };
+      this.notify();
+    } else if (targetId) {
+      const updatedList = this.state.students.map((s) =>
+        s.id === targetId ? { ...s, consentStatus: status } : s
+      );
+      this.state = {
+        ...this.state,
         students: updatedList,
       };
       this.notify();
