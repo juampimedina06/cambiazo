@@ -81,12 +81,12 @@ export default function SavingsGoalsScreen() {
 
   // Form states for creating goal
   const [newTitle, setNewTitle] = useState('');
-  const [newTargetPesos, setNewTargetPesos] = useState('');
+  const [newTargetPesos, setNewTargetPesos] = useState('1500');
   const [newIcon, setNewIcon] = useState('target');
   const [createError, setCreateError] = useState('');
 
   // Form states for depositing to goal
-  const [depositPesos, setDepositPesos] = useState('');
+  const [depositPesos, setDepositPesos] = useState('500');
   const [depositError, setDepositError] = useState('');
 
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function SavingsGoalsScreen() {
 
     setShowCreateModal(false);
     setNewTitle('');
-    setNewTargetPesos('');
+    setNewTargetPesos('1500');
     reloadData();
   };
 
@@ -189,7 +189,7 @@ export default function SavingsGoalsScreen() {
     }
 
     setShowDepositModal(false);
-    setDepositPesos('');
+    setDepositPesos('500');
     setSelectedGoal(null);
     reloadData();
   };

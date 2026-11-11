@@ -313,6 +313,18 @@ describe('Onboarding & Consent Endpoints Integration', () => {
       const result = pipe.transform(input, { type: 'body' });
       expect(result).toEqual(input);
     });
+
+    it('skips schema validation for non-body parameters such as @CurrentUser or @Param', () => {
+      const pipe = new ZodValidationPipe(CreateInstitutionSchema);
+      const authUser = {
+        id: '11111111-1111-1111-1111-111111111111',
+        role: 'STUDENT',
+        institutionId: '22222222-2222-2222-2222-222222222222',
+      };
+
+      expect(pipe.transform(authUser, { type: 'custom' })).toEqual(authUser);
+      expect(pipe.transform('goal-1', { type: 'param', data: 'id' })).toBe('goal-1');
+    });
   });
 
   describe('Family Login Flow (Parent & Student)', () => {

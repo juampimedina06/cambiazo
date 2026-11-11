@@ -6,7 +6,6 @@ import {
   Body,
   Param,
   Inject,
-  UsePipes,
 } from '@nestjs/common';
 import {
   CreateSavingsGoalSchema,
@@ -30,10 +29,9 @@ export class SavingsGoalsController {
 
   @Post()
   @Roles('STUDENT')
-  @UsePipes(new ZodValidationPipe(CreateSavingsGoalSchema))
   async createGoal(
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateSavingsGoalDto,
+    @Body(new ZodValidationPipe(CreateSavingsGoalSchema)) dto: CreateSavingsGoalDto,
   ): Promise<StudentSavingsGoal> {
     return this.savingsGoalService.createGoal(user.id, user.institutionId!, dto);
   }
@@ -48,11 +46,10 @@ export class SavingsGoalsController {
 
   @Post(':id/deposit')
   @Roles('STUDENT')
-  @UsePipes(new ZodValidationPipe(DepositSavingsGoalSchema))
   async deposit(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() dto: DepositSavingsGoalDto,
+    @Body(new ZodValidationPipe(DepositSavingsGoalSchema)) dto: DepositSavingsGoalDto,
   ): Promise<StudentSavingsGoal> {
     return this.savingsGoalService.depositToGoal(user.id, user.institutionId!, id, dto);
   }

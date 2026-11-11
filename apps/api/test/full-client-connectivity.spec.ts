@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplicationContext } from '@nestjs/common';
+import { IncomingMessage, ServerResponse } from 'node:http';
+import { Socket } from 'node:net';
 import { AppModule } from '../src/app.module.js';
 import { InMemoryInstitutionRepository } from '../src/modules/tenants/infrastructure/persistence/in-memory-institution.repository.js';
 import { InMemoryInvitationRepository } from '../src/modules/tenants/infrastructure/persistence/in-memory-invitation.repository.js';
@@ -198,5 +200,98 @@ describe('Full-Stack Live Endpoints & DI Graph (Mobile & Web-Admin Contracts)', 
 
     const withdrawals = await kioskPayoutsController.listWithdrawals(instId);
     expect(Array.isArray(withdrawals)).toBe(true);
+  });
+
+  it('creates and deposits into savings goals through the full NestJS HTTP pipeline', async () => {
+    const httpApp = await NestFactory.create(AppModule, { logger: false });
+    httpApp.get(InMemoryInstitutionRepository).seedDefault();
+    httpApp.get(InMemoryUserRepository).seedDefault();
+    httpApp.get(InMemoryLedgerRepository).seedDefault();
+    httpApp.get(InMemorySavingsGoalRepository).seedDefault();
+    await httpApp.init();
+
+    const expressApp = httpApp.getHttpAdapter().getInstance() as (
+      req: unknown,
+      res: unknown,
+    ) => void;
+
+    const invokeHttp = (
+      method: string,
+      path: string,
+      headers: Record<string, string>,
+      payload: unknown,
+    ): Promise<{ status: number; body: Record<string, unknown> }> =>
+      new Promise((resolve, reject) => {
+        const rawBody = JSON.stringify(payload);
+        const socket = new Socket();
+        const req = new IncomingMessage(socket);
+        req.method = method;
+        req.url = path;
+        req.headers = {
+          ...headers,
+          'content-type': 'application/json',
+          'content-length': String(Buffer.byteLength(rawBody)),
+        };
+        req.push(rawBody);
+        req.push(null);
+
+        const chunks: Buffer[] = [];
+        const res = new ServerResponse(req);
+        res.write = ((chunk: string | Buffer) => {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          return true;
+        }) as ServerResponse['write'];
+        res.end = ((chunk?: string | Buffer) => {
+          if (chunk && typeof chunk !== 'function') {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          }
+          const text = Buffer.concat(chunks).toString('utf8');
+          resolve({
+            status: res.statusCode,
+            body: text ? (JSON.parse(text) as Record<string, unknown>) : {},
+          });
+          return res;
+        }) as ServerResponse['end'];
+
+        try {
+          expressApp(req, res);
+        } catch (err) {
+          reject(err);
+        }
+      });
+
+    try {
+      const headers = {
+        'x-user-id': '22222222-2222-4222-8222-222222222222',
+        'x-user-role': 'STUDENT',
+        'x-institution-id': 'e28bb18a-66fe-4f8e-9092-2df283f55001',
+      };
+
+      const createRes = await invokeHttp(
+        'POST',
+        '/api/v1/wallet/savings-goals',
+        headers,
+        {
+          title: 'Zapatillas nuevas',
+          targetAmountCents: 150000,
+        },
+      );
+      expect(createRes, JSON.stringify(createRes.body)).toMatchObject({ status: 201 });
+      expect(createRes.body['title']).toBe('Zapatillas nuevas');
+      expect(createRes.body['targetAmountCents']).toBe(150000);
+      expect(createRes.body['reservedAmountCents']).toBe(0);
+
+      const goalId = String(createRes.body['id']);
+      const depositRes = await invokeHttp(
+        'POST',
+        `/api/v1/wallet/savings-goals/${goalId}/deposit`,
+        headers,
+        { amountCents: 50000 },
+      );
+      expect(depositRes.status).toBe(201);
+      expect(depositRes.body['reservedAmountCents']).toBe(50000);
+    } finally {
+      await httpApp.close();
+    }
   });
 });
