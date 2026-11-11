@@ -53,7 +53,7 @@ export default function SchoolModerationPage() {
       const data = await apiClient.getExchangeItems(getActiveInstitutionId());
       setItems(data);
     } catch (err) {
-      console.error('Error loading exchange items:', err);
+      console.warn('Error loading exchange items:', err);
       setApiError(
         err instanceof Error
           ? err.message

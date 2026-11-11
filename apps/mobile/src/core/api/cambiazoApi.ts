@@ -3,7 +3,7 @@ import { type ConsentStatus, type UserRole } from '@cambiazo/shared';
 export const BACKEND_UNAVAILABLE_MESSAGE =
   'No se pudo conectar con el servidor. Verificá que el backend esté activo.';
 
-const DEFAULT_BASE_URL = 'http://localhost:3000/api/v1';
+const DEFAULT_BASE_URL = 'http://localhost:3010/api/v1';
 const DEFAULT_TIMEOUT_MS = 5000;
 
 export interface ApiAuthContext {
@@ -117,7 +117,7 @@ function extractExpoLanHost(): string | null {
     const match = scriptURL.match(/^https?:\/\/([^:/]+)/);
     const host = match?.[1];
     if (host && host !== 'localhost' && host !== '127.0.0.1') {
-      return `http://${host}:3000/api/v1`;
+      return `http://${host}:3010/api/v1`;
     }
   } catch {
     // Safe fallback outside React Native runtime (e.g. Vitest / SSR).
@@ -147,8 +147,8 @@ function getCandidateBaseUrls(): string[] {
 
   const fallbacks = [
     DEFAULT_BASE_URL,
-    'http://127.0.0.1:3000/api/v1',
-    'http://10.0.2.2:3000/api/v1',
+    'http://127.0.0.1:3010/api/v1',
+    'http://10.0.2.2:3010/api/v1',
   ];
   for (const url of fallbacks) {
     if (!candidates.includes(url)) {

@@ -26,7 +26,7 @@ export default function SuperAdminMetricsPage() {
       const data = await apiClient.getSuperAdminMetrics();
       setMetrics(data);
     } catch (err) {
-      console.error('Error loading super admin metrics:', err);
+      console.warn('Error loading super admin metrics:', err);
       setApiError(
         err instanceof Error
           ? err.message

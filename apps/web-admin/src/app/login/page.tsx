@@ -29,7 +29,7 @@ export default function LoginPage() {
           setSelectedInstId(matched ? matched.id : list[0]!.id);
         }
       } catch (e) {
-        console.error('Error loading institutions in login:', e);
+        console.warn('Error loading institutions in login:', e);
       }
     }
     load();

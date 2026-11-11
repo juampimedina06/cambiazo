@@ -35,7 +35,7 @@ export const InstitutionSwitcher: React.FC<InstitutionSwitcherProps> = ({
           if (match) setCurrentName(match.name);
         }
       } catch (err) {
-        console.error('Failed to load institutions in switcher:', err);
+        console.warn('No se pudieron cargar las instituciones en el switcher:', err);
       }
     }
     fetchInstitutions();

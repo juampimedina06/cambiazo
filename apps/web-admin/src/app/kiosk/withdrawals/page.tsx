@@ -47,7 +47,7 @@ export default function KioskWithdrawalsPage() {
       setBalance(balanceData);
       setWithdrawals(withdrawalsData);
     } catch (err) {
-      console.error('Error loading withdrawals and balance:', err);
+      console.warn('Error loading withdrawals and balance:', err);
       setApiError(
         err instanceof Error
           ? err.message

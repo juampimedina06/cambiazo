@@ -40,7 +40,7 @@ export default function SchoolReportsPage() {
         const data = await apiClient.getSchoolReportMetrics(getActiveInstitutionId());
         setMetrics(data);
       } catch (err) {
-        console.error('Error loading school report metrics:', err);
+        console.warn('Error loading school report metrics:', err);
         setApiError(
           err instanceof Error
             ? err.message

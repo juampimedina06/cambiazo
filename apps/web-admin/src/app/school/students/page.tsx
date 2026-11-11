@@ -28,7 +28,7 @@ export default function SchoolStudentsPage() {
       const data = await apiClient.getStudentsRoster(getActiveInstitutionId());
       setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Failed to load students roster:', err);
+      console.warn('Failed to load students roster:', err);
       setApiError(
         err instanceof Error
           ? err.message

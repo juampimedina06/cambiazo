@@ -49,7 +49,7 @@ export default function KioskCatalogPage() {
       );
       setProducts(data);
     } catch (err) {
-      console.error('Error loading catalog products:', err);
+      console.warn('Error loading catalog products:', err);
       setApiError(
         err instanceof Error
           ? err.message

@@ -26,7 +26,7 @@ export default function SuperAdminInstitutionsPage() {
       const sanitized = rawList.map((item: any) => item?.institution || item);
       setInstitutions(sanitized);
     } catch (err) {
-      console.error('Failed to load institutions:', err);
+      console.warn('Failed to load institutions:', err);
       setApiError(
         err instanceof Error
           ? err.message

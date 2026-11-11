@@ -23,7 +23,7 @@ export default function SchoolInvitationsPage() {
       const data = await apiClient.getInvitations(targetId);
       setInvitations(data);
     } catch (err) {
-      console.error('Failed to load invitations:', err);
+      console.warn('Failed to load invitations:', err);
       setApiError(
         err instanceof Error
           ? err.message

@@ -73,7 +73,7 @@ export default function SchoolRewardsPage() {
       setLeaderboard(leaderboardData);
       setRedemptions(redemptionsData);
     } catch (err) {
-      console.error('Error loading rewards and leaderboard:', err);
+      console.warn('Error loading rewards and leaderboard:', err);
       setApiError(
         err instanceof Error
           ? err.message

@@ -35,7 +35,7 @@ export default function KioskSalesPage() {
       setSales(salesData);
       setProducts(productsData);
     } catch (err) {
-      console.error('Error loading kiosk sales and catalog:', err);
+      console.warn('Error loading kiosk sales and catalog:', err);
       setApiError(
         err instanceof Error
           ? err.message
