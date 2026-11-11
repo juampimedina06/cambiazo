@@ -31,6 +31,7 @@ cambiazo/
 
 - **Contract-First:** Antes de implementar pantallas o rutas, los esquemas se definen en `packages/shared` con Zod. Web y Mobile consumen tipos y mocks basados en estos esquemas sin esperar al backend.
 - **Sin atribución AI:** No incluir "Co-Authored-By" ni firmas automáticas en commits.
+- **Envío obligatorio a GitHub:** Cada vez que un agente realice y verifique un cambio o ticket (`typecheck` y `tests` pasando), debe commitear usando Conventional Commits (sin atribución AI) y pushear los cambios a GitHub (`origin`).
 
 ---
 
