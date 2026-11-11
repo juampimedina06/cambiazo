@@ -4,6 +4,7 @@ import {
   completeTopUpAction,
   createTopUpPreferenceAction,
   fetchStudentBalanceAction,
+  verifyTopUpAction,
 } from '../src/core';
 import {
   installTestBackend,
@@ -106,5 +107,23 @@ describe('Parent 1:1 Balance Top-Up (TopUpPreferenceRequestSchema & MP Checkout)
     });
     expect(result.success).toBe(false);
     expect(result.error).toContain('no encontrado');
+  });
+
+  it('verifies top-up via externalReference and credits student wallet 1-to-1', async () => {
+    const prefResult = await createTopUpPreferenceAction({
+      studentId,
+      amountCents: 100000,
+    });
+    expect(prefResult.success).toBe(true);
+    expect(prefResult.externalReference).toBeDefined();
+
+    const verifyResult = await verifyTopUpAction({
+      studentId,
+      externalReference: prefResult.externalReference!,
+      preferenceId: prefResult.preferenceId,
+    });
+    expect(verifyResult.success).toBe(true);
+    expect(verifyResult.verified).toBe(true);
+    expect(verifyResult.newBalanceArsCents).toBe(550000);
   });
 });

@@ -19,6 +19,8 @@ import type {
   SavingsGoal,
   SavingsGoalActionResult,
   TopUpPreferenceResult,
+  VerifyTopUpParams,
+  VerifyTopUpResult,
   WalletApiOptions,
   WalletPurchase,
 } from '../interface/wallet.interface';
@@ -124,6 +126,8 @@ export async function createTopUpPreferenceAction(
     const response = await cambiazoApi.post<{
       preferenceId: string;
       initPoint: string;
+      externalReference?: string;
+      sandboxMode?: boolean;
     }>(
       '/wallet/top-up-preference',
       validation.data,
@@ -140,6 +144,8 @@ export async function createTopUpPreferenceAction(
       success: true,
       preferenceId: response.preferenceId,
       initPoint: response.initPoint,
+      externalReference: response.externalReference,
+      sandboxMode: response.sandboxMode,
       amountCents: validation.data.amountCents,
       studentId: validation.data.studentId,
     };
@@ -192,6 +198,45 @@ export async function completeTopUpAction(
       error: extractApiErrorMessage(
         error,
         'Error al acreditar la recarga en el servidor'
+      ),
+    };
+  }
+}
+
+export async function verifyTopUpAction(
+  params: VerifyTopUpParams,
+  options?: WalletApiOptions
+): Promise<VerifyTopUpResult> {
+  try {
+    const response = await cambiazoApi.post<{
+      status: 'APPROVED' | 'PENDING';
+      credited: boolean;
+      balanceCents?: number;
+    }>(
+      '/wallet/verify-top-up',
+      params,
+      {
+        auth: {
+          role: 'PARENT',
+          ...options?.auth,
+        },
+      },
+      'No se pudo verificar el estado del pago en Mercado Pago.'
+    );
+
+    return {
+      success: true,
+      verified: response.status === 'APPROVED' && response.credited,
+      status: response.status,
+      newBalanceArsCents: response.balanceCents,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      verified: false,
+      error: extractApiErrorMessage(
+        error,
+        'No se pudo verificar el estado del pago en Mercado Pago.'
       ),
     };
   }

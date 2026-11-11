@@ -9,6 +9,7 @@ export interface PreferenceResult {
   preferenceId: string;
   initPoint: string;
   externalReference: string;
+  sandboxMode?: boolean;
 }
 
 export interface PaymentDetails {
@@ -23,6 +24,9 @@ export interface PaymentDetails {
 export interface PaymentGatewayPort {
   createTopUpPreference(params: CreatePreferenceParams): Promise<PreferenceResult>;
   getPaymentDetails(paymentId: string): Promise<PaymentDetails | null>;
+  findApprovedPaymentByExternalReference(
+    externalReference: string,
+  ): Promise<PaymentDetails | null>;
 }
 
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');

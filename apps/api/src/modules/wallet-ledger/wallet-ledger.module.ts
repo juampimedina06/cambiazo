@@ -3,8 +3,10 @@ import { LEDGER_REPOSITORY } from './domain/ports/ledger.repository.port.js';
 import { PAYMENT_GATEWAY } from './domain/ports/payment-gateway.port.js';
 import { InMemoryLedgerRepository } from './infrastructure/persistence/in-memory-ledger.repository.js';
 import { MercadoPagoMockGateway } from './infrastructure/gateways/mercadopago-mock.gateway.js';
+import { MercadoPagoGateway } from './infrastructure/gateways/mercadopago.gateway.js';
 import { LedgerService } from './application/services/ledger.service.js';
 import { CreateTopUpPreferenceUseCase } from './application/use-cases/create-top-up-preference.use-case.js';
+import { VerifyTopUpUseCase } from './application/use-cases/verify-top-up.use-case.js';
 import { HandleMpTopupWebhookUseCase } from './application/use-cases/handle-mp-topup-webhook.use-case.js';
 import { RequestKioskPayoutUseCase } from './application/use-cases/request-kiosk-payout.use-case.js';
 import { GetWalletBalanceUseCase } from './application/use-cases/get-wallet-balance.use-case.js';
@@ -30,13 +32,25 @@ import { SavingsGoalsController } from './infrastructure/http/savings-goals.cont
     InMemoryLedgerRepository,
     InMemorySavingsGoalRepository,
     MercadoPagoMockGateway,
+    MercadoPagoGateway,
     {
       provide: LEDGER_REPOSITORY,
       useExisting: InMemoryLedgerRepository,
     },
     {
       provide: PAYMENT_GATEWAY,
-      useExisting: MercadoPagoMockGateway,
+      useFactory: (
+        mpGateway: MercadoPagoGateway,
+        mockGateway: MercadoPagoMockGateway,
+      ) => {
+        const token = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
+        const hasRealToken =
+          process.env.NODE_ENV !== 'test' &&
+          Boolean(token) &&
+          !token.includes('xxxx');
+        return hasRealToken ? mpGateway : mockGateway;
+      },
+      inject: [MercadoPagoGateway, MercadoPagoMockGateway],
     },
     {
       provide: SAVINGS_GOAL_REPOSITORY,
@@ -45,6 +59,7 @@ import { SavingsGoalsController } from './infrastructure/http/savings-goals.cont
     LedgerService,
     SavingsGoalService,
     CreateTopUpPreferenceUseCase,
+    VerifyTopUpUseCase,
     HandleMpTopupWebhookUseCase,
     RequestKioskPayoutUseCase,
     GetWalletBalanceUseCase,
@@ -56,9 +71,11 @@ import { SavingsGoalsController } from './infrastructure/http/savings-goals.cont
     InMemoryLedgerRepository,
     InMemorySavingsGoalRepository,
     MercadoPagoMockGateway,
+    MercadoPagoGateway,
     LedgerService,
     SavingsGoalService,
     CreateTopUpPreferenceUseCase,
+    VerifyTopUpUseCase,
     HandleMpTopupWebhookUseCase,
     RequestKioskPayoutUseCase,
     GetWalletBalanceUseCase,

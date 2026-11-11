@@ -630,6 +630,11 @@ export function installTestBackend(): {
         return jsonResponse({ message: 'Alumno no encontrado para la recarga' }, 404);
       }
       const preferenceId = `pref_mp_${seq++}`;
+      const externalReference = JSON.stringify({
+        topupId: preferenceId,
+        studentId: student.id,
+        amountCents: body.amountCents,
+      });
       state.pendingTopUps.set(preferenceId, {
         studentId: student.id,
         amountCents: body.amountCents,
@@ -637,7 +642,37 @@ export function installTestBackend(): {
       return jsonResponse({
         preferenceId,
         initPoint: `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${preferenceId}`,
+        externalReference,
+        sandboxMode: true,
       });
+    }
+
+    if (method === 'POST' && path === '/wallet/verify-top-up') {
+      const prefId = String(body?.preferenceId || '');
+      const pending = state.pendingTopUps.get(prefId);
+      const student = state.students.get(String(body?.studentId || ''));
+      if (!student) {
+        return jsonResponse({ message: 'Alumno no encontrado' }, 404);
+      }
+      if (pending && pending.studentId === student.id) {
+        student.balanceArsCents += pending.amountCents;
+        state.transactions.unshift({
+          id: `tx-topup-${seq++}`,
+          studentId: student.id,
+          amountCents: pending.amountCents,
+          direction: 'CREDIT',
+          referenceType: 'TOP_UP',
+          description: 'Carga Mercado Pago',
+          createdAt: new Date().toISOString(),
+        });
+        state.pendingTopUps.delete(prefId);
+        return jsonResponse({
+          status: 'APPROVED',
+          credited: true,
+          balanceCents: student.balanceArsCents,
+        });
+      }
+      return jsonResponse({ status: 'PENDING', credited: false });
     }
 
     if (method === 'POST' && path === '/webhooks/mercadopago') {

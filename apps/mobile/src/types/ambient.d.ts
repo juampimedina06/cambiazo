@@ -215,6 +215,21 @@ declare module 'react-native' {
     create<T extends Record<string, ViewStyle | TextStyle>>(styles: T): T;
     absoluteFillObject: any;
   };
+
+  export type AppStateStatus = 'active' | 'background' | 'inactive' | 'unknown' | 'extension';
+
+  export const AppState: {
+    currentState: AppStateStatus;
+    addEventListener(
+      type: 'change',
+      listener: (state: AppStateStatus) => void
+    ): { remove(): void };
+  };
+
+  export const Linking: {
+    openURL(url: string): Promise<any>;
+    canOpenURL(url: string): Promise<boolean>;
+  };
 }
 
 declare module 'expo-router' {

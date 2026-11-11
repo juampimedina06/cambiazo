@@ -1,7 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Linking,
+  AppState,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Banknote, ShieldCheck, CheckCircle2, CreditCard, ArrowLeft } from 'lucide-react-native';
+import {
+  Banknote,
+  ShieldCheck,
+  CheckCircle2,
+  CreditCard,
+  ArrowLeft,
+  ExternalLink,
+} from 'lucide-react-native';
 import { colors } from '../../../src/shared/theme/colors';
 import { Button } from '../../../src/shared/ui/Button';
 import { Pill } from '../../../src/shared/ui/Pill';
@@ -10,6 +26,7 @@ import {
   completeTopUpAction,
   createTopUpPreferenceAction,
   fetchStudentBalanceAction,
+  verifyTopUpAction,
 } from '../../../src/core';
 import { TopUpPreferenceRequestSchema } from '@cambiazo/shared';
 
@@ -22,7 +39,12 @@ export default function ParentTopUpScreen() {
   const [customAmountText, setCustomAmountText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [checkoutModalVisible, setCheckoutModalVisible] = useState<boolean>(false);
-  const [preferenceData, setPreferenceData] = useState<{ preferenceId: string; initPoint: string } | null>(null);
+  const [preferenceData, setPreferenceData] = useState<{
+    preferenceId: string;
+    initPoint: string;
+    externalReference?: string;
+    isMock: boolean;
+  } | null>(null);
   const [successResult, setSuccessResult] = useState<{ newBalance: number; amountLoaded: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -115,12 +137,86 @@ export default function ParentTopUpScreen() {
       return;
     }
 
+    const isMock = res.preferenceId.startsWith('pref_');
     setPreferenceData({
       preferenceId: res.preferenceId,
       initPoint: res.initPoint,
+      externalReference: res.externalReference,
+      isMock,
     });
     setCheckoutModalVisible(true);
+
+    if (!isMock) {
+      await Linking.openURL(res.initPoint).catch(() => {
+        setErrorMessage('No se pudo abrir el navegador. Tocá "Ir a Mercado Pago" abajo.');
+      });
+    }
   };
+
+  const handleVerifyRealMercadoPagoPayment = useCallback(
+    async (silentIfPending = false) => {
+      if (!student || !preferenceData?.externalReference || isProcessing) return;
+
+      setIsProcessing(true);
+      if (!silentIfPending) {
+        setErrorMessage(null);
+      }
+
+      const res = await verifyTopUpAction(
+        {
+          studentId: student.id,
+          externalReference: preferenceData.externalReference,
+          preferenceId: preferenceData.preferenceId,
+        },
+        {
+          auth: {
+            role: 'PARENT',
+            userId: parent?.id || student.parentId || student.id,
+            institutionId,
+          },
+        }
+      );
+      setIsProcessing(false);
+
+      if (!res.success) {
+        if (!silentIfPending) {
+          setErrorMessage(res.error || 'Error al verificar el pago en Mercado Pago.');
+        }
+        return;
+      }
+
+      if (!res.verified || res.newBalanceArsCents === undefined) {
+        if (!silentIfPending) {
+          setErrorMessage(
+            'Todavía no recibimos el pago aprobado desde Mercado Pago. Si acabás de pagar, esperá unos segundos y volvé a tocar Verificar.'
+          );
+        }
+        return;
+      }
+
+      authStore.updateStudentFields(student.id, {
+        balanceArsCents: res.newBalanceArsCents,
+      });
+      authStore.refreshCurrentStudent();
+
+      setCheckoutModalVisible(false);
+      setSuccessResult({
+        newBalance: res.newBalanceArsCents / 100,
+        amountLoaded: effectiveAmount,
+      });
+    },
+    [student, preferenceData, isProcessing, parent?.id, institutionId, effectiveAmount]
+  );
+
+  useEffect(() => {
+    if (!checkoutModalVisible || !preferenceData || preferenceData.isMock) return;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void handleVerifyRealMercadoPagoPayment(true);
+      }
+    });
+    return () => subscription.remove();
+  }, [checkoutModalVisible, preferenceData, handleVerifyRealMercadoPagoPayment]);
 
   const handleConfirmMercadoPagoPayment = async () => {
     if (!student || !preferenceData) return;
@@ -290,7 +386,7 @@ export default function ParentTopUpScreen() {
         </View>
       )}
 
-      {/* Simulated Mercado Pago Checkout Sheet */}
+      {/* Mercado Pago Checkout / Verification Sheet */}
       {checkoutModalVisible && preferenceData && (
         <View style={styles.checkoutModal} testID="modal-mp-checkout">
           <View style={styles.checkoutHeader}>
@@ -298,7 +394,9 @@ export default function ParentTopUpScreen() {
               <CreditCard size={18} color="#009EE3" />
               <Text style={styles.mpLogo}>Mercado Pago</Text>
             </View>
-            <Text style={styles.checkoutTitle}>Checkout Seguro</Text>
+            <Text style={styles.checkoutTitle}>
+              {preferenceData.isMock ? 'Checkout Simulado (Modo Demo)' : 'Checkout Sandbox / Real'}
+            </Text>
           </View>
           <Text style={styles.checkoutSummary}>
             Recarga Billetera Escolar: ${effectiveAmount.toLocaleString('es-AR')} ARS
@@ -311,13 +409,35 @@ export default function ParentTopUpScreen() {
           </Text>
 
           <View style={styles.checkoutActions}>
-            <Button
-              label={isProcessing ? 'Procesando...' : 'Confirmar Pago Aprobado'}
-              onPress={handleConfirmMercadoPagoPayment}
-              variant="mint"
-              disabled={isProcessing}
-              testID="btn-confirm-mp-payment"
-            />
+            {preferenceData.isMock ? (
+              <Button
+                label={isProcessing ? 'Procesando...' : 'Confirmar Pago Aprobado'}
+                onPress={handleConfirmMercadoPagoPayment}
+                variant="mint"
+                disabled={isProcessing}
+                testID="btn-confirm-mp-payment"
+              />
+            ) : (
+              <>
+                <Button
+                  label={isProcessing ? 'Verificando pago...' : 'Ya pagué, verificar acreditación'}
+                  icon={<CheckCircle2 size={18} color="#FFFFFF" />}
+                  onPress={() => handleVerifyRealMercadoPagoPayment(false)}
+                  variant="mint"
+                  disabled={isProcessing}
+                  testID="btn-verify-mp-payment"
+                />
+                <Button
+                  label="Abrir Mercado Pago Nuevamente"
+                  icon={<ExternalLink size={18} color="#FFFFFF" />}
+                  onPress={() => Linking.openURL(preferenceData.initPoint)}
+                  variant="primary"
+                  style={{ marginTop: 8 }}
+                  disabled={isProcessing}
+                  testID="btn-reopen-mp-checkout"
+                />
+              </>
+            )}
             <Button
               label="Cancelar"
               onPress={() => setCheckoutModalVisible(false)}

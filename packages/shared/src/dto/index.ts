@@ -17,6 +17,7 @@ import {
 
 import {
   TopUpPreferenceRequestSchema,
+  VerifyTopUpRequestSchema,
   MercadoPagoWebhookPayloadSchema,
   CreateCatalogProductSchema,
   UpdateCatalogProductSchema,
@@ -60,6 +61,7 @@ export type SpendingLimitsDto = z.infer<typeof SpendingLimitsSchema>;
 
 // Ledger DTOs
 export type TopUpPreferenceRequestDto = z.infer<typeof TopUpPreferenceRequestSchema>;
+export type VerifyTopUpRequestDto = z.infer<typeof VerifyTopUpRequestSchema>;
 export type MercadoPagoWebhookPayloadDto = z.infer<typeof MercadoPagoWebhookPayloadSchema>;
 export type CreateCatalogProductDto = z.infer<typeof CreateCatalogProductSchema>;
 export type UpdateCatalogProductDto = z.infer<typeof UpdateCatalogProductSchema>;

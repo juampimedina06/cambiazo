@@ -37,8 +37,24 @@ export interface TopUpPreferenceResult {
   success: boolean;
   preferenceId?: string;
   initPoint?: string;
+  externalReference?: string;
+  sandboxMode?: boolean;
   amountCents?: number;
   studentId?: string;
+  error?: string;
+}
+
+export interface VerifyTopUpParams {
+  studentId: string;
+  externalReference: string;
+  preferenceId?: string;
+}
+
+export interface VerifyTopUpResult {
+  success: boolean;
+  verified: boolean;
+  status?: 'APPROVED' | 'PENDING';
+  newBalanceArsCents?: number;
   error?: string;
 }
 

@@ -9,7 +9,9 @@ import {
 } from '@nestjs/common';
 import {
   TopUpPreferenceRequestSchema,
+  VerifyTopUpRequestSchema,
   type TopUpPreferenceRequestDto,
+  type VerifyTopUpRequestDto,
 } from '@cambiazo/shared';
 import { Roles } from '../../../../common/auth/roles.decorator.js';
 import { CurrentUser } from '../../../../common/auth/current-user.decorator.js';
@@ -17,6 +19,10 @@ import type { AuthUser } from '../../../../common/auth/auth-user.interface.js';
 import { TenantId } from '../../../../common/tenant/tenant.guard.js';
 import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe.js';
 import { CreateTopUpPreferenceUseCase } from '../../application/use-cases/create-top-up-preference.use-case.js';
+import {
+  VerifyTopUpUseCase,
+  type VerifyTopUpResult,
+} from '../../application/use-cases/verify-top-up.use-case.js';
 import {
   GetWalletBalanceUseCase,
   type WalletBalanceResult,
@@ -29,6 +35,8 @@ export class WalletController {
   constructor(
     @Inject(CreateTopUpPreferenceUseCase)
     private readonly createTopUpPreferenceUseCase: CreateTopUpPreferenceUseCase,
+    @Inject(VerifyTopUpUseCase)
+    private readonly verifyTopUpUseCase: VerifyTopUpUseCase,
     @Inject(GetWalletBalanceUseCase)
     private readonly getWalletBalanceUseCase: GetWalletBalanceUseCase,
   ) {}
@@ -46,6 +54,21 @@ export class WalletController {
       institutionId,
       body,
       parentUser.email,
+    );
+  }
+
+  @Post('verify-top-up')
+  @Roles('PARENT')
+  @UsePipes(new ZodValidationPipe(VerifyTopUpRequestSchema))
+  async verifyTopUp(
+    @Body() body: VerifyTopUpRequestDto,
+    @CurrentUser() parentUser: AuthUser,
+    @TenantId() institutionId: string,
+  ): Promise<VerifyTopUpResult> {
+    return this.verifyTopUpUseCase.execute(
+      parentUser.id,
+      institutionId,
+      body,
     );
   }
 

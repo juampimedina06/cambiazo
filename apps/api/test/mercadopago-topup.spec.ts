@@ -8,6 +8,7 @@ import { InMemoryLedgerRepository } from '../src/modules/wallet-ledger/infrastru
 import { MercadoPagoMockGateway } from '../src/modules/wallet-ledger/infrastructure/gateways/mercadopago-mock.gateway.js';
 import { LedgerService } from '../src/modules/wallet-ledger/application/services/ledger.service.js';
 import { CreateTopUpPreferenceUseCase } from '../src/modules/wallet-ledger/application/use-cases/create-top-up-preference.use-case.js';
+import { VerifyTopUpUseCase } from '../src/modules/wallet-ledger/application/use-cases/verify-top-up.use-case.js';
 import { HandleMpTopupWebhookUseCase } from '../src/modules/wallet-ledger/application/use-cases/handle-mp-topup-webhook.use-case.js';
 import { GetWalletBalanceUseCase } from '../src/modules/wallet-ledger/application/use-cases/get-wallet-balance.use-case.js';
 import {
@@ -27,6 +28,7 @@ describe('1-to-1 Balance Top-Up via Mercado Pago & Webhooks', () => {
   let checkConsentUseCase: CheckStudentConsentUseCase;
   let grantConsentUseCase: GrantParentalConsentUseCase;
   let createPreferenceUseCase: CreateTopUpPreferenceUseCase;
+  let verifyTopUpUseCase: VerifyTopUpUseCase;
   let handleWebhookUseCase: HandleMpTopupWebhookUseCase;
   let getBalanceUseCase: GetWalletBalanceUseCase;
 
@@ -53,6 +55,13 @@ describe('1-to-1 Balance Top-Up via Mercado Pago & Webhooks', () => {
 
     handleWebhookUseCase = new HandleMpTopupWebhookUseCase(
       paymentGateway,
+      ledgerService,
+    );
+
+    verifyTopUpUseCase = new VerifyTopUpUseCase(
+      linkRepo,
+      paymentGateway,
+      handleWebhookUseCase,
       ledgerService,
     );
 
@@ -273,6 +282,47 @@ describe('1-to-1 Balance Top-Up via Mercado Pago & Webhooks', () => {
 
       expect(res.status).toBe('IGNORED');
       expect(res.reason).toContain('pending');
+    });
+
+    it('verifies approved payment by externalReference and stays idempotent with webhooks', async () => {
+      const pref = await createPreferenceUseCase.execute(
+        parentId,
+        institutionId,
+        {
+          studentId,
+          amountCents: 150000,
+        },
+      );
+
+      const verified = await verifyTopUpUseCase.execute(
+        parentId,
+        institutionId,
+        {
+          studentId,
+          externalReference: pref.externalReference,
+          preferenceId: pref.preferenceId,
+        },
+      );
+
+      expect(verified.status).toBe('APPROVED');
+      expect(verified.credited).toBe(true);
+      expect(verified.balanceCents).toBe(150000);
+
+      // Re-verifying or receiving late webhook does not double-credit
+      const duplicateWebhook = await handleWebhookUseCase.execute({
+        id: pref.preferenceId,
+        type: 'payment',
+        data: { id: pref.preferenceId },
+      });
+      expect(duplicateWebhook.status).toBe('ALREADY_PROCESSED');
+
+      const balance = await getBalanceUseCase.getStudentBalance(
+        parentId,
+        'PARENT',
+        studentId,
+        institutionId,
+      );
+      expect(balance.balanceCents).toBe(150000);
     });
   });
 });

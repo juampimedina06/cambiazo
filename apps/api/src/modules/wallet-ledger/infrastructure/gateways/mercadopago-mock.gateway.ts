@@ -21,6 +21,7 @@ export class MercadoPagoMockGateway implements PaymentGatewayPort {
       preferenceId,
       initPoint,
       externalReference,
+      sandboxMode: true,
     };
 
     this.preferences.set(preferenceId, { ...params, ...result });
@@ -41,6 +42,20 @@ export class MercadoPagoMockGateway implements PaymentGatewayPort {
   async getPaymentDetails(paymentId: string): Promise<PaymentDetails | null> {
     const payment = this.payments.get(paymentId);
     return payment ? { ...payment } : null;
+  }
+
+  async findApprovedPaymentByExternalReference(
+    externalReference: string,
+  ): Promise<PaymentDetails | null> {
+    for (const payment of this.payments.values()) {
+      if (
+        payment.externalReference === externalReference &&
+        payment.status === 'approved'
+      ) {
+        return { ...payment };
+      }
+    }
+    return null;
   }
 
   // Helper for tests to register an arbitrary approved payment

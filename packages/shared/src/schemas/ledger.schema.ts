@@ -6,6 +6,12 @@ export const TopUpPreferenceRequestSchema = z.object({
   amountCents: z.number().int().positive(),
 });
 
+export const VerifyTopUpRequestSchema = z.object({
+  studentId: z.string().uuid(),
+  externalReference: z.string().min(1),
+  preferenceId: z.string().optional(),
+});
+
 export const MercadoPagoWebhookPayloadSchema = z.object({
   id: z.union([z.string(), z.number()]),
   type: z.string(),

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { MercadoPagoWebhookPayloadDto } from '@cambiazo/shared';
 import {
+  type PaymentDetails,
   type PaymentGatewayPort,
   PAYMENT_GATEWAY,
 } from '../../domain/ports/payment-gateway.port.js';
@@ -45,7 +46,23 @@ export class HandleMpTopupWebhookUseCase {
       };
     }
 
-    // 2. Resolve accounts
+    return this.creditFromPaymentDetails(paymentDetails);
+  }
+
+  async creditFromPaymentDetails(
+    paymentDetails: PaymentDetails,
+  ): Promise<WebhookProcessingResult> {
+    if (paymentDetails.status !== 'approved') {
+      return {
+        status: 'IGNORED',
+        reason: `Payment status is ${paymentDetails.status}, required: approved`,
+      };
+    }
+
+    const paymentId = paymentDetails.paymentId;
+    const idempotencyKey = `mp_webhook_${paymentId}`;
+
+    // Resolve accounts
     const studentAccount = await this.ledgerService.getStudentAccount(
       paymentDetails.studentId,
       paymentDetails.institutionId,
@@ -55,7 +72,7 @@ export class HandleMpTopupWebhookUseCase {
       paymentDetails.institutionId,
     );
 
-    // 3. Execute double-entry transaction: DEBIT PLATFORM_CLEARING / CREDIT STUDENT_ALLOCATION
+    // Execute double-entry transaction: DEBIT PLATFORM_CLEARING / CREDIT STUDENT_ALLOCATION
     const result = await this.ledgerService.recordTransaction({
       institutionId: paymentDetails.institutionId,
       referenceType: 'TOP_UP',
