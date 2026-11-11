@@ -103,7 +103,10 @@ export const PARENT_NAV_ITEMS: readonly RoleNavItem[] = [
   },
 ] as const;
 
-export const STUDENT_HIDDEN_NAV_ROUTES: readonly string[] = ['/blocked'] as const;
+export const STUDENT_HIDDEN_NAV_ROUTES: readonly string[] = [
+  '/blocked',
+  '/community/camera',
+] as const;
 
 export function pathFromSegments(segments?: readonly string[] | null): string {
   if (!segments || segments.length === 0) {

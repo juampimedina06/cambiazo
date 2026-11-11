@@ -87,12 +87,120 @@ export async function fetchExchangeItemsAction(
   }
 }
 
+export function isLocalImageUri(uri: string): boolean {
+  const trimmed = uri.trim();
+  if (!trimmed) return false;
+  return !/^https?:\/\//i.test(trimmed);
+}
+
+function inferImageMeta(uri: string): { name: string; type: string } {
+  const rawName = uri.split('/').pop()?.split('?')[0] || '';
+  const lower = rawName.toLowerCase();
+  if (lower.endsWith('.png')) {
+    return { name: rawName, type: 'image/png' };
+  }
+  if (lower.endsWith('.webp')) {
+    return { name: rawName, type: 'image/webp' };
+  }
+  if (lower.endsWith('.gif')) {
+    return { name: rawName, type: 'image/gif' };
+  }
+  if (lower.endsWith('.heic')) {
+    return { name: rawName, type: 'image/heic' };
+  }
+  const safeName = rawName && rawName.includes('.') ? rawName : `photo_${Date.now()}.jpg`;
+  return { name: safeName, type: 'image/jpeg' };
+}
+
+export async function uploadExchangeImageAction(
+  imageUri: string,
+  options?: CommunityApiOptions
+): Promise<string> {
+  const formData = new FormData();
+  const { name, type } = inferImageMeta(imageUri);
+
+  // On Expo Web blob:/data: URIs must be appended as a Blob; on React Native, file:/content: takes { uri, type, name }.
+  if (/^(blob:|data:)/i.test(imageUri) && typeof fetch === 'function') {
+    const res = await fetch(imageUri);
+    const blob = await res.blob();
+    formData.append('file', blob, name);
+  } else {
+    (formData as unknown as { append: (key: string, value: unknown) => void }).append(
+      'file',
+      {
+        uri: imageUri,
+        type,
+        name,
+      }
+    );
+  }
+
+  const uploaded = await cambiazoApi.postFormData<{ url?: string; image?: string }>(
+    '/files/upload',
+    formData,
+    {
+      timeoutMs: 15000,
+      auth: {
+        role: 'STUDENT',
+        ...options?.auth,
+      },
+    },
+    'No se pudo subir la imagen del útil.'
+  );
+
+  const publicUrl = uploaded.url || uploaded.image;
+  if (!publicUrl) {
+    throw new Error('El servidor no devolvió la URL de la imagen subida.');
+  }
+  return publicUrl;
+}
+
+export async function prepareExchangeImagesAction(
+  images: string[],
+  options?: CommunityApiOptions
+): Promise<string[]> {
+  const clean = Array.from(
+    new Set(images.map((uri) => uri.trim()).filter(Boolean))
+  ).slice(0, 5);
+
+  const localImages = clean.filter(isLocalImageUri);
+  const remoteImages = clean.filter((uri) => !isLocalImageUri(uri));
+
+  if (localImages.length > 0) {
+    const uploaded = await Promise.all(
+      localImages.map((uri) => uploadExchangeImageAction(uri, options))
+    );
+    remoteImages.push(...uploaded);
+  }
+
+  return remoteImages.slice(0, 5);
+}
+
 export async function createExchangeItemAction(
   studentId: string,
   institutionId: string,
   input: CreateExchangeItemDto
 ): Promise<CreateExchangeItemResult> {
-  const validation = CreateExchangeItemSchema.safeParse(input);
+  let preparedPhotoUrls: string[] = [];
+  try {
+    preparedPhotoUrls = await prepareExchangeImagesAction(input.photoUrls || [], {
+      auth: {
+        role: 'STUDENT',
+        userId: studentId,
+        institutionId,
+      },
+    });
+  } catch (error) {
+    return {
+      success: false,
+      error: extractApiErrorMessage(error, 'No se pudo subir la imagen del útil.'),
+    };
+  }
+
+  const validation = CreateExchangeItemSchema.safeParse({
+    ...input,
+    photoUrls: preparedPhotoUrls,
+  });
   if (!validation.success) {
     return {
       success: false,

@@ -8,6 +8,7 @@ import { WalletLedgerModule } from './modules/wallet-ledger/wallet-ledger.module
 import { KioskCatalogModule } from './modules/kiosk-catalog/kiosk-catalog.module.js';
 import { CommunityExchangeModule } from './modules/community-exchange/community-exchange.module.js';
 import { AnalyticsNotificationsModule } from './modules/analytics-notifications/analytics-notifications.module.js';
+import { FilesModule } from './modules/files/files.module.js';
 import { DomainExceptionFilter } from './common/filters/domain-exception.filter.js';
 import { AuthGuard } from './common/auth/auth.guard.js';
 import { RolesGuard } from './common/auth/roles.guard.js';
@@ -21,6 +22,7 @@ import { TenantGuard } from './common/tenant/tenant.guard.js';
     KioskCatalogModule,
     CommunityExchangeModule,
     AnalyticsNotificationsModule,
+    FilesModule,
   ],
 
 

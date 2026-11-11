@@ -159,9 +159,13 @@ function getCandidateBaseUrls(): string[] {
   return candidates;
 }
 
+function isFormDataBody(body: unknown): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
 function buildHeaders(options?: ApiRequestOptions): Record<string, string> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormDataBody(options?.body) ? {} : { 'Content-Type': 'application/json' }),
     ...(options?.headers ?? {}),
   };
 
@@ -194,10 +198,16 @@ async function fetchWithDiscovery(
   const candidates = getCandidateBaseUrls();
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const headers = buildHeaders(options);
+  const serializedBody =
+    options?.body === undefined
+      ? undefined
+      : isFormDataBody(options.body)
+      ? (options.body as unknown as BodyInit)
+      : JSON.stringify(options.body);
   const init: RequestInit = {
     method: options?.method ?? 'GET',
     headers,
-    ...(options?.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+    ...(serializedBody !== undefined ? { body: serializedBody } : {}),
   };
 
   let lastError: unknown;
@@ -249,6 +259,12 @@ export const cambiazoApi = {
     request<T>(path, { ...options, method: 'GET' }, fallbackError),
   post: <T>(path: string, body?: unknown, options?: Omit<ApiRequestOptions, 'method' | 'body'>, fallbackError?: string) =>
     request<T>(path, { ...options, method: 'POST', body }, fallbackError),
+  postFormData: <T>(
+    path: string,
+    formData: FormData,
+    options?: Omit<ApiRequestOptions, 'method' | 'body'>,
+    fallbackError?: string,
+  ) => request<T>(path, { ...options, method: 'POST', body: formData }, fallbackError),
   put: <T>(path: string, body?: unknown, options?: Omit<ApiRequestOptions, 'method' | 'body'>, fallbackError?: string) =>
     request<T>(path, { ...options, method: 'PUT', body }, fallbackError),
   patch: <T>(path: string, body?: unknown, options?: Omit<ApiRequestOptions, 'method' | 'body'>, fallbackError?: string) =>

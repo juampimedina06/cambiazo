@@ -152,3 +152,4 @@ const styles = StyleSheet.create({
     color: colors.brand.primaryDark,
   },
 });
+

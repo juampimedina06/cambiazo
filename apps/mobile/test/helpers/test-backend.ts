@@ -927,6 +927,12 @@ export function installTestBackend(): {
       return jsonResponse(result);
     }
 
+    if (method === 'POST' && path === '/files/upload') {
+      const filename = `uploaded_${seq++}.jpg`;
+      const url = `http://localhost:3010/api/v1/files/${filename}`;
+      return jsonResponse({ filename, image: url, url }, 201);
+    }
+
     if (method === 'GET' && path === '/community/items') {
       const instId = headers['x-institution-id'] || TEST_INSTITUTION_ID;
       const list = Array.from(state.exchangeItems.values()).filter(

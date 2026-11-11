@@ -11,7 +11,19 @@
       "supportsTablet": true
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir que Cambiazo use la cámara para sacar fotos de tus útiles escolares."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir que Cambiazo acceda a tus fotos para publicar útiles escolares."
+        }
+      ]
     ]
   }
 }

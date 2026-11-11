@@ -203,6 +203,12 @@ declare module 'react-native' {
     get(dim: 'window' | 'screen'): { width: number; height: number };
   };
 
+  export function useWindowDimensions(): { width: number; height: number; scale?: number; fontScale?: number };
+
+  export const Alert: {
+    alert(title: string, message?: string, buttons?: any[], options?: any): void;
+  };
+
   export const Easing: {
     linear: any;
     ease: any;

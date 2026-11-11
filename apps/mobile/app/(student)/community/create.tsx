@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowLeft,
+  Camera,
+  Images,
+  Link2,
   Plus,
   CheckCircle2,
   AlertTriangle,
@@ -24,8 +28,15 @@ import {
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
+import { ExchangeItemImages } from '../../../src/shared/ui/ExchangeItemImages';
 import { SelectPickerField, type SelectOption } from '../../../src/shared/ui/SelectPickerField';
-import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import {
+  MAX_EXCHANGE_IMAGES,
+  authStore,
+  resolveSessionContext,
+  useCameraStore,
+  type AuthState,
+} from '../../../src/shared/store';
 import { createExchangeItemAction } from '../../../src/core';
 
 const categoryOptions = ['Libros', 'Útiles', 'Tecnología', 'Accesorios', 'Arte y Música'];
@@ -66,14 +77,23 @@ const categorySelectOptions: SelectOption[] = [
 export default function CreateExchangeItemScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
+  const { selectedImages, addSelectedImages, removeSelectedImage, clearImages } = useCameraStore();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Útiles');
   const [mode, setMode] = useState<ExchangeMode>('BARTER');
-  const [photoUrl, setPhotoUrl] = useState('https://images.unsplash.com/photo-1588072432836-e10032774350?w=400');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      clearImages();
+    };
+  }, []);
 
   useEffect(() => {
     return authStore.subscribe((state) => {
@@ -83,6 +103,34 @@ export default function CreateExchangeItemScreen() {
 
   const { studentId, institutionId, institutionName } = resolveSessionContext(authState);
 
+  const previewImages = Array.from(
+    new Set([
+      ...selectedImages,
+      ...(photoUrl.trim() ? [photoUrl.trim()] : []),
+    ]),
+  ).slice(0, MAX_EXCHANGE_IMAGES);
+
+  const handlePickFromGallery = async () => {
+    const remaining = Math.max(1, MAX_EXCHANGE_IMAGES - previewImages.length);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+    addSelectedImages(result.assets.map((asset) => asset.uri));
+  };
+
+  const handleRemoveImage = (uri: string) => {
+    if (selectedImages.includes(uri)) {
+      removeSelectedImage(uri);
+    } else if (photoUrl.trim() === uri) {
+      setPhotoUrl('');
+    }
+  };
+
   const handleSubmit = async () => {
     setErrorMessage('');
 
@@ -91,23 +139,32 @@ export default function CreateExchangeItemScreen() {
       description: description.trim(),
       category: category.trim(),
       mode,
-      photoUrls: photoUrl.trim() ? [photoUrl.trim()] : [],
+      photoUrls: previewImages,
     };
 
-    // Strict validation against CreateExchangeItemSchema
-    const validation = CreateExchangeItemSchema.safeParse(payload);
+    // Validate text fields before uploading local images; photoUrls are validated after upload when needed.
+    const validation = CreateExchangeItemSchema.safeParse({
+      ...payload,
+      photoUrls: [],
+    });
     if (!validation.success) {
       setErrorMessage(validation.error.errors[0]?.message || 'Verificá los datos del útil escolar.');
       return;
     }
 
-    const res = await createExchangeItemAction(studentId, institutionId, validation.data);
-    if (!res.success) {
-      setErrorMessage(res.error || 'Ocurrió un error al publicar el útil.');
-      return;
-    }
+    setIsSubmitting(true);
+    try {
+      const res = await createExchangeItemAction(studentId, institutionId, payload);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Ocurrió un error al publicar el útil.');
+        return;
+      }
 
-    setIsSuccess(true);
+      clearImages();
+      setIsSuccess(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
@@ -280,22 +337,61 @@ export default function CreateExchangeItemScreen() {
           testID="input-item-description"
         />
 
-        {/* 5. Photo URL */}
-        <Text style={styles.fieldLabel}>Foto o Imagen del Útil (URL)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="https://..."
-          placeholderTextColor={colors.text.muted}
-          value={photoUrl}
-          onChangeText={setPhotoUrl}
-          testID="input-item-photo"
+        {/* 5. Photos Carousel + Camera & Gallery Picker (replicated from products-app) */}
+        <Text style={styles.fieldLabel}>Fotos del Útil ({previewImages.length}/{MAX_EXCHANGE_IMAGES})</Text>
+        <ExchangeItemImages
+          images={previewImages}
+          onRemoveImage={handleRemoveImage}
+          testID="carousel-item-photos"
         />
+
+        <View style={styles.mediaActionsRow}>
+          <TouchableOpacity
+            style={styles.mediaActionBtn}
+            onPress={() => router.push('/(student)/community/camera')}
+            testID="btn-open-camera"
+          >
+            <Camera size={18} color={colors.brand.primaryDark} />
+            <Text style={styles.mediaActionText}>Sacar Foto</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.mediaActionBtn}
+            onPress={handlePickFromGallery}
+            testID="btn-open-gallery"
+          >
+            <Images size={18} color={colors.brand.primaryDark} />
+            <Text style={styles.mediaActionText}>Galería</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.urlToggleBtn}
+          onPress={() => setShowUrlInput((prev) => !prev)}
+          testID="btn-toggle-photo-url"
+        >
+          <Link2 size={14} color={colors.text.secondary} />
+          <Text style={styles.urlToggleText}>
+            {showUrlInput ? 'Ocultar enlace URL' : 'O pegar URL de imagen (opcional)'}
+          </Text>
+        </TouchableOpacity>
+
+        {showUrlInput && (
+          <TextInput
+            style={styles.input}
+            placeholder="https://..."
+            placeholderTextColor={colors.text.muted}
+            value={photoUrl}
+            onChangeText={setPhotoUrl}
+            testID="input-item-photo"
+          />
+        )}
 
         {/* Submit Button */}
         <View style={styles.submitWrapper}>
           <Button
-            label="Enviar para Moderación Escolar"
+            label={isSubmitting ? 'Subiendo fotos y enviando...' : 'Enviar para Moderación Escolar'}
             onPress={handleSubmit}
+            disabled={isSubmitting}
             variant="primary"
             testID="btn-submit-exchange-item"
           />
@@ -448,6 +544,38 @@ const styles = StyleSheet.create({
   },
   submitWrapper: {
     marginTop: 16,
+  },
+  mediaActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8,
+  },
+  mediaActionBtn: {
+    flex: 1,
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.brand.primarySoft,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+  },
+  mediaActionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.brand.primaryDark,
+  },
+  urlToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  urlToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text.secondary,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',

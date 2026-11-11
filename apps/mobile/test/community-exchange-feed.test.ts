@@ -3,7 +3,10 @@ import { CreateExchangeItemSchema } from '@cambiazo/shared';
 import {
   createExchangeItemAction,
   fetchExchangeItemsAction,
+  isLocalImageUri,
+  prepareExchangeImagesAction,
 } from '../src/core';
+import { cameraStore } from '../src/shared/store';
 import {
   installTestBackend,
   TEST_INSTITUTION_ID,
@@ -98,5 +101,38 @@ describe('Student Community Exchange Feed & Publish Form (WAVE-3-MOBILE-03)', ()
     const feed = await fetchExchangeItemsAction(institutionId);
     const inFeed = feed.some((i) => i.id === createRes.item?.id);
     expect(inFeed).toBe(false);
+  });
+
+  it('uploads local camera/gallery images via FormData before publishing exchange item', async () => {
+    cameraStore.clearImages();
+    cameraStore.addSelectedImages([
+      'file:///var/mobile/photo-1.jpg',
+      'content://media/external/images/media/42',
+    ]);
+    expect(cameraStore.getState().selectedImages.length).toBe(2);
+    expect(isLocalImageUri('file:///var/mobile/photo-1.jpg')).toBe(true);
+    expect(isLocalImageUri('https://images.unsplash.com/photo-1.jpg')).toBe(false);
+
+    const prepared = await prepareExchangeImagesAction([
+      ...cameraStore.getState().selectedImages,
+      'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=400',
+    ]);
+    expect(prepared.length).toBe(3);
+    prepared.forEach((url) => expect(url).toMatch(/^https?:\/\//));
+
+    const createRes = await createExchangeItemAction(studentId, institutionId, {
+      title: 'Calculadora Científica Casio',
+      description: 'Funciona perfecto, con tapa protectora incluida.',
+      category: 'Tecnología',
+      mode: 'BARTER',
+      photoUrls: cameraStore.getState().selectedImages,
+    });
+
+    expect(createRes.success).toBe(true);
+    expect(createRes.item?.photoUrls.length).toBe(2);
+    createRes.item?.photoUrls.forEach((url) =>
+      expect(url).toMatch(/^http:\/\/localhost:3010\/api\/v1\/files\//)
+    );
+    cameraStore.clearImages();
   });
 });

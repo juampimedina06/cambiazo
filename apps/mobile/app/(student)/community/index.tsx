@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
@@ -224,10 +224,18 @@ export default function CommunityFeedScreen() {
                 style={styles.itemRow}
                 testID={`community-item-${item.id}`}
               >
-                {/* 1. Icon / Avatar */}
-                <View style={styles.itemIconCircle}>
-                  {renderCategoryIcon(item.category)}
-                </View>
+                {/* 1. Photo thumbnail or Icon / Avatar */}
+                {item.photoUrls?.[0] ? (
+                  <Image
+                    source={{ uri: item.photoUrls[0] }}
+                    style={styles.itemThumbnail}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.itemIconCircle}>
+                    {renderCategoryIcon(item.category)}
+                  </View>
+                )}
 
                 {/* 2. Short Title + Subtitle */}
                 <View style={styles.itemContent}>
@@ -358,6 +366,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  itemThumbnail: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.background.divider,
   },
   itemContent: {
     flex: 1,
