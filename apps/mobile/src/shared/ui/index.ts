@@ -8,3 +8,5 @@ export * from './DramaticSplashScreen';
 export * from './DatePickerField';
 export * from './SelectPickerField';
 export * from './NumericStepperField';
+export * from './role-nav.config';
+export * from './RoleBottomNav';

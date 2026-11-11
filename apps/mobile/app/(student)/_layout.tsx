@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
-import { Redirect, Slot, useRouter } from 'expo-router';
+import { Redirect, Slot, useRouter, useSegments } from 'expo-router';
 import { colors } from '../../src/shared/theme/colors';
 import { authStore, type AuthState } from '../../src/shared/store/auth-store';
 import { StudentBlockedView } from '../../src/features/parental-consent/ui/StudentBlockedView';
+import {
+  RoleBottomNav,
+  STUDENT_HIDDEN_NAV_ROUTES,
+  STUDENT_NAV_ITEMS,
+  pathFromSegments,
+} from '../../src/shared/ui';
 
 /**
  * Student Layout with strict Parental Consent Gate (Ley 25.326):
@@ -12,6 +18,8 @@ import { StudentBlockedView } from '../../src/features/parental-consent/ui/Stude
  */
 export default function StudentLayout() {
   const router = useRouter();
+  const segments = useSegments();
+  const activePath = pathFromSegments(segments);
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
 
   useEffect(() => {
@@ -60,6 +68,13 @@ export default function StudentLayout() {
       <View style={styles.container}>
         <Slot />
       </View>
+      <RoleBottomNav
+        items={STUDENT_NAV_ITEMS}
+        activePath={activePath}
+        hiddenRoutes={STUDENT_HIDDEN_NAV_ROUTES}
+        onNavigate={(href) => router.replace(href)}
+        testID="nav-bar-student"
+      />
     </SafeAreaView>
   );
 }

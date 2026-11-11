@@ -131,6 +131,9 @@ declare module 'react-native' {
     children?: React.ReactNode;
     onLayout?: (event: any) => void;
     testID?: string;
+    accessibilityRole?: string;
+    accessibilityState?: Record<string, boolean>;
+    accessibilityLabel?: string;
   }
 
   export interface TextProps {
