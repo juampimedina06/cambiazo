@@ -1,39 +1,42 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Ticket, Users, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Ticket, Users, CheckCircle2 } from 'lucide-react';
 import { InvitationCode } from '@/shared/api/types';
 import { apiClient } from '@/shared/api/api-client';
-import { Surface } from '@/shared/ui/Surface';
+import { getActiveInstitutionId } from '@/shared/api/tenant';
 import { Button } from '@/shared/ui/Button';
 import { InvitationRow } from '@/entities/invitation';
 import { CreateInvitationModal } from '@/features/invitation-generator';
 
-const DEFAULT_SCHOOL_ID = 'e28bb18a-66fe-4f8e-9092-2df283f55001'; // Colegio Belgrano Day School
-
 export default function SchoolInvitationsPage() {
   const [invitations, setInvitations] = useState<InvitationCode[]>([]);
-  const [institutionId, setInstitutionId] = useState<string>(DEFAULT_SCHOOL_ID);
+  const [institutionId, setInstitutionId] = useState<string>(() => getActiveInstitutionId());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const loadInvitations = async (targetId: string = institutionId) => {
     setIsLoading(true);
+    setApiError(null);
     try {
       const data = await apiClient.getInvitations(targetId);
       setInvitations(data);
     } catch (err) {
       console.error('Failed to load invitations:', err);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudieron cargar los códigos de invitación.'
+      );
+      setInvitations([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    const activeId =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('cambiazo_institution_id') || DEFAULT_SCHOOL_ID
-        : DEFAULT_SCHOOL_ID;
+    const activeId = getActiveInstitutionId();
     setInstitutionId(activeId);
     loadInvitations(activeId);
   }, []);
@@ -70,12 +73,10 @@ export default function SchoolInvitationsPage() {
         </Button>
       </div>
 
-      {/* Metrics Row (NO CARD-IN-CARD) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-soft text-brand-dark flex items-center justify-center flex-shrink-0">
-            <Ticket size={24} />
-          </div>
+      {/* Open Editorial Metrics Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 border-y border-slate-200/70 dark:border-white/[0.08] divide-y sm:divide-y-0 sm:divide-x divide-slate-200/70 dark:divide-white/[0.08]">
+        <div className="py-4 sm:pr-6 flex items-center gap-3.5">
+          <Ticket size={20} className="text-brand-primary dark:text-purple-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Códigos Creados
@@ -84,12 +85,10 @@ export default function SchoolInvitationsPage() {
               {totalCodes}
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
-            <Users size={24} />
-          </div>
+        <div className="py-4 sm:px-6 flex items-center gap-3.5">
+          <Users size={20} className="text-amber-600 dark:text-amber-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Familias Vinculadas
@@ -101,41 +100,48 @@ export default function SchoolInvitationsPage() {
               </span>
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 size={24} />
-          </div>
+        <div className="py-4 sm:pl-6 flex items-center gap-3.5">
+          <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Tasa de Adopción
             </span>
-            <div className="text-2xl font-extrabold text-emerald-600 tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">
               {totalMax > 0 ? Math.round((totalUsed / totalMax) * 100) : 0}%
             </div>
           </div>
-        </Surface>
+        </div>
       </div>
 
-      {/* Main Table / Flat List inside Surface (NO CARD-IN-CARD) */}
-      <Surface>
-        <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      {/* Open List directly on canvas */}
+      <section className="border-t border-slate-200/70 dark:border-white/[0.08]">
+        <div className="py-3.5 border-b border-slate-200/60 dark:border-white/[0.07] flex justify-between items-center">
           <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
             Códigos Disponibles ({invitations.length})
           </span>
-          <span className="text-xs text-text-secondary font-medium">
-            Expira según configuración de directivos
+          <span className="text-xs text-text-muted font-medium">
+            Vigencia institucional
           </span>
         </div>
 
-        {isLoading ? (
-          <div className="p-12 text-center text-text-secondary text-sm">
+        {apiError ? (
+          <div className="py-10 text-center flex flex-col items-center gap-3">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+              {apiError}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => loadInvitations(institutionId)}>
+              Reintentar
+            </Button>
+          </div>
+        ) : isLoading ? (
+          <div className="py-12 text-center text-text-secondary text-sm">
             Cargando códigos de invitación...
           </div>
         ) : invitations.length === 0 ? (
-          <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
-            <Ticket size={36} className="text-slate-300" />
+          <div className="py-12 text-center flex flex-col items-center justify-center gap-2">
+            <Ticket size={36} className="text-slate-300 dark:text-slate-600" />
             <p className="font-semibold text-text-primary text-base">
               No hay códigos generados
             </p>
@@ -150,7 +156,7 @@ export default function SchoolInvitationsPage() {
             ))}
           </div>
         )}
-      </Surface>
+      </section>
 
       {/* Modal for Creating Invitation */}
       <CreateInvitationModal

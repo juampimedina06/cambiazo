@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { KioskLedgerBalance } from '@/shared/api/types';
-import { Surface } from '@/shared/ui/Surface';
 import { Button } from '@/shared/ui/Button';
-import { Wallet, ArrowUpRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Wallet, ShieldCheck, ArrowUpRight } from 'lucide-react';
 
 interface LedgerBalanceCardProps {
   balance: KioskLedgerBalance;
@@ -43,25 +42,23 @@ export const LedgerBalanceCard: React.FC<LedgerBalanceCardProps> = ({
   const canWithdraw = balance.availableBalanceCents > 0;
 
   return (
-    <Surface className="p-6 sm:p-8 bg-gradient-to-br from-white via-white to-purple-50/40 border-2 border-purple-100">
+    <section className="py-6 border-y border-slate-200/70 dark:border-white/[0.08]">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         {/* Left: Giant Balance Display */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
-              <Wallet size={16} />
-            </span>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <Wallet size={16} className="text-emerald-600 dark:text-emerald-400" />
             <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
               Saldo Disponible en Libro Mayor
             </span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-2.5 py-0.5 rounded-full">
               <ShieldCheck size={12} />
               <span>0% Comisión</span>
             </span>
           </div>
 
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl sm:text-5xl font-extrabold text-emerald-600 tracking-tight tabular-nums">
+            <span className="text-4xl sm:text-5xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight tabular-nums">
               {availableFormatted}
             </span>
             <span className="text-xs font-semibold text-text-secondary uppercase">
@@ -70,13 +67,13 @@ export const LedgerBalanceCard: React.FC<LedgerBalanceCardProps> = ({
           </div>
 
           <p className="text-xs text-text-secondary mt-2">
-            Calculado de forma inmutable desde los asientos contables de la institución educativa.
+            Calculado desde los asientos contables de la institución educativa.
           </p>
         </div>
 
         {/* Right: Sub-metrics and Withdrawal Action */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <div className="flex items-center gap-6 divide-x divide-slate-200">
+          <div className="flex items-center gap-6 divide-x divide-slate-200/70 dark:divide-white/[0.08]">
             <div>
               <span className="text-[11px] font-semibold text-text-secondary block">
                 Total Recaudado en Ventas
@@ -108,6 +105,6 @@ export const LedgerBalanceCard: React.FC<LedgerBalanceCardProps> = ({
           </Button>
         </div>
       </div>
-    </Surface>
+    </section>
   );
 };

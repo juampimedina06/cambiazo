@@ -40,60 +40,55 @@ export const ProductRow: React.FC<ProductRowProps> = ({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-slate-100 hover:bg-slate-50/50 transition-colors gap-4 ${
-        !product.isActive ? 'opacity-60 bg-slate-50/30' : ''
+      className={`flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 border-b border-slate-200/60 dark:border-white/[0.07] last:border-b-0 hover:bg-white/60 dark:hover:bg-white/[0.04] transition-colors gap-4 ${
+        !product.isActive ? 'opacity-55' : ''
       }`}
     >
       {/* 1. Product Identity & Stock */}
-      <div className="flex items-center gap-4 min-w-[260px]">
+      <div className="flex items-center gap-3.5 min-w-[240px]">
         <div
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${
             product.isActive
-              ? 'bg-brand-soft text-brand-dark'
-              : 'bg-slate-200 text-slate-500'
+              ? 'bg-brand-soft/80 dark:bg-brand-primary/20 text-brand-dark dark:text-purple-200'
+              : 'bg-slate-200/70 dark:bg-white/[0.08] text-text-muted'
           }`}
         >
-          <Package size={22} />
+          <Package size={20} />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-text-primary text-base leading-tight">
+            <h3 className="font-bold text-text-primary text-sm sm:text-base leading-tight">
               {product.name}
             </h3>
             {!product.isActive && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-white/[0.1] text-text-secondary">
                 Pausado
               </span>
             )}
           </div>
           <p className="text-xs text-text-secondary mt-0.5">
             {isOutOfStock ? (
-              <span className="text-red-600 font-bold">Sin stock disponible</span>
+              <span className="text-rose-600 dark:text-rose-400 font-bold">Sin stock</span>
             ) : isLowStock ? (
-              <span className="text-amber-600 font-semibold">
-                ¡Poco stock! {product.stock} disponibles
+              <span className="text-amber-600 dark:text-amber-300 font-semibold">
+                Quedan {product.stock} u.
               </span>
             ) : (
-              <span>Stock: {product.stock} unidades</span>
+              <span>Stock: {product.stock} u.</span>
             )}
           </p>
         </div>
       </div>
 
-      {/* 2. Category & Parent-Blockable Badges */}
+      {/* 2. Category Badge */}
       <div className="flex items-center gap-2">
         <CategoryBadge category={product.category} />
       </div>
 
-      {/* 3. Price in Pesos (1 a 1) & Actions */}
-      <div className="flex items-center justify-between sm:justify-end gap-5">
-        <div className="text-right">
-          <div className="text-lg sm:text-xl font-extrabold text-brand-primary tabular-nums">
-            {priceFormatted}
-          </div>
-          <div className="text-[11px] text-text-secondary font-medium">
-            Pesos reales 1 a 1
-          </div>
+      {/* 3. Price & Actions */}
+      <div className="flex items-center justify-between sm:justify-end gap-4">
+        <div className="text-lg sm:text-xl font-extrabold text-brand-primary dark:text-purple-300 tabular-nums">
+          {priceFormatted}
         </div>
 
         <div className="flex items-center gap-1.5">

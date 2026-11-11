@@ -37,17 +37,17 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles = {
     primary:
-      'bg-brand-primary text-white hover:bg-brand-dark focus:ring-brand-primary shadow-sm active:scale-[0.98]',
+      'bg-brand-primary text-white hover:bg-[#5B2DD6] focus:ring-brand-primary shadow-[0_6px_20px_-4px_rgba(108,60,233,0.45)] active:scale-[0.98]',
     secondary:
-      'bg-brand-soft text-brand-dark hover:bg-purple-200 focus:ring-brand-primary active:scale-[0.98]',
+      'bg-brand-soft/80 dark:bg-brand-primary/20 text-brand-dark dark:text-purple-200 border border-brand-primary/15 dark:border-brand-primary/30 hover:bg-brand-soft dark:hover:bg-brand-primary/30 focus:ring-brand-primary active:scale-[0.98]',
     outline:
-      'bg-white border-2 border-slate-200 text-text-primary hover:border-brand-primary hover:text-brand-primary focus:ring-brand-primary active:scale-[0.98]',
+      'backdrop-blur-md bg-white/70 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.14] text-text-primary hover:border-brand-primary/60 hover:text-brand-primary dark:hover:bg-white/[0.1] focus:ring-brand-primary active:scale-[0.98]',
     ghost:
-      'bg-transparent text-text-secondary hover:text-text-primary hover:bg-slate-100 focus:ring-slate-300',
+      'bg-transparent text-text-secondary hover:text-text-primary hover:bg-black/[0.04] dark:hover:bg-white/[0.08] focus:ring-slate-300',
     danger:
-      'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 focus:ring-red-400',
+      'bg-rose-500/10 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20 border border-rose-200/80 dark:border-rose-400/25 focus:ring-rose-400',
     accent:
-      'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 shadow-sm active:scale-[0.98]',
+      'bg-emerald-600 text-white hover:bg-emerald-500 focus:ring-emerald-500 shadow-[0_6px_20px_-4px_rgba(16,185,129,0.4)] active:scale-[0.98]',
   }[variant];
 
   return (

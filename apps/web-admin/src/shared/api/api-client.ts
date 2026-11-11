@@ -1,4 +1,5 @@
 import { mockAdapter } from './mock-adapter';
+import { getActiveInstitutionId } from './tenant';
 import {
   Institution,
   CreateInstitutionInput,
@@ -26,24 +27,19 @@ import {
   SuperAdminGlobalMetrics,
 } from './types';
 
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== 'false';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 export class ApiClient {
   private useMocks: boolean;
   private baseUrl: string;
 
-  constructor(useMocks: boolean = USE_MOCKS, baseUrl: string = API_BASE_URL) {
+  constructor(useMocks: boolean = false, baseUrl: string = API_BASE_URL) {
     this.useMocks = useMocks;
     this.baseUrl = baseUrl;
   }
 
   private getHeaders(role: string = 'SUPER_ADMIN', institutionId?: string): Record<string, string> {
-    const defaultInstId =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('cambiazo_institution_id') || 'e28bb18a-66fe-4f8e-9092-2df283f55001'
-        : 'e28bb18a-66fe-4f8e-9092-2df283f55001';
-
+    const defaultInstId = getActiveInstitutionId();
     const targetInstitutionId = institutionId || (role !== 'SUPER_ADMIN' ? defaultInstId : undefined);
 
     const headers: Record<string, string> = {
@@ -64,55 +60,42 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.getInstitutions();
     }
-    try {
-      const res = await fetch(`${this.baseUrl}/institutions`, {
-        headers: this.getHeaders('SUPER_ADMIN'),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Failed to fetch institutions: ${res.statusText}`);
-      }
-      return res.json();
-    } catch (err: any) {
-      console.warn(`[ApiClient] Live backend request failed (${err.message}). Using fallback.`);
-      return mockAdapter.getInstitutions();
+    const res = await fetch(`${this.baseUrl}/institutions`, {
+      headers: this.getHeaders('SUPER_ADMIN'),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Error al cargar instituciones (${res.status})`);
     }
+    return res.json();
   }
 
   async getInstitutionById(id: string): Promise<Institution | null> {
     if (this.useMocks) {
       return mockAdapter.getInstitutionById(id);
     }
-    try {
-      const res = await fetch(`${this.baseUrl}/institutions/${id}`, {
-        headers: this.getHeaders('SUPER_ADMIN'),
-      });
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`Failed to fetch institution: ${res.statusText}`);
-      return res.json();
-    } catch (err: any) {
-      console.warn(`[ApiClient] Live backend request failed (${err.message}). Using fallback.`);
-      return mockAdapter.getInstitutionById(id);
+    const res = await fetch(`${this.baseUrl}/institutions/${id}`, {
+      headers: this.getHeaders('SUPER_ADMIN'),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      throw new Error(`Error al consultar institución (${res.status})`);
     }
+    return res.json();
   }
 
   async createInstitution(data: CreateInstitutionInput): Promise<Institution> {
     if (this.useMocks) {
       return mockAdapter.createInstitution(data);
     }
-    let res: Response;
-    try {
-      res = await fetch(`${this.baseUrl}/institutions`, {
-        method: 'POST',
-        headers: this.getHeaders('SUPER_ADMIN'),
-        body: JSON.stringify(data),
-      });
-    } catch {
-      return mockAdapter.createInstitution(data);
-    }
+    const res = await fetch(`${this.baseUrl}/institutions`, {
+      method: 'POST',
+      headers: this.getHeaders('SUPER_ADMIN'),
+      body: JSON.stringify(data),
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error creating institution');
+      throw new Error(err.message || `Error al crear institución (${res.status})`);
     }
     const json = await res.json();
     return json?.institution ? json.institution : json;
@@ -125,17 +108,15 @@ export class ApiClient {
     if (this.useMocks) {
       return mockAdapter.updateInstitutionStatus(id, status);
     }
-    let res: Response;
-    try {
-      res = await fetch(`${this.baseUrl}/institutions/${id}/status`, {
-        method: 'PATCH',
-        headers: this.getHeaders('SUPER_ADMIN'),
-        body: JSON.stringify({ status }),
-      });
-    } catch {
-      return mockAdapter.updateInstitutionStatus(id, status);
+    const res = await fetch(`${this.baseUrl}/institutions/${id}/status`, {
+      method: 'PATCH',
+      headers: this.getHeaders('SUPER_ADMIN'),
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Error al actualizar estado (${res.status})`);
     }
-    if (!res.ok) throw new Error('Error updating institution status');
     return res.json();
   }
 
@@ -240,9 +221,10 @@ export class ApiClient {
       return mockAdapter.updateStudentConsent(studentId, status, reason);
     }
     const endpoint = status === 'REVOKED' ? '/consents/revoke' : '/consents/grant';
+    const institutionId = getActiveInstitutionId();
     const res = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
-      headers: this.getHeaders('PARENT'),
+      headers: this.getHeaders('PARENT', institutionId),
       body: JSON.stringify({
         studentId,
         reason,
@@ -251,28 +233,44 @@ export class ApiClient {
         signatureIp: '127.0.0.1',
       }),
     });
-    if (!res.ok) throw new Error('Failed to update parental consent');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Error al actualizar el consentimiento parental');
+    }
     const json = await res.json().catch(() => ({}));
+    const roster = await this.getStudentsRoster(institutionId).catch(() => []);
+    const matched = roster.find((item) => item.studentId === studentId || item.id === studentId);
+    if (matched) {
+      return {
+        ...matched,
+        consentStatus: status,
+        consentAudit: {
+          ...matched.consentAudit,
+          revocationReason: reason,
+          signedAt: new Date().toISOString(),
+        },
+        ...json,
+      };
+    }
     return {
-      id: `rost-${studentId}`,
+      id: studentId,
       studentId,
-      institutionId: 'e28bb18a-66fe-4f8e-9092-2df283f55001',
-      studentName: 'Mateo Gómez',
-      studentDni: '52.345.678',
-      grade: '6° Primaria',
-      parentName: 'Carolina Gómez',
-      parentEmail: 'carolina.gomez@ejemplo.com',
-      parentPhone: '+54 11 2233-4455',
+      institutionId,
+      studentName: json.studentName || 'Alumno',
+      studentDni: json.studentDni || '-',
+      grade: json.grade || 'Sin curso',
+      parentName: json.parentName || 'Tutor',
+      parentEmail: json.parentEmail || '',
+      parentPhone: json.parentPhone || '',
       consentStatus: status,
       consentAudit: {
         acceptedTermsVersion: 'v1.0',
         signedAt: new Date().toISOString(),
         revocationReason: reason,
       },
-      walletBalanceCents: 450000,
-      communityPoints: 120,
-      createdAt: new Date().toISOString(),
-      ...json,
+      walletBalanceCents: json.walletBalanceCents ?? 0,
+      communityPoints: json.communityPoints ?? 0,
+      createdAt: json.createdAt || new Date().toISOString(),
     };
   }
 
@@ -686,8 +684,21 @@ export class ApiClient {
     const activeSchools = insts.filter((i) => i.status === 'ACTIVE');
     const totalActiveStudents = insts.reduce((sum, i) => sum + i.activeStudentsCount, 0);
 
+    const salesPerSchool = await Promise.all(
+      insts.map((inst) =>
+        this.getKioskSales(inst.id)
+          .then((sales) => sales.reduce((acc, s) => acc + s.totalAmountCents, 0))
+          .catch(() => 0)
+      )
+    );
+
     let totalMonthlyBillingCents = 0;
-    const institutionsBilling = insts.map((inst) => {
+    let totalKioskVolumeCents = 0;
+
+    const institutionsBilling = insts.map((inst, index) => {
+      const kioskVolumeCents = salesPerSchool[index] ?? 0;
+      totalKioskVolumeCents += kioskVolumeCents;
+
       let calculatedMonthlyFeeCents = 0;
       if (inst.status === 'ACTIVE') {
         if (inst.billingPlanType === 'FIXED_MONTHLY') {
@@ -706,7 +717,7 @@ export class ApiClient {
         monthlyRateCents: inst.monthlyFeeCents,
         activeStudentsCount: inst.activeStudentsCount,
         calculatedMonthlyFeeCents,
-        kioskVolumeCents: 12000000,
+        kioskVolumeCents,
       };
     });
 
@@ -714,12 +725,12 @@ export class ApiClient {
       totalSchoolsCount: insts.length,
       activeSchoolsCount: activeSchools.length,
       totalActiveStudents,
-      totalKioskVolumeCents: 154000000,
+      totalKioskVolumeCents,
       totalMonthlyBillingCents,
       institutionsBilling,
     };
   }
 }
 
-export const apiClient = new ApiClient();
+export const apiClient = new ApiClient(false);
 

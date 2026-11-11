@@ -44,16 +44,16 @@ export const StudentRow: React.FC<StudentRowProps> = ({
         return (
           <Pill
             variant="granted"
-            icon={<ShieldCheck size={14} />}
-            label="Consentimiento Otorgado"
+            icon={<ShieldCheck size={13} />}
+            label="Otorgado"
           />
         );
       case 'REVOKED':
         return (
           <Pill
             variant="revoked"
-            icon={<ShieldAlert size={14} />}
-            label="Consentimiento Revocado"
+            icon={<ShieldAlert size={13} />}
+            label="Revocado"
           />
         );
       case 'PENDING':
@@ -61,8 +61,8 @@ export const StudentRow: React.FC<StudentRowProps> = ({
         return (
           <Pill
             variant="pending"
-            icon={<Clock size={14} />}
-            label="Pendiente de Firma"
+            icon={<Clock size={13} />}
+            label="Pendiente"
           />
         );
     }
@@ -84,51 +84,41 @@ export const StudentRow: React.FC<StudentRowProps> = ({
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between p-4 sm:p-5 border-b border-slate-100 hover:bg-slate-50/50 transition-colors gap-4">
-        {/* 1. Student Identity */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between px-5 py-4 border-b border-slate-200/60 dark:border-white/[0.07] last:border-b-0 hover:bg-white/60 dark:hover:bg-white/[0.04] transition-colors gap-4">
+        {/* 1. Student Identity + Tutor */}
         <div className="flex items-center gap-3.5 min-w-[260px]">
-          <div className="w-12 h-12 rounded-2xl bg-brand-soft text-brand-dark flex items-center justify-center flex-shrink-0">
-            <GraduationCap size={22} />
+          <div className="w-11 h-11 rounded-2xl bg-brand-soft/80 dark:bg-brand-primary/20 text-brand-dark dark:text-purple-200 flex items-center justify-center flex-shrink-0">
+            <GraduationCap size={20} />
           </div>
-          <div>
-            <h4 className="font-bold text-text-primary text-base leading-tight">
+          <div className="min-w-0">
+            <h4 className="font-bold text-text-primary text-sm sm:text-base leading-tight truncate">
               {student.studentName || (student as any).fullName || (student as any).name || 'Alumno sin nombre'}
             </h4>
-            <p className="text-xs text-text-secondary mt-0.5">
-              {student.grade || 'Sin curso'} • DNI {student.studentDni || (student as any).dni || '-'}
+            <p className="text-xs text-text-secondary mt-0.5 truncate">
+              {student.grade || 'Sin curso'} • Tutor: {student.parentName || (student as any).guardianName || 'Sin tutor'}
             </p>
-            <div className="flex items-center gap-3 mt-1.5 text-xs font-semibold">
-              <span className="text-emerald-600">
-                Saldo: {formattedBalance}
-              </span>
-              <span className="text-amber-600">
-                ⭐ {student.communityPoints ?? 0} Pts
-              </span>
-            </div>
           </div>
         </div>
 
-        {/* 2. Family & Parent Contact */}
-        <div className="flex flex-col min-w-[220px]">
-          <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-            Tutor / Responsable
+        {/* 2. Economies Summary */}
+        <div className="flex items-center gap-3 text-xs font-bold tabular-nums">
+          <span className="text-emerald-600 dark:text-emerald-400">
+            {formattedBalance}
           </span>
-          <span className="font-bold text-text-primary text-sm mt-0.5">
-            {student.parentName || (student as any).guardianName || 'Tutor'}
-          </span>
-          <span className="text-xs text-text-secondary mt-0.5">
-            {student.parentEmail || '-'} • {student.parentPhone || '-'}
+          <span className="text-text-muted">•</span>
+          <span className="text-amber-600 dark:text-amber-300">
+            {student.communityPoints ?? 0} Pts
           </span>
         </div>
 
-        {/* 3. Parental Consent Status & Audit Action */}
-        <div className="flex items-center justify-between lg:justify-end gap-3 flex-wrap">
+        {/* 3. Consent Status & Compact Actions */}
+        <div className="flex items-center justify-between lg:justify-end gap-2.5 flex-wrap">
           {getStatusBadge()}
 
           <button
             onClick={() => setShowAuditModal(true)}
-            className="flex items-center gap-1 text-xs text-brand-primary hover:text-brand-dark font-semibold px-2 py-1.5 rounded-lg hover:bg-brand-soft/50 transition-colors"
-            title="Ver trazabilidad Ley 25.326"
+            className="flex items-center gap-1 text-xs text-text-secondary hover:text-brand-primary font-semibold px-2.5 py-1.5 rounded-xl hover:bg-brand-soft/60 dark:hover:bg-white/[0.08] transition-colors"
+            title={`Auditoría Ley 25.326 • DNI ${student.studentDni || '-'}`}
           >
             <Info size={14} />
             <span>Auditoría</span>
@@ -141,7 +131,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={handleGrantConsent}
-                  icon={<CheckCircle size={14} className="text-emerald-600" />}
+                  icon={<CheckCircle size={14} className="text-emerald-600 dark:text-emerald-400" />}
                 >
                   Otorgar
                 </Button>

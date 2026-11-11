@@ -20,8 +20,8 @@ import {
   ModerateExchangeItemDto,
 } from '@/shared/api/types';
 import { apiClient } from '@/shared/api/api-client';
+import { getActiveInstitutionId } from '@/shared/api/tenant';
 import { ModerateExchangeItemSchema } from '@cambiazo/shared';
-import { Surface } from '@/shared/ui/Surface';
 import { Button } from '@/shared/ui/Button';
 import { Pill } from '@/shared/ui/Pill';
 import { Modal } from '@/shared/ui/Modal';
@@ -32,6 +32,7 @@ export default function SchoolModerationPage() {
   const [modeFilter, setModeFilter] = useState<'ALL' | ExchangeMode>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [actionInProgressId, setActionInProgressId] = useState<string | null>(null);
 
   // Reject Modal State
@@ -47,15 +48,18 @@ export default function SchoolModerationPage() {
 
   const loadItems = async () => {
     setIsLoading(true);
+    setApiError(null);
     try {
-      const activeId =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('cambiazo_institution_id') || 'e28bb18a-66fe-4f8e-9092-2df283f55001'
-          : 'e28bb18a-66fe-4f8e-9092-2df283f55001';
-      const data = await apiClient.getExchangeItems(activeId);
+      const data = await apiClient.getExchangeItems(getActiveInstitutionId());
       setItems(data);
     } catch (err) {
       console.error('Error loading exchange items:', err);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo cargar la bandeja de moderación.'
+      );
+      setItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -223,12 +227,10 @@ export default function SchoolModerationPage() {
         </div>
       </div>
 
-      {/* Overview Metric Indicators (Flat on Canvas, NO card-in-card) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Surface className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
-            <AlertCircle size={20} />
-          </div>
+      {/* Open Editorial Metric Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 border-y border-slate-200/70 dark:border-white/[0.08] divide-y sm:divide-y-0 sm:divide-x divide-slate-200/70 dark:divide-white/[0.08]">
+        <div className="py-4 sm:pr-5 flex items-center gap-3">
+          <AlertCircle size={18} className="text-amber-600 dark:text-amber-300 flex-shrink-0" />
           <div>
             <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider block">
               Pendientes
@@ -237,12 +239,10 @@ export default function SchoolModerationPage() {
               {pendingCount}
             </span>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 text-brand-primary flex items-center justify-center font-bold text-sm">
-            <CheckCircle2 size={20} />
-          </div>
+        <div className="py-4 sm:px-5 flex items-center gap-3">
+          <CheckCircle2 size={18} className="text-brand-primary dark:text-purple-300 flex-shrink-0" />
           <div>
             <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider block">
               Disponibles
@@ -251,35 +251,31 @@ export default function SchoolModerationPage() {
               {approvedCount}
             </span>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
-            <PackageCheck size={20} />
-          </div>
+        <div className="py-4 sm:px-5 flex items-center gap-3">
+          <PackageCheck size={18} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           <div>
             <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider block">
               Entregados
             </span>
-            <span className="text-xl font-extrabold text-emerald-600 tabular-nums">
+            <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
               {deliveredCount}
             </span>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center font-bold text-sm">
-            <XCircle size={20} />
-          </div>
+        <div className="py-4 sm:pl-5 flex items-center gap-3">
+          <XCircle size={18} className="text-rose-600 dark:text-rose-400 flex-shrink-0" />
           <div>
             <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider block">
               Rechazados
             </span>
-            <span className="text-xl font-extrabold text-rose-600 tabular-nums">
+            <span className="text-xl font-extrabold text-rose-600 dark:text-rose-400 tabular-nums">
               {rejectedCount}
             </span>
           </div>
-        </Surface>
+        </div>
       </div>
 
       {/* Filter and Search Controls */}
@@ -287,26 +283,26 @@ export default function SchoolModerationPage() {
         <div className="relative flex-1 max-w-md">
           <Search
             size={18}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <input
             type="text"
-            placeholder="Buscar por útil, alumno o descripción..."
+            placeholder="Buscar por útil o alumno..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-text-primary placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            className="w-full pl-10 pr-4 py-2.5 liquid-glass-subtle rounded-2xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Status Filter Buttons */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          <div className="flex items-center gap-1 liquid-glass-subtle p-1 rounded-full">
             {(['ALL', 'PENDING', 'APPROVED', 'DELIVERED', 'REJECTED'] as const).map(
               (status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                     statusFilter === status
                       ? 'bg-brand-primary text-white shadow-sm'
                       : 'text-text-secondary hover:text-text-primary'
@@ -327,12 +323,12 @@ export default function SchoolModerationPage() {
           </div>
 
           {/* Mode Filter Buttons */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          <div className="flex items-center gap-1 liquid-glass-subtle p-1 rounded-full">
             {(['ALL', 'BARTER', 'DONATION', 'LOAN'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setModeFilter(mode)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                   modeFilter === mode
                     ? 'bg-amber-400 text-amber-950 shadow-sm'
                     : 'text-text-secondary hover:text-text-primary'
@@ -351,24 +347,33 @@ export default function SchoolModerationPage() {
         </div>
       </div>
 
-      {/* Main Roster of Items (Flat surface, NO card-in-card) */}
-      <Surface>
-        <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      {/* Open List directly on canvas */}
+      <section className="border-t border-slate-200/70 dark:border-white/[0.08]">
+        <div className="py-3.5 border-b border-slate-200/60 dark:border-white/[0.07] flex justify-between items-center">
           <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-            Publicaciones Comunitarias ({filteredItems.length})
+            Publicaciones ({filteredItems.length})
           </span>
-          <span className="text-xs text-text-secondary font-medium">
-            Punto de Entrega: Preceptoría Central
+          <span className="text-xs text-text-muted font-medium">
+            Preceptoría Central
           </span>
         </div>
 
-        {isLoading ? (
-          <div className="p-12 text-center text-text-secondary text-sm">
+        {apiError ? (
+          <div className="py-10 text-center flex flex-col items-center gap-3">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+              {apiError}
+            </p>
+            <Button size="sm" variant="outline" onClick={loadItems}>
+              Reintentar
+            </Button>
+          </div>
+        ) : isLoading ? (
+          <div className="py-12 text-center text-text-secondary text-sm">
             Cargando bandeja de moderación escolar...
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
-            <BookOpen size={36} className="text-slate-300" />
+          <div className="py-12 text-center flex flex-col items-center justify-center gap-2">
+            <BookOpen size={36} className="text-text-muted opacity-50" />
             <p className="font-semibold text-text-primary text-base">
               No hay publicaciones que coincidan
             </p>
@@ -377,15 +382,15 @@ export default function SchoolModerationPage() {
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-200/60 dark:divide-white/[0.07]">
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+                className="py-4 px-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-white/40 dark:hover:bg-white/[0.03] transition-colors"
               >
-                {/* 1. Item Identity & Mode (Rule: Max 3 data items) */}
-                <div className="flex items-start gap-4 max-w-xl">
-                  <div className="w-14 h-14 rounded-2xl bg-brand-soft/70 border border-purple-100 flex-shrink-0 flex items-center justify-center text-brand-primary overflow-hidden">
+                {/* 1. Item Identity & Student */}
+                <div className="flex items-start gap-3.5 max-w-xl">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-soft/80 dark:bg-brand-primary/20 flex-shrink-0 flex items-center justify-center text-brand-primary dark:text-purple-200 overflow-hidden">
                     {item.photoUrls?.[0] ? (
                       <img
                         src={item.photoUrls[0]}
@@ -393,23 +398,19 @@ export default function SchoolModerationPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <BookOpen size={24} />
+                      <BookOpen size={20} />
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-base text-text-primary leading-snug">
+                      <h3 className="font-bold text-sm sm:text-base text-text-primary leading-snug">
                         {item.title}
                       </h3>
                       {modeBadge(item.mode)}
                     </div>
 
-                    <p className="text-xs text-text-secondary line-clamp-2">
-                      {item.description}
-                    </p>
-
-                    <div className="flex items-center gap-2 text-xs text-text-secondary mt-1">
+                    <div className="flex items-center gap-2 text-xs text-text-secondary flex-wrap">
                       <span className="font-semibold text-text-primary">
                         {item.studentName}
                       </span>
@@ -418,21 +419,18 @@ export default function SchoolModerationPage() {
                       {item.awardedPoints > 0 && (
                         <>
                           <span>•</span>
-                          <span className="text-amber-700 font-bold flex items-center gap-1">
-                            <Sparkles size={12} className="text-amber-500" />
-                            +{item.awardedPoints} Pts Acreditados
+                          <span className="text-amber-600 dark:text-amber-300 font-bold flex items-center gap-1">
+                            <Sparkles size={12} />
+                            +{item.awardedPoints} Pts
                           </span>
                         </>
                       )}
                     </div>
 
                     {item.moderatorNotes && (
-                      <div className="mt-2 p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs text-text-primary font-medium">
-                        <span className="text-text-secondary font-semibold block text-[11px]">
-                          Nota del Moderador:
-                        </span>
+                      <p className="mt-1 border-l-2 border-brand-primary/50 pl-2.5 text-xs text-text-secondary">
                         {item.moderatorNotes}
-                      </div>
+                      </p>
                     )}
                   </div>
                 </div>
@@ -510,7 +508,7 @@ export default function SchoolModerationPage() {
             ))}
           </div>
         )}
-      </Surface>
+      </section>
 
       {/* Modal: Rejection with Mandatory Educational Feedback Reason */}
       <Modal

@@ -19,7 +19,7 @@ export const Surface: React.FC<SurfaceProps> = ({
 }) => {
   return (
     <div
-      className={`bg-surface rounded-2xl border border-slate-100 shadow-sm overflow-hidden ${className}`}
+      className={`liquid-glass rounded-3xl overflow-hidden transition-colors duration-200 ${className}`}
       {...props}
     >
       {children}

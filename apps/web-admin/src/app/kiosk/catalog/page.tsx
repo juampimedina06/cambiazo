@@ -18,8 +18,7 @@ import {
   PRODUCT_CATEGORIES,
 } from '@/shared/api/types';
 import { apiClient } from '@/shared/api/api-client';
-import { DEFAULT_KIOSK_INSTITUTION_ID } from '@/shared/api/mock-adapter';
-import { Surface } from '@/shared/ui/Surface';
+import { getActiveInstitutionId } from '@/shared/api/tenant';
 import { Button } from '@/shared/ui/Button';
 import {
   ProductRow,
@@ -37,24 +36,35 @@ export default function KioskCatalogPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<CatalogProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [institutionId, setInstitutionId] = useState<string>(() => getActiveInstitutionId());
 
-  const loadProducts = async () => {
+  const loadProducts = async (targetId: string = institutionId) => {
     setIsLoading(true);
+    setApiError(null);
     try {
       const data = await apiClient.getCatalogProducts(
-        DEFAULT_KIOSK_INSTITUTION_ID,
+        targetId,
         selectedCategory === 'ALL' ? undefined : selectedCategory
       );
       setProducts(data);
     } catch (err) {
       console.error('Error loading catalog products:', err);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo cargar el catálogo desde la API.'
+      );
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadProducts();
+    const activeId = getActiveInstitutionId();
+    setInstitutionId(activeId);
+    loadProducts(activeId);
   }, [selectedCategory]);
 
   const handleOpenCreateModal = () => {
@@ -144,75 +154,59 @@ export default function KioskCatalogPage() {
         </Button>
       </div>
 
-      {/* Metric Cards (Anti-nesting: flat Surfaces directly on canvas) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-soft text-brand-dark flex items-center justify-center flex-shrink-0">
-            <Package size={24} />
-          </div>
+      {/* Open Editorial Metric Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-y border-slate-200/70 dark:border-white/[0.08] divide-y sm:divide-y-0 lg:divide-x divide-slate-200/70 dark:divide-white/[0.08]">
+        <div className="py-4 lg:pr-5 flex items-center gap-3.5">
+          <Package size={20} className="text-brand-primary dark:text-purple-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Total Catálogo
             </span>
             <div className="text-2xl font-extrabold text-text-primary tabular-nums mt-0.5">
               {totalProducts}{' '}
-              <span className="text-xs text-text-secondary font-normal">
-                artículos
-              </span>
+              <span className="text-xs text-text-secondary font-normal">artículos</span>
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 size={24} />
-          </div>
+        <div className="py-4 lg:px-5 flex items-center gap-3.5">
+          <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               En Stock / Activos
             </span>
-            <div className="text-2xl font-extrabold text-emerald-600 tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">
               {activeProducts}{' '}
-              <span className="text-xs text-text-secondary font-normal">
-                habilitados
-              </span>
+              <span className="text-xs text-text-secondary font-normal">habilitados</span>
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle size={24} />
-          </div>
+        <div className="py-4 lg:px-5 flex items-center gap-3.5">
+          <AlertTriangle size={20} className="text-amber-600 dark:text-amber-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Stock Bajo (≤ 5)
             </span>
-            <div className="text-2xl font-extrabold text-amber-600 tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-300 tabular-nums mt-0.5">
               {lowStockCount}{' '}
-              <span className="text-xs text-text-secondary font-normal">
-                a reponer
-              </span>
+              <span className="text-xs text-text-secondary font-normal">a reponer</span>
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center flex-shrink-0">
-            <ShieldAlert size={24} />
-          </div>
+        <div className="py-4 lg:pl-5 flex items-center gap-3.5">
+          <ShieldAlert size={20} className="text-rose-600 dark:text-rose-400 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Bloqueables Familias
             </span>
-            <div className="text-2xl font-extrabold text-rose-600 tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400 tabular-nums mt-0.5">
               {blockableCount}{' '}
-              <span className="text-xs text-text-secondary font-normal">
-                golosinas
-              </span>
+              <span className="text-xs text-text-secondary font-normal">golosinas</span>
             </div>
           </div>
-        </Surface>
+        </div>
       </div>
 
       {/* Filter and Control Bar */}
@@ -222,43 +216,43 @@ export default function KioskCatalogPage() {
           <div className="relative flex-1 max-w-md">
             <Search
               size={18}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
             />
             <input
               type="text"
-              placeholder="Buscar por nombre de producto o categoría..."
+              placeholder="Buscar producto o categoría..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-text-primary placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+              className="w-full pl-10 pr-4 py-2.5 liquid-glass-subtle rounded-2xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all"
             />
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 bg-surface border border-slate-200 rounded-xl p-1 self-end md:self-auto">
+          <div className="flex items-center gap-1 liquid-glass-subtle rounded-full p-1 self-end md:self-auto">
             <button
               type="button"
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'list'
-                  ? 'bg-brand-soft text-brand-dark'
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
-              title="Vista de Tabla / Lista plana"
+              title="Vista de Lista plana"
             >
-              <List size={16} />
+              <List size={15} />
               <span>Lista</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'grid'
-                  ? 'bg-brand-soft text-brand-dark'
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
               title="Vista de Grilla"
             >
-              <LayoutGrid size={16} />
+              <LayoutGrid size={15} />
               <span>Grilla</span>
             </button>
           </div>
@@ -269,10 +263,10 @@ export default function KioskCatalogPage() {
           <button
             type="button"
             onClick={() => setSelectedCategory('ALL')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap border ${
               selectedCategory === 'ALL'
-                ? 'bg-brand-primary text-white border-brand-primary'
-                : 'bg-surface text-text-secondary border-slate-200 hover:border-slate-300'
+                ? 'bg-brand-primary text-white border-brand-primary shadow-sm'
+                : 'liquid-glass-subtle text-text-secondary hover:text-text-primary'
             }`}
           >
             Todas las Categorías
@@ -282,10 +276,10 @@ export default function KioskCatalogPage() {
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap border flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 ${
                 selectedCategory === cat
-                  ? 'bg-brand-primary text-white border-brand-primary'
-                  : 'bg-surface text-text-secondary border-slate-200 hover:border-slate-300'
+                  ? 'bg-brand-primary text-white border-brand-primary shadow-sm'
+                  : 'liquid-glass-subtle text-text-secondary hover:text-text-primary'
               }`}
             >
               <span>{CATEGORY_LABELS[cat]}</span>
@@ -301,14 +295,23 @@ export default function KioskCatalogPage() {
       </div>
 
       {/* Products Content */}
-      {isLoading ? (
-        <Surface className="p-12 text-center text-text-secondary">
+      {apiError ? (
+        <div className="py-10 text-center flex flex-col items-center gap-3 border-t border-slate-200/70 dark:border-white/[0.08]">
+          <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+            {apiError}
+          </p>
+          <Button size="sm" variant="outline" onClick={() => loadProducts(institutionId)}>
+            Reintentar
+          </Button>
+        </div>
+      ) : isLoading ? (
+        <div className="py-12 text-center text-text-secondary border-t border-slate-200/70 dark:border-white/[0.08]">
           <div className="inline-block w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mb-3" />
           <p className="text-sm">Cargando catálogo del kiosco escolar...</p>
-        </Surface>
+        </div>
       ) : filteredProducts.length === 0 ? (
-        <Surface className="p-12 text-center text-text-secondary">
-          <Package size={40} className="mx-auto text-slate-300 mb-3" />
+        <div className="py-12 text-center text-text-secondary border-t border-slate-200/70 dark:border-white/[0.08]">
+          <Package size={40} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
           <h3 className="font-bold text-text-primary text-base">
             No se encontraron productos
           </h3>
@@ -322,19 +325,19 @@ export default function KioskCatalogPage() {
               Agregar Primer Producto
             </Button>
           </div>
-        </Surface>
+        </div>
       ) : viewMode === 'list' ? (
-        /* Flat Row List inside a single Surface (strictly adhering to NO card-in-card) */
-        <Surface>
-          <div className="px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between text-xs font-bold text-text-secondary uppercase tracking-wider">
-            <span>Artículo / Stock</span>
+        /* Open List directly on canvas */
+        <section className="border-t border-slate-200/70 dark:border-white/[0.08]">
+          <div className="py-3.5 border-b border-slate-200/60 dark:border-white/[0.07] flex items-center justify-between text-xs font-bold text-text-secondary uppercase tracking-wider">
+            <span>Artículo</span>
             <div className="flex items-center gap-12">
               <span className="hidden sm:inline">Categoría</span>
-              <span>Precio y Acciones</span>
+              <span>Precio</span>
             </div>
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-200/60 dark:divide-white/[0.07]">
             {filteredProducts.map((product) => (
               <ProductRow
                 key={product.id}
@@ -345,7 +348,7 @@ export default function KioskCatalogPage() {
               />
             ))}
           </div>
-        </Surface>
+        </section>
       ) : (
         /* Grid Mode on Base Canvas (NOT nested in another Surface) */
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -365,7 +368,7 @@ export default function KioskCatalogPage() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSaveProduct}
         productToEdit={productToEdit}
-        institutionId={DEFAULT_KIOSK_INSTITUTION_ID}
+        institutionId={institutionId}
       />
     </div>
   );

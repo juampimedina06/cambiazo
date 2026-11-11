@@ -5,3 +5,4 @@ export * from './Pill';
 export * from './Input';
 export * from './Modal';
 export * from './InstitutionSwitcher';
+export * from './ThemeToggle';

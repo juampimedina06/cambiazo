@@ -48,13 +48,13 @@ export const Modal: React.FC<ModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 dark:bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className={`w-full ${maxWidthClass} bg-surface rounded-2xl shadow-xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]`}
+        className={`w-full ${maxWidthClass} backdrop-blur-2xl backdrop-saturate-150 bg-white/90 dark:bg-[#17142B]/90 rounded-3xl shadow-2xl border border-white/80 dark:border-white/[0.14] overflow-hidden flex flex-col max-h-[90vh]`}
       >
         {/* Modal Header */}
-        <div className="flex items-start justify-between p-6 border-b border-slate-100">
+        <div className="flex items-start justify-between p-6 border-b border-slate-200/70 dark:border-white/[0.08]">
           <div>
             <h2 id="modal-title" className="text-xl font-bold text-text-primary">
               {title}
@@ -66,7 +66,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-text-secondary hover:text-text-primary hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-text-secondary hover:text-text-primary hover:bg-black/[0.05] dark:hover:bg-white/[0.08] rounded-xl transition-colors"
             aria-label="Cerrar modal"
           >
             <X size={20} />

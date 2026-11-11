@@ -26,8 +26,8 @@ export const ProductGridCard: React.FC<ProductGridCardProps> = ({
 
   return (
     <div
-      className={`bg-surface rounded-2xl border border-slate-100 p-5 flex flex-col justify-between hover:shadow-sm transition-all ${
-        !product.isActive ? 'opacity-60 bg-slate-50/50' : ''
+      className={`py-4 px-2 border-b border-slate-200/70 dark:border-white/[0.08] flex flex-col justify-between transition-colors hover:bg-white/30 dark:hover:bg-white/[0.02] ${
+        !product.isActive ? 'opacity-60' : ''
       }`}
     >
       <div>
@@ -61,9 +61,9 @@ export const ProductGridCard: React.FC<ProductGridCardProps> = ({
         </div>
       </div>
 
-      <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+      <div className="mt-4 pt-3 border-t border-slate-200/50 dark:border-white/[0.06] flex items-center justify-between">
         <div>
-          <div className="text-lg font-extrabold text-brand-primary tabular-nums">
+          <div className="text-lg font-extrabold text-brand-primary dark:text-purple-300 tabular-nums">
             {priceFormatted}
           </div>
           <div className="text-[10px] text-text-secondary">Pesos reales 1 a 1</div>

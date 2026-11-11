@@ -4,6 +4,14 @@
 
 @layer base {
   :root {
+    --canvas-rgb: 244 242 255;
+    --surface-rgb: 255 255 255;
+    --brand-dark-rgb: 76 29 149;
+    --brand-soft-rgb: 237 233 254;
+    --text-primary-rgb: 30 27 75;
+    --text-secondary-rgb: 100 116 139;
+    --text-muted-rgb: 148 163 184;
+
     --canvas: #F8F7FF;
     --surface: #FFFFFF;
     --brand-primary: #6C3CE9;
@@ -13,14 +21,79 @@
     --accent-mint: #10B981;
     --text-primary: #1E1B4B;
     --text-secondary: #64748B;
+    color-scheme: light;
+  }
+
+  .dark {
+    --canvas-rgb: 11 10 22;
+    --surface-rgb: 22 20 38;
+    --brand-dark-rgb: 221 214 254;
+    --brand-soft-rgb: 46 34 88;
+    --text-primary-rgb: 245 243 255;
+    --text-secondary-rgb: 161 161 194;
+    --text-muted-rgb: 113 113 148;
+
+    --canvas: #0B0A16;
+    --surface: #161426;
+    --brand-primary-dark: #DDD6FE;
+    --brand-primary-soft: #2E2258;
+    --text-primary: #F5F3FF;
+    --text-secondary: #A1A1C2;
+    color-scheme: dark;
   }
 
   body {
-    background-color: var(--canvas);
-    color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: rgb(var(--canvas-rgb));
+    color: rgb(var(--text-primary-rgb));
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     margin: 0;
     padding: 0;
+    transition: background-color 220ms ease, color 220ms ease;
   }
+}
+
+@layer components {
+  .liquid-glass {
+    @apply backdrop-blur-2xl backdrop-saturate-150 bg-white/75 dark:bg-white/[0.06] border border-white/80 dark:border-white/[0.12] shadow-glass dark:shadow-glass-dark;
+  }
+
+  .liquid-glass-subtle {
+    @apply backdrop-blur-xl backdrop-saturate-150 bg-white/55 dark:bg-white/[0.04] border border-white/70 dark:border-white/[0.09];
+  }
+
+  .liquid-glass-nav {
+    @apply backdrop-blur-2xl backdrop-saturate-150 bg-white/70 dark:bg-[#121024]/75 border-b border-white/70 dark:border-white/[0.1] shadow-[0_8px_30px_-12px_rgba(30,27,75,0.08)] dark:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.65)];
+  }
+}
+
+/* Smooth Dark Mode compatibility for nested legacy utility surfaces inside inner pages/modals */
+.dark .bg-white {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/70 {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.dark .bg-slate-200 {
+  background-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.dark .border-slate-100 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .border-slate-200 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.07) !important;
 }

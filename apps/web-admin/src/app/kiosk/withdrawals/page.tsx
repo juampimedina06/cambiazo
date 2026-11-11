@@ -15,15 +15,15 @@ import {
   KioskWithdrawalRequestInput,
 } from '@/shared/api/types';
 import { apiClient } from '@/shared/api/api-client';
-import { DEFAULT_KIOSK_INSTITUTION_ID } from '@/shared/api/mock-adapter';
-import { Surface } from '@/shared/ui/Surface';
+import { getActiveInstitutionId } from '@/shared/api/tenant';
 import { Button } from '@/shared/ui/Button';
 import { LedgerBalanceCard, WithdrawalRow } from '@/entities/withdrawal';
 import { WithdrawalModal } from '@/features/withdrawal-request';
 
 export default function KioskWithdrawalsPage() {
+  const [institutionId, setInstitutionId] = useState<string>(() => getActiveInstitutionId());
   const [balance, setBalance] = useState<KioskLedgerBalance>({
-    institutionId: DEFAULT_KIOSK_INSTITUTION_ID,
+    institutionId: getActiveInstitutionId(),
     totalSalesCents: 0,
     totalWithdrawnCents: 0,
     availableBalanceCents: 0,
@@ -34,18 +34,25 @@ export default function KioskWithdrawalsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (targetId: string = institutionId) => {
     setIsRefreshing(true);
+    setApiError(null);
     try {
       const [balanceData, withdrawalsData] = await Promise.all([
-        apiClient.getKioskLedgerBalance(DEFAULT_KIOSK_INSTITUTION_ID),
-        apiClient.getKioskWithdrawals(DEFAULT_KIOSK_INSTITUTION_ID),
+        apiClient.getKioskLedgerBalance(targetId),
+        apiClient.getKioskWithdrawals(targetId),
       ]);
       setBalance(balanceData);
       setWithdrawals(withdrawalsData);
     } catch (err) {
       console.error('Error loading withdrawals and balance:', err);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo cargar el saldo ni los retiros.'
+      );
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -53,20 +60,17 @@ export default function KioskWithdrawalsPage() {
   };
 
   useEffect(() => {
-    loadData();
+    const activeId = getActiveInstitutionId();
+    setInstitutionId(activeId);
+    loadData(activeId);
   }, []);
 
   const handleRequestWithdrawal = async (data: KioskWithdrawalRequestInput) => {
-    const created = await apiClient.requestKioskWithdrawal(
-      data,
-      DEFAULT_KIOSK_INSTITUTION_ID
-    );
+    const created = await apiClient.requestKioskWithdrawal(data, institutionId);
     setWithdrawals((prev) => [created, ...prev]);
 
     // Refresh balance from double-entry ledger
-    const updatedBalance = await apiClient.getKioskLedgerBalance(
-      DEFAULT_KIOSK_INSTITUTION_ID
-    );
+    const updatedBalance = await apiClient.getKioskLedgerBalance(institutionId);
     setBalance(updatedBalance);
   };
 
@@ -86,7 +90,7 @@ export default function KioskWithdrawalsPage() {
         <Button
           size="sm"
           variant="outline"
-          onClick={loadData}
+          onClick={() => loadData(institutionId)}
           isLoading={isRefreshing}
           icon={<RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />}
         >
@@ -115,35 +119,44 @@ export default function KioskWithdrawalsPage() {
           </span>
         </div>
 
-        {isLoading ? (
-          <Surface className="p-12 text-center text-text-secondary">
+        {apiError ? (
+          <div className="py-10 text-center flex flex-col items-center gap-3 border-t border-slate-200/70 dark:border-white/[0.08]">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+              {apiError}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => loadData(institutionId)}>
+              Reintentar
+            </Button>
+          </div>
+        ) : isLoading ? (
+          <div className="py-12 text-center text-text-secondary border-t border-slate-200/70 dark:border-white/[0.08]">
             <div className="inline-block w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mb-3" />
             <p className="text-sm">Cargando historial de retiros...</p>
-          </Surface>
+          </div>
         ) : withdrawals.length === 0 ? (
-          <Surface className="p-12 text-center text-text-secondary">
-            <Wallet size={40} className="mx-auto text-slate-300 mb-3" />
+          <div className="py-12 text-center text-text-secondary border-t border-slate-200/70 dark:border-white/[0.08]">
+            <Wallet size={40} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
             <h3 className="font-bold text-text-primary text-base">
               Aún no has solicitado retiros
             </h3>
             <p className="text-xs text-text-secondary mt-1 max-w-sm mx-auto">
               Cuando solicites una transferencia a tu CVU o Alias de Mercado Pago, quedará registrada aquí con su comprobante de auditoría.
             </p>
-          </Surface>
+          </div>
         ) : (
-          <Surface>
-            <div className="px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between text-xs font-bold text-text-secondary uppercase tracking-wider">
-              <span>Fecha / Auditoría</span>
-              <span className="hidden sm:inline">Destino Mercado Pago</span>
-              <span>Monto Transferido</span>
+          <section className="border-t border-slate-200/70 dark:border-white/[0.08]">
+            <div className="py-3.5 border-b border-slate-200/60 dark:border-white/[0.07] flex items-center justify-between text-xs font-bold text-text-secondary uppercase tracking-wider">
+              <span>Fecha</span>
+              <span className="hidden sm:inline">Destino MP</span>
+              <span>Monto</span>
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-200/60 dark:divide-white/[0.07]">
               {withdrawals.map((withdrawal) => (
                 <WithdrawalRow key={withdrawal.id} withdrawal={withdrawal} />
               ))}
             </div>
-          </Surface>
+          </section>
         )}
       </div>
 

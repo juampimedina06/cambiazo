@@ -51,32 +51,27 @@ export const WithdrawalRow: React.FC<WithdrawalRowProps> = ({ withdrawal }) => {
   }[withdrawal.status];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-slate-100 hover:bg-slate-50/50 transition-colors gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 border-b border-slate-200/60 dark:border-white/[0.07] last:border-b-0 hover:bg-white/60 dark:hover:bg-white/[0.04] transition-colors gap-3">
       {/* 1. Icon & Timestamp */}
-      <div className="flex items-center gap-3.5 min-w-[220px]">
-        <div className="w-11 h-11 rounded-2xl bg-brand-soft text-brand-dark flex items-center justify-center flex-shrink-0">
-          <ArrowUpRight size={20} />
+      <div className="flex items-center gap-3.5 min-w-[200px]">
+        <div className="w-10 h-10 rounded-2xl bg-brand-soft/80 dark:bg-brand-primary/20 text-brand-dark dark:text-purple-200 flex items-center justify-center flex-shrink-0">
+          <ArrowUpRight size={18} />
         </div>
-        <div>
-          <span className="font-extrabold text-sm text-text-primary tabular-nums block">
+        <div title={`Ref: ${withdrawal.idempotencyKey}`}>
+          <span className="font-bold text-sm text-text-primary tabular-nums block">
             {formattedDate} hs
           </span>
-          <span className="text-[11px] text-text-secondary font-mono" title={withdrawal.idempotencyKey}>
-            Idempotencia: {withdrawal.idempotencyKey.substring(0, 14)}...
+          <span className="text-xs text-text-secondary">
+            Retiro Mercado Pago
           </span>
         </div>
       </div>
 
-      {/* 2. Mercado Pago CVU/Alias & Status */}
-      <div className="flex flex-col sm:items-center gap-1">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-text-primary">
-            Destino MP:
-          </span>
-          <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded-lg text-text-primary">
-            {withdrawal.mercadoPagoAliasOrCvu}
-          </span>
-        </div>
+      {/* 2. Mercado Pago Destination & Status */}
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <span className="text-xs font-mono bg-white/80 dark:bg-white/[0.08] border border-slate-200/70 dark:border-white/[0.1] px-2.5 py-1 rounded-lg text-text-primary">
+          {withdrawal.mercadoPagoAliasOrCvu}
+        </span>
         <Pill
           variant={statusConfig.variant}
           icon={statusConfig.icon}
@@ -85,15 +80,8 @@ export const WithdrawalRow: React.FC<WithdrawalRowProps> = ({ withdrawal }) => {
       </div>
 
       {/* 3. Amount in ARS */}
-      <div className="flex items-center justify-between sm:justify-end gap-4">
-        <div className="text-right">
-          <div className="text-base sm:text-lg font-extrabold text-emerald-700 tabular-nums">
-            {amountFormatted}
-          </div>
-          <div className="text-[10px] text-text-secondary">
-            100% neto a cuenta MP
-          </div>
-        </div>
+      <div className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums text-right">
+        {amountFormatted}
       </div>
     </div>
   );

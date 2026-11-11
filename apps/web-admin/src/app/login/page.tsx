@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { LogoPencilC } from '@/shared/ui/LogoPencilC';
 import { Surface } from '@/shared/ui/Surface';
 import { Button } from '@/shared/ui/Button';
-import { ShieldCheck, School, Store, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ThemeToggle } from '@/shared/ui/ThemeToggle';
+import { ShieldCheck, School, Store, ArrowRight } from 'lucide-react';
 import { apiClient } from '@/shared/api/api-client';
 import { Institution } from '@/shared/api/types';
 
@@ -55,18 +56,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between p-6 sm:p-12 bg-canvas">
-      <header className="flex items-center justify-between max-w-xl w-full mx-auto pb-6 border-b border-slate-200">
+    <div className="min-h-screen flex flex-col justify-between p-6 sm:p-10">
+      <header className="max-w-xl w-full mx-auto px-5 py-3.5 rounded-3xl liquid-glass flex items-center justify-between gap-3">
         <Link href="/">
-          <LogoPencilC size={42} showText />
+          <LogoPencilC size={40} showText />
         </Link>
-        <span className="text-xs font-semibold px-3 py-1 bg-brand-soft text-brand-dark rounded-full">
-          Inicio de Sesión
-        </span>
+        <div className="flex items-center gap-2.5">
+          <span className="hidden sm:inline-flex text-xs font-semibold px-3 py-1 bg-brand-soft/80 dark:bg-brand-primary/20 text-brand-dark dark:text-purple-200 rounded-full border border-brand-primary/15">
+            Inicio de Sesión
+          </span>
+          <ThemeToggle compact />
+        </div>
       </header>
 
       <main className="max-w-xl w-full mx-auto py-8">
-        <Surface className="p-8 border border-slate-200 shadow-sm">
+        <Surface className="p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">
               Ingresar al Portal
@@ -86,39 +90,39 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setRole('SCHOOL_ADMIN')}
-                  className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 text-center transition-all ${
+                  className={`p-4 rounded-2xl border backdrop-blur-md flex flex-col items-center gap-2 text-center transition-all ${
                     role === 'SCHOOL_ADMIN'
-                      ? 'border-brand-primary bg-brand-soft/40 text-brand-dark font-bold shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 text-text-secondary bg-white'
+                      ? 'border-brand-primary bg-brand-soft/60 dark:bg-brand-primary/25 text-brand-dark dark:text-purple-100 font-bold shadow-sm'
+                      : 'border-white/70 dark:border-white/[0.1] hover:border-brand-primary/40 text-text-secondary bg-white/50 dark:bg-white/[0.04]'
                   }`}
                 >
-                  <School size={24} className={role === 'SCHOOL_ADMIN' ? 'text-brand-primary' : 'text-slate-400'} />
+                  <School size={24} className={role === 'SCHOOL_ADMIN' ? 'text-brand-primary dark:text-purple-300' : 'text-text-muted'} />
                   <span className="text-sm">Panel Escolar</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setRole('KIOSK')}
-                  className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 text-center transition-all ${
+                  className={`p-4 rounded-2xl border backdrop-blur-md flex flex-col items-center gap-2 text-center transition-all ${
                     role === 'KIOSK'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 text-text-secondary bg-white'
+                      ? 'border-emerald-500 bg-emerald-500/15 dark:bg-emerald-400/20 text-emerald-900 dark:text-emerald-200 font-bold shadow-sm'
+                      : 'border-white/70 dark:border-white/[0.1] hover:border-emerald-400/50 text-text-secondary bg-white/50 dark:bg-white/[0.04]'
                   }`}
                 >
-                  <Store size={24} className={role === 'KIOSK' ? 'text-emerald-600' : 'text-slate-400'} />
+                  <Store size={24} className={role === 'KIOSK' ? 'text-emerald-600 dark:text-emerald-300' : 'text-text-muted'} />
                   <span className="text-sm">Kiosco POS</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setRole('SUPER_ADMIN')}
-                  className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 text-center transition-all ${
+                  className={`p-4 rounded-2xl border backdrop-blur-md flex flex-col items-center gap-2 text-center transition-all ${
                     role === 'SUPER_ADMIN'
-                      ? 'border-brand-primary bg-brand-soft/40 text-brand-dark font-bold shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 text-text-secondary bg-white'
+                      ? 'border-brand-primary bg-brand-soft/60 dark:bg-brand-primary/25 text-brand-dark dark:text-purple-100 font-bold shadow-sm'
+                      : 'border-white/70 dark:border-white/[0.1] hover:border-brand-primary/40 text-text-secondary bg-white/50 dark:bg-white/[0.04]'
                   }`}
                 >
-                  <ShieldCheck size={24} className={role === 'SUPER_ADMIN' ? 'text-brand-primary' : 'text-slate-400'} />
+                  <ShieldCheck size={24} className={role === 'SUPER_ADMIN' ? 'text-brand-primary dark:text-purple-300' : 'text-text-muted'} />
                   <span className="text-sm">Super Admin</span>
                 </button>
               </div>
@@ -134,15 +138,15 @@ export default function LoginPage() {
                   <select
                     value={selectedInstId}
                     onChange={(e) => setSelectedInstId(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-text-primary font-bold text-sm focus:outline-none focus:border-brand-primary transition-colors cursor-pointer appearance-none"
+                    className="w-full px-4 py-3.5 backdrop-blur-md bg-white/75 dark:bg-white/[0.06] border border-white/80 dark:border-white/[0.12] rounded-2xl text-text-primary font-bold text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/60 focus:border-brand-primary transition-colors cursor-pointer appearance-none shadow-sm"
                   >
                     {institutions.map((inst) => (
-                      <option key={inst.id} value={inst.id}>
+                      <option key={inst.id} value={inst.id} className="bg-white dark:bg-[#17142B] text-text-primary">
                         {inst.name} ({inst.address || 'Sede Central'})
                       </option>
                     ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text-muted">
                     ▼
                   </div>
                 </div>

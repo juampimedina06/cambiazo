@@ -6,42 +6,57 @@ import {
   Users,
   Store,
   Building2,
-  Receipt,
   Download,
-  Calendar,
-  ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
 } from 'lucide-react';
-import { SuperAdminGlobalMetrics, InstitutionBillingRow } from '@/shared/api/types';
+import { SuperAdminGlobalMetrics } from '@/shared/api/types';
 import { apiClient } from '@/shared/api/api-client';
-import { Surface } from '@/shared/ui/Surface';
 import { Button } from '@/shared/ui/Button';
 import { Pill } from '@/shared/ui/Pill';
 
 export default function SuperAdminMetricsPage() {
   const [metrics, setMetrics] = useState<SuperAdminGlobalMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [planFilter, setPlanFilter] = useState<'ALL' | 'FIXED_MONTHLY' | 'PER_ACTIVE_STUDENT'>('ALL');
 
+  const loadMetrics = async () => {
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const data = await apiClient.getSuperAdminMetrics();
+      setMetrics(data);
+    } catch (err) {
+      console.error('Error loading super admin metrics:', err);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudieron cargar las métricas desde la API.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadMetrics = async () => {
-      setIsLoading(true);
-      try {
-        const data = await apiClient.getSuperAdminMetrics();
-        setMetrics(data);
-      } catch (err) {
-        console.error('Error loading super admin metrics:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadMetrics();
   }, []);
 
+  if (apiError) {
+    return (
+      <div className="py-12 text-center flex flex-col items-center gap-3">
+        <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+          {apiError}
+        </p>
+        <Button size="sm" variant="outline" onClick={loadMetrics}>
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading || !metrics) {
     return (
-      <div className="p-12 text-center text-text-secondary text-sm">
+      <div className="py-12 text-center text-text-secondary text-sm">
         Cargando tablero global de métricas y liquidación...
       </div>
     );
@@ -60,6 +75,37 @@ export default function SuperAdminMetricsPage() {
     return row.billingPlanType === planFilter;
   });
 
+  const handleExportCsv = () => {
+    const header = [
+      'Institucion',
+      'CUIT',
+      'Estado',
+      'Plan',
+      'Tarifa_ARS',
+      'Alumnos_Activos',
+      'Volumen_Kiosco_ARS',
+      'Abono_Liquidado_ARS',
+    ];
+    const rows = filteredBilling.map((row) => [
+      `"${row.institutionName.replace(/"/g, '""')}"`,
+      row.cuit,
+      row.status,
+      row.billingPlanType,
+      Math.round(row.monthlyRateCents / 100),
+      row.activeStudentsCount,
+      Math.round(row.kioskVolumeCents / 100),
+      row.status === 'ACTIVE' ? Math.round(row.calculatedMonthlyFeeCents / 100) : 0,
+    ]);
+    const csv = [header.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'liquidacion-cambiazo.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page Title & Action */}
@@ -76,53 +122,41 @@ export default function SuperAdminMetricsPage() {
         <Button
           size="md"
           variant="secondary"
-          onClick={() => alert('Simulación de exportación contable generada para facturación AFIP.')}
+          onClick={handleExportCsv}
           icon={<Download size={16} />}
         >
           Exportar Liquidación (CSV)
         </Button>
       </div>
 
-      {/* Cross-Tenant KPIs (Flat on canvas, NO card-in-card) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
-            <DollarSign size={24} />
-          </div>
+      {/* Cross-Tenant KPIs (Open Editorial Strip) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-y border-slate-200/70 dark:border-white/[0.08] divide-y sm:divide-y-0 lg:divide-x divide-slate-200/70 dark:divide-white/[0.08]">
+        <div className="py-4 lg:pr-5 flex items-center gap-3.5">
+          <DollarSign size={20} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Facturación Mensual
             </span>
-            <div className="text-2xl font-extrabold text-emerald-600 tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">
               {formatCurrency(metrics.totalMonthlyBillingCents)}
             </div>
-            <span className="text-[11px] text-text-secondary">
-              Abonos a cobrar este mes
-            </span>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-soft text-brand-dark flex items-center justify-center flex-shrink-0">
-            <Store size={24} />
-          </div>
+        <div className="py-4 lg:px-5 flex items-center gap-3.5">
+          <Store size={20} className="text-brand-primary dark:text-purple-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Volumen Kioscos
             </span>
-            <div className="text-2xl font-extrabold text-brand-primary tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold text-brand-primary dark:text-purple-300 tabular-nums mt-0.5">
               {formatCurrency(metrics.totalKioskVolumeCents)}
             </div>
-            <span className="text-[11px] text-text-secondary">
-              0% comisión retenida al kiosco
-            </span>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
-            <Users size={24} />
-          </div>
+        <div className="py-4 lg:px-5 flex items-center gap-3.5">
+          <Users size={20} className="text-amber-600 dark:text-amber-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Alumnos Activos
@@ -130,16 +164,11 @@ export default function SuperAdminMetricsPage() {
             <div className="text-2xl font-extrabold text-text-primary tabular-nums mt-0.5">
               {metrics.totalActiveStudents.toLocaleString('es-AR')}
             </div>
-            <span className="text-[11px] text-text-secondary">
-              Entre todos los colegios
-            </span>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-100 text-brand-primary flex items-center justify-center font-bold text-sm flex-shrink-0">
-            <Building2 size={24} />
-          </div>
+        <div className="py-4 lg:pl-5 flex items-center gap-3.5">
+          <Building2 size={20} className="text-brand-primary dark:text-purple-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Colegios Activos
@@ -150,24 +179,21 @@ export default function SuperAdminMetricsPage() {
                 de {metrics.totalSchoolsCount}
               </span>
             </div>
-            <span className="text-[11px] text-text-secondary">
-              Tenants adheridos a la red
-            </span>
           </div>
-        </Surface>
+        </div>
       </div>
 
       {/* Plan Filter Row */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 liquid-glass-subtle p-1 rounded-full">
           {(['ALL', 'FIXED_MONTHLY', 'PER_ACTIVE_STUDENT'] as const).map((plan) => (
             <button
               key={plan}
               onClick={() => setPlanFilter(plan)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 planFilter === plan
                   ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-surface text-text-secondary hover:bg-slate-100 border border-slate-200'
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               {plan === 'ALL'
@@ -180,90 +206,78 @@ export default function SuperAdminMetricsPage() {
         </div>
 
         <span className="text-xs text-text-secondary font-medium">
-          Cálculo dinámico: Plan Fijo = Cuota fija | Plan Alumno = Tarifa × Alumnos Activos
+          Plan Fijo = Cuota fija · Plan Alumno = Tarifa × Alumnos Activos
         </span>
       </div>
 
-      {/* Institutions Billing Table (Surface, NO card-in-card) */}
-      <Surface>
-        <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      {/* Open Billing List directly on canvas */}
+      <section className="border-t border-slate-200/70 dark:border-white/[0.08]">
+        <div className="py-3.5 border-b border-slate-200/60 dark:border-white/[0.07] flex justify-between items-center">
           <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-            Liquidación Mensual por Institución Educativa ({filteredBilling.length})
+            Liquidación Mensual ({filteredBilling.length})
           </span>
-          <span className="text-xs text-text-secondary font-medium">
-            Facturación en Pesos Argentinos (ARS)
+          <span className="text-xs text-text-muted font-medium">
+            Pesos Argentinos (ARS)
           </span>
         </div>
 
-        <div className="divide-y divide-slate-100 overflow-x-auto">
+        <div className="divide-y divide-slate-200/60 dark:divide-white/[0.07]">
           {filteredBilling.map((row) => (
             <div
               key={row.institutionId}
-              className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+              className="py-4 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/40 dark:hover:bg-white/[0.03] transition-colors"
             >
-              {/* 1. School Identity & CUIT */}
-              <div className="flex items-start gap-4 max-w-sm">
-                <div className="w-12 h-12 rounded-2xl bg-brand-soft text-brand-dark flex items-center justify-center font-bold text-sm flex-shrink-0">
-                  <Building2 size={20} />
+              {/* 1. School Identity */}
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-brand-soft/80 dark:bg-brand-primary/20 text-brand-dark dark:text-purple-200 flex items-center justify-center flex-shrink-0">
+                  <Building2 size={18} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-base text-text-primary leading-tight">
-                    {row.institutionName}
-                  </h3>
-                  <span className="text-xs text-text-secondary mt-0.5 block">
-                    CUIT: {row.cuit}
-                  </span>
-                  <div className="mt-1">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-sm sm:text-base text-text-primary leading-tight truncate">
+                      {row.institutionName}
+                    </h3>
                     {row.status === 'ACTIVE' ? (
                       <Pill label="Activo" variant="active" />
                     ) : (
                       <Pill label="Suspendido" variant="suspended" />
                     )}
                   </div>
+                  <span className="text-xs text-text-secondary mt-0.5 block">
+                    CUIT {row.cuit}
+                  </span>
                 </div>
               </div>
 
-              {/* 2. Billing Plan & Rate Calculation details */}
-              <div className="flex flex-col gap-1 min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  {row.billingPlanType === 'FIXED_MONTHLY' ? (
-                    <Pill label="Abono Fijo Mensual" variant="plan" />
-                  ) : (
-                    <Pill label="Por Alumno Activo" variant="points" />
-                  )}
-                </div>
-
-                <div className="text-xs text-text-secondary mt-1">
-                  {row.billingPlanType === 'FIXED_MONTHLY' ? (
-                    <span>Tarifa fija acordada: <strong>{formatCurrency(row.monthlyRateCents)}</strong></span>
-                  ) : (
-                    <span>
-                      {formatCurrency(row.monthlyRateCents)} × {row.activeStudentsCount} alumnos
-                    </span>
-                  )}
-                </div>
-
-                <span className="text-[11px] text-text-secondary">
-                  Volumen Kiosco acumulado: <strong>{formatCurrency(row.kioskVolumeCents)}</strong>
+              {/* 2. Plan Summary */}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {row.billingPlanType === 'FIXED_MONTHLY' ? (
+                  <Pill label="Abono Fijo" variant="plan" />
+                ) : (
+                  <Pill label="Por Alumno" variant="points" />
+                )}
+                <span className="text-xs text-text-secondary tabular-nums">
+                  {row.billingPlanType === 'FIXED_MONTHLY'
+                    ? formatCurrency(row.monthlyRateCents)
+                    : `${formatCurrency(row.monthlyRateCents)} × ${row.activeStudentsCount} al.`}
                 </span>
               </div>
 
               {/* 3. Monthly Invoice Amount */}
-              <div className="text-right w-full md:w-auto">
-                <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
-                  Abono Liquidado
-                </span>
-                <div className="text-xl font-extrabold text-emerald-600 tabular-nums">
-                  {row.status === 'ACTIVE' ? formatCurrency(row.calculatedMonthlyFeeCents) : '$ 0 (Suspendido)'}
+              <div className="sm:text-right flex-shrink-0">
+                <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  {row.status === 'ACTIVE'
+                    ? formatCurrency(row.calculatedMonthlyFeeCents)
+                    : '$ 0'}
                 </div>
-                <span className="text-[11px] text-text-secondary">
-                  {row.status === 'ACTIVE' ? 'A facturar este período' : 'Sin cargo por suspensión'}
+                <span className="text-[11px] text-text-muted">
+                  Kiosco: {formatCurrency(row.kioskVolumeCents)}
                 </span>
               </div>
             </div>
           ))}
         </div>
-      </Surface>
+      </section>
     </div>
   );
 }

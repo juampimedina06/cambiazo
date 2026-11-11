@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Building2, Users, DollarSign, School } from 'lucide-react';
+import { Plus, Search, Users, DollarSign, School } from 'lucide-react';
 import { Institution, InstitutionStatus } from '@/shared/api/types';
 import { apiClient } from '@/shared/api/api-client';
-import { Surface } from '@/shared/ui/Surface';
 import { Button } from '@/shared/ui/Button';
 import { InstitutionRow } from '@/entities/institution';
 import { CreateInstitutionModal } from '@/features/institution-creation';
@@ -15,10 +14,12 @@ export default function SuperAdminInstitutionsPage() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const loadInstitutions = async () => {
     setIsLoading(true);
+    setApiError(null);
     try {
       const data = await apiClient.getInstitutions();
       const rawList = Array.isArray(data) ? data : ((data as any)?.institutions || []);
@@ -26,6 +27,11 @@ export default function SuperAdminInstitutionsPage() {
       setInstitutions(sanitized);
     } catch (err) {
       console.error('Failed to load institutions:', err);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo conectar con la API del backend.'
+      );
       setInstitutions([]);
     } finally {
       setIsLoading(false);
@@ -127,12 +133,10 @@ export default function SuperAdminInstitutionsPage() {
         </Button>
       </div>
 
-      {/* Metrics Row (Flat on canvas, NO card-in-card) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-soft text-brand-dark flex items-center justify-center flex-shrink-0">
-            <School size={24} />
-          </div>
+      {/* Open Editorial Metrics Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 border-y border-slate-200/70 dark:border-white/[0.08] divide-y sm:divide-y-0 sm:divide-x divide-slate-200/70 dark:divide-white/[0.08]">
+        <div className="py-4 sm:pr-6 flex items-center gap-3.5">
+          <School size={20} className="text-brand-primary dark:text-purple-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Colegios Activos
@@ -144,12 +148,10 @@ export default function SuperAdminInstitutionsPage() {
               </span>
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
-            <Users size={24} />
-          </div>
+        <div className="py-4 sm:px-6 flex items-center gap-3.5">
+          <Users size={20} className="text-amber-600 dark:text-amber-300 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Alumnos en Plataforma
@@ -158,22 +160,20 @@ export default function SuperAdminInstitutionsPage() {
               {totalStudents.toLocaleString('es-AR')}
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
-            <DollarSign size={24} />
-          </div>
+        <div className="py-4 sm:pl-6 flex items-center gap-3.5">
+          <DollarSign size={20} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
               Facturación Estimada
             </span>
-            <div className="text-2xl font-extrabold text-emerald-600 tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">
               {formattedTotalBilling}
               <span className="text-xs text-text-secondary font-normal"> / mes</span>
             </div>
           </div>
-        </Surface>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -181,26 +181,26 @@ export default function SuperAdminInstitutionsPage() {
         <div className="relative flex-1 max-w-md">
           <Search
             size={18}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <input
             type="text"
-            placeholder="Buscar por nombre, CUIT o dirección..."
+            placeholder="Buscar colegio o CUIT..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-text-primary placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            className="w-full pl-10 pr-4 py-2.5 liquid-glass-subtle rounded-2xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 liquid-glass-subtle p-1 rounded-full">
           {(['ALL', 'ACTIVE', 'SUSPENDED'] as const).map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 statusFilter === status
                   ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-surface text-text-secondary hover:bg-slate-100 border border-slate-200'
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               {status === 'ALL'
@@ -213,24 +213,33 @@ export default function SuperAdminInstitutionsPage() {
         </div>
       </div>
 
-      {/* Main Table / Flat List inside Surface (NO CARD-IN-CARD) */}
-      <Surface>
-        <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      {/* Open List directly on canvas */}
+      <section className="border-t border-slate-200/70 dark:border-white/[0.08]">
+        <div className="py-3.5 border-b border-slate-200/60 dark:border-white/[0.07] flex justify-between items-center">
           <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-            Listado de Instituciones ({filteredInstitutions.length})
+            Instituciones ({filteredInstitutions.length})
           </span>
-          <span className="text-xs text-text-secondary font-medium">
-            Abono fijo mensual vs por alumno activo
+          <span className="text-xs text-text-muted font-medium">
+            Plan y facturación
           </span>
         </div>
 
-        {isLoading ? (
-          <div className="p-12 text-center text-text-secondary text-sm">
+        {apiError ? (
+          <div className="py-10 text-center flex flex-col items-center gap-3">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+              {apiError}
+            </p>
+            <Button size="sm" variant="outline" onClick={loadInstitutions}>
+              Reintentar conexión
+            </Button>
+          </div>
+        ) : isLoading ? (
+          <div className="py-12 text-center text-text-secondary text-sm">
             Cargando instituciones...
           </div>
         ) : filteredInstitutions.length === 0 ? (
-          <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
-            <School size={36} className="text-slate-300" />
+          <div className="py-12 text-center flex flex-col items-center justify-center gap-2">
+            <School size={36} className="text-slate-300 dark:text-slate-600" />
             <p className="font-semibold text-text-primary text-base">
               No se encontraron instituciones
             </p>
@@ -250,7 +259,7 @@ export default function SuperAdminInstitutionsPage() {
             ))}
           </div>
         )}
-      </Surface>
+      </section>
 
       {/* Modal for Creating New Institution */}
       <CreateInstitutionModal
