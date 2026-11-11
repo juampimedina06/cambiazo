@@ -1,38 +1,38 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { MockMobileApiClient } from '../src/shared/api/mock-client';
+import {
+  chargeQrPaymentAction,
+  generateQrPaymentTokenAction,
+  grantParentalConsentAction,
+  registerFamilyAction,
+  resetApiBaseUrlCache,
+  validateInviteCodeAction,
+} from '../src/core';
 
-describe('Mobile Backend Connectivity & Resilient Fallback', () => {
+describe('Mobile Backend Connectivity & Real HTTP Client', () => {
   const originalEnv = { ...process.env };
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
-    process.env.NODE_ENV = 'development';
-    process.env.EXPO_PUBLIC_USE_MOCKS = 'false';
+    resetApiBaseUrlCache();
+    process.env.EXPO_PUBLIC_API_URL = 'http://localhost:3000/api/v1';
   });
 
   afterEach(() => {
     process.env = { ...originalEnv };
     globalThis.fetch = originalFetch;
+    resetApiBaseUrlCache();
   });
 
-  it('gracefully falls back to local registry when backend server is unreachable (no fetch failed error)', async () => {
+  it('returns explicit server connectivity error without silent mock fallbacks when backend is unreachable', async () => {
     globalThis.fetch = (async () => {
       throw new TypeError('fetch failed');
     }) as typeof fetch;
 
-    const client = new MockMobileApiClient();
+    const codeRes = await validateInviteCodeAction('BELGRANO2026');
+    expect(codeRes.success).toBe(false);
+    expect(codeRes.error).toContain('No se pudo conectar con el servidor');
 
-    // 1. Validate School Code (including SAP2026)
-    const codeRes = await client.validateInviteCode('BELGRANO2026');
-    expect(codeRes.success).toBe(true);
-    expect(codeRes.institution?.name).toBe('Colegio Manuel Belgrano');
-
-    const sapRes = await client.validateInviteCode('SAP2026');
-    expect(sapRes.success).toBe(true);
-    expect(sapRes.institution?.code).toBe('SAP2026');
-
-    // 2. Register Family
-    const regRes = await client.registerFamily({
+    const regRes = await registerFamilyAction({
       inviteCode: 'BELGRANO2026',
       parent: {
         fullName: 'Laura Pérez',
@@ -41,42 +41,45 @@ describe('Mobile Backend Connectivity & Resilient Fallback', () => {
         phone: '+5491144556677',
         password: 'Password123!',
       },
-      student: {
-        fullName: 'Tomás Pérez',
-        dni: '54999888',
-        grade: '5° Primaria',
-        dateOfBirth: '2015-03-10',
-      },
+      students: [
+        {
+          fullName: 'Tomás Pérez',
+          dni: '54999888',
+          grade: '5° Primaria',
+          dateOfBirth: '2015-03-10',
+        },
+      ],
     });
-    expect(regRes.success).toBe(true);
-    expect(regRes.student?.id).toBeDefined();
+    expect(regRes.success).toBe(false);
+    expect(regRes.error).toContain('No se pudo conectar con el servidor');
 
-    // 3. Grant Parental Consent
-    const consentRes = await client.grantParentalConsent({
+    const consentRes = await grantParentalConsentAction({
       studentId: '22222222-2222-4222-8222-222222222222',
       acceptedTermsVersion: 'v1.0-2026',
       acceptedAt: new Date().toISOString(),
       signatureIp: '127.0.0.1',
     });
-    expect(consentRes.success).toBe(true);
+    expect(consentRes.success).toBe(false);
+    expect(consentRes.error).toContain('No se pudo conectar con el servidor');
 
-    // 4. Generate QR Payment Token
-    const qrRes = await client.generateQrPaymentToken('22222222-2222-4222-8222-222222222222');
-    expect(qrRes.success).toBe(true);
-    expect(qrRes.qrToken?.token).toBeDefined();
-    expect(qrRes.backupCode).toMatch(/^\d{6}$/);
+    const qrRes = await generateQrPaymentTokenAction(
+      '22222222-2222-4222-8222-222222222222'
+    );
+    expect(qrRes.success).toBe(false);
+    expect(qrRes.error).toContain('No se pudo conectar con el servidor');
 
-    // 5. Charge QR Payment at Kiosk
-    const chargeRes = await client.chargeQrPayment({
-      paymentTokenOrCode: qrRes.backupCode!,
-      items: [{ productId: '10000000-0000-4000-8000-000000000004', quantity: 1 }],
-      idempotencyKey: 'idem-fallback-test-1',
+    const chargeRes = await chargeQrPaymentAction({
+      paymentTokenOrCode: '123456',
+      items: [
+        { productId: '10000000-0000-4000-8000-000000000004', quantity: 1 },
+      ],
+      idempotencyKey: 'idem-offline-error-test-1',
     });
-    expect(chargeRes.success).toBe(true);
-    expect(chargeRes.totalChargedCents).toBe(60000);
+    expect(chargeRes.success).toBe(false);
+    expect(chargeRes.error).toContain('No se pudo conectar con el servidor');
   });
 
-  it('correctly parses real NestJS backend response payloads across all mobile endpoints', async () => {
+  it('correctly parses real NestJS backend response payloads across mobile actions', async () => {
     const mockResponses: Response[] = [
       new Response(
         JSON.stringify({
@@ -116,14 +119,15 @@ describe('Mobile Backend Connectivity & Resilient Fallback', () => {
       return next;
     }) as typeof fetch;
 
-    const client = new MockMobileApiClient();
-    const codeRes = await client.validateInviteCode('BELGRANO2026');
+    const codeRes = await validateInviteCodeAction('BELGRANO2026');
     expect(codeRes.success).toBe(true);
     expect(codeRes.institution?.id).toBe('e28bb18a-66fe-4f8e-9092-2df283f55001');
     expect(codeRes.institution?.name).toBe('Colegio Manuel Belgrano');
     expect(codeRes.institution?.code).toBe('BELGRANO2026');
 
-    const qrRes = await client.generateQrPaymentToken('22222222-2222-4222-8222-222222222222');
+    const qrRes = await generateQrPaymentTokenAction(
+      '22222222-2222-4222-8222-222222222222'
+    );
     expect(qrRes.success).toBe(true);
     expect(qrRes.qrToken?.token).toBe('qr_live_backend_token_123');
     expect(qrRes.backupCode).toBe('654321');

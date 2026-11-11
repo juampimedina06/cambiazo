@@ -1,13 +1,16 @@
 import { useState, useCallback } from 'react';
 import { ValidateInviteCodeSchema } from '@cambiazo/shared';
-import { mockApiClient, type MockInstitution } from '../../../shared/api/mock-client';
+import {
+  validateInviteCodeAction,
+  type SchoolInstitution,
+} from '../../../core';
 import { authStore } from '../../../shared/store/auth-store';
 
 export interface UseSchoolCodeState {
   code: string;
   isLoading: boolean;
   error: string | null;
-  institution: MockInstitution | null;
+  institution: SchoolInstitution | null;
   isValid: boolean;
 }
 
@@ -15,7 +18,7 @@ export function useSchoolCode() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [institution, setInstitution] = useState<MockInstitution | null>(null);
+  const [institution, setInstitution] = useState<SchoolInstitution | null>(null);
 
   const handleCodeChange = useCallback((text: string) => {
     // Keep uppercase and clean characters
@@ -39,7 +42,7 @@ export function useSchoolCode() {
     setError(null);
 
     try {
-      const result = await mockApiClient.validateInviteCode(parseResult.data.code);
+      const result = await validateInviteCodeAction(parseResult.data.code);
       if (!result.success || !result.institution) {
         setError(result.error || 'Código escolar no encontrado');
         setInstitution(null);

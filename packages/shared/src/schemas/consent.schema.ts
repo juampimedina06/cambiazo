@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { ProductCategorySchema } from '../enums';
 
+export const StudentRegistrationSchema = z.object({
+  fullName: z.string().min(2).max(100),
+  dni: z.string().min(6).max(15),
+  grade: z.string().min(1).max(50),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be in YYYY-MM-DD format'),
+});
+
 export const RegisterParentAndStudentSchema = z.object({
   inviteCode: z.string().min(4).max(32),
   parent: z.object({
@@ -10,12 +17,19 @@ export const RegisterParentAndStudentSchema = z.object({
     phone: z.string().min(6).max(25).optional(),
     dni: z.string().min(6).max(15),
   }),
-  student: z.object({
-    fullName: z.string().min(2).max(100),
-    dni: z.string().min(6).max(15),
-    grade: z.string().min(1).max(50),
-    dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be in YYYY-MM-DD format'),
-  }),
+  student: StudentRegistrationSchema,
+  additionalStudents: z.array(StudentRegistrationSchema).max(4).optional(),
+});
+
+export const LoginFamilySchema = z.object({
+  inviteCode: z.string().min(4).max(32),
+  identifier: z.string().min(3).max(100),
+  password: z.string().min(4).max(100),
+});
+
+export const ChangeStudentPasswordSchema = z.object({
+  studentId: z.string().uuid().optional(),
+  newPassword: z.string().min(4).max(100),
 });
 
 export const GrantParentalConsentSchema = z.object({

@@ -17,6 +17,17 @@ export interface WalletBalanceResult {
   currency: 'ARS';
 }
 
+export interface WalletTransactionItem {
+  id: string;
+  referenceType: string;
+  referenceId?: string;
+  direction: 'CREDIT' | 'DEBIT';
+  amountCents: number;
+  description: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+}
+
 @Injectable()
 export class GetWalletBalanceUseCase {
   constructor(
@@ -26,12 +37,12 @@ export class GetWalletBalanceUseCase {
     private readonly linkRepo: ParentStudentLinkRepositoryPort,
   ) {}
 
-  async getStudentBalance(
+  private async assertStudentWalletAccess(
     requestingUserId: string,
     role: UserRole,
     studentId: string,
     institutionId: string,
-  ): Promise<WalletBalanceResult> {
+  ): Promise<void> {
     if (role === 'PARENT') {
       const link = await this.linkRepo.findLink(
         institutionId,
@@ -50,6 +61,20 @@ export class GetWalletBalanceUseCase {
         throw new UnauthorizedRoleException('Students can only check their own wallet balance');
       }
     }
+  }
+
+  async getStudentBalance(
+    requestingUserId: string,
+    role: UserRole,
+    studentId: string,
+    institutionId: string,
+  ): Promise<WalletBalanceResult> {
+    await this.assertStudentWalletAccess(
+      requestingUserId,
+      role,
+      studentId,
+      institutionId,
+    );
 
     const account = await this.ledgerService.getStudentAccount(
       studentId,
@@ -62,6 +87,27 @@ export class GetWalletBalanceUseCase {
       formattedBalance: `$${(account.balanceCents / 100).toFixed(2)}`,
       currency: 'ARS',
     };
+  }
+
+  async getStudentTransactions(
+    requestingUserId: string,
+    role: UserRole,
+    studentId: string,
+    institutionId: string,
+    limit = 30,
+  ): Promise<WalletTransactionItem[]> {
+    await this.assertStudentWalletAccess(
+      requestingUserId,
+      role,
+      studentId,
+      institutionId,
+    );
+
+    return this.ledgerService.getStudentTransactions(
+      studentId,
+      institutionId,
+      limit,
+    );
   }
 
   async getKioskBalance(

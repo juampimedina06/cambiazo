@@ -18,8 +18,8 @@ import {
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import { fetchLeaderboardAction } from '../../../src/core';
 
 export default function LeaderboardScreen() {
   const router = useRouter();
@@ -32,22 +32,26 @@ export default function LeaderboardScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const institution = authState.institution || { id: 'e28bb18a-66fe-4f8e-9092-2df283f55001', name: 'Colegio Manuel Belgrano' };
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
-  const institutionId = student?.institutionId || institution.id;
+  const { student, studentId, institutionId, institutionName } = resolveSessionContext(authState);
 
   useEffect(() => {
+    if (!institutionId) return;
     const fetchRanking = async () => {
-      const data = await mockApiClient.getLeaderboard(institutionId);
+      const data = await fetchLeaderboardAction(institutionId, {
+        auth: {
+          role: 'STUDENT',
+          userId: studentId || undefined,
+          institutionId,
+        },
+      });
       // Validate schema compliance
       data.forEach((e) => LeaderboardEntryDtoSchema.parse(e));
       setEntries(data);
     };
     fetchRanking();
-  }, [institutionId]);
+  }, [institutionId, studentId]);
 
-  const pointsCount = student?.communityPoints ?? 120;
+  const pointsCount = student?.communityPoints ?? 0;
 
   return (
     <ScrollView
@@ -75,7 +79,7 @@ export default function LeaderboardScreen() {
 
       <Text style={styles.title}>Mis Puntos y Ranking</Text>
       <Text style={styles.subtitle}>
-        Reconocimiento al compromiso solidario en {institution.name}
+        Reconocimiento al compromiso solidario en {institutionName}
       </Text>
 
       {/* Points Surface (Strictly non-monetary community points) */}

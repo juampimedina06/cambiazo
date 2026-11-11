@@ -20,6 +20,7 @@ import { CreateTopUpPreferenceUseCase } from '../../application/use-cases/create
 import {
   GetWalletBalanceUseCase,
   type WalletBalanceResult,
+  type WalletTransactionItem,
 } from '../../application/use-cases/get-wallet-balance.use-case.js';
 import type { PreferenceResult } from '../../domain/ports/payment-gateway.port.js';
 
@@ -56,6 +57,21 @@ export class WalletController {
     @TenantId() institutionId: string,
   ): Promise<WalletBalanceResult> {
     return this.getWalletBalanceUseCase.getStudentBalance(
+      user.id,
+      user.role,
+      studentId,
+      institutionId,
+    );
+  }
+
+  @Get('transactions/:studentId')
+  @Roles('PARENT', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN')
+  async getStudentTransactions(
+    @Param('studentId') studentId: string,
+    @CurrentUser() user: AuthUser,
+    @TenantId() institutionId: string,
+  ): Promise<WalletTransactionItem[]> {
+    return this.getWalletBalanceUseCase.getStudentTransactions(
       user.id,
       user.role,
       studentId,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { LogIn, UserPlus } from 'lucide-react-native';
 import { colors } from '../../../shared/theme/colors';
 import { Button } from '../../../shared/ui/Button';
 import { Input } from '../../../shared/ui/Input';
@@ -8,11 +9,15 @@ import { useSchoolCode } from '../hooks/useSchoolCode';
 
 export interface SchoolCodeFormProps {
   onSuccess: (code: string, institutionName: string) => void;
+  onSelectLogin?: (code: string, institutionName: string) => void;
+  onSelectRegister?: (code: string, institutionName: string) => void;
   testID?: string;
 }
 
 export const SchoolCodeForm: React.FC<SchoolCodeFormProps> = ({
   onSuccess,
+  onSelectLogin,
+  onSelectRegister,
   testID = 'school-code-form',
 }) => {
   const {
@@ -32,10 +37,22 @@ export const SchoolCodeForm: React.FC<SchoolCodeFormProps> = ({
     }
   };
 
-  const handleContinue = () => {
-    if (institution) {
-      onSuccess(institution.code, institution.name);
+  const handleContinueLogin = () => {
+    if (!institution) return;
+    if (onSelectLogin) {
+      onSelectLogin(institution.code, institution.name);
+      return;
     }
+    onSuccess(institution.code, institution.name);
+  };
+
+  const handleContinueRegister = () => {
+    if (!institution) return;
+    if (onSelectRegister) {
+      onSelectRegister(institution.code, institution.name);
+      return;
+    }
+    onSuccess(institution.code, institution.name);
   };
 
   return (
@@ -78,9 +95,17 @@ export const SchoolCodeForm: React.FC<SchoolCodeFormProps> = ({
 
           <View style={styles.actionWrapper}>
             <Button
-              label="Continuar con Registro Familiar"
-              onPress={handleContinue}
+              label="Iniciar Sesión"
+              onPress={handleContinueLogin}
+              variant="primary"
+              icon={<LogIn size={20} color="#FFFFFF" />}
+              testID="btn-go-to-login"
+            />
+            <Button
+              label="Registrarme (Nueva Familia)"
+              onPress={handleContinueRegister}
               variant="mint"
+              icon={<UserPlus size={20} color="#FFFFFF" />}
               testID="btn-continue-registration"
             />
           </View>
@@ -116,5 +141,6 @@ const styles = StyleSheet.create({
   },
   actionWrapper: {
     marginTop: 8,
+    gap: 12,
   },
 });

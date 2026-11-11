@@ -5,8 +5,12 @@ import { Banknote, ShieldCheck, CheckCircle2, CreditCard, ArrowLeft } from 'luci
 import { colors } from '../../../src/shared/theme/colors';
 import { Button } from '../../../src/shared/ui/Button';
 import { Pill } from '../../../src/shared/ui/Pill';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { ensureUuid, mockApiClient } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import {
+  completeTopUpAction,
+  createTopUpPreferenceAction,
+  fetchStudentBalanceAction,
+} from '../../../src/core';
 import { TopUpPreferenceRequestSchema } from '@cambiazo/shared';
 
 const PRESET_AMOUNTS = [1000, 2000, 5000, 10000];
@@ -28,8 +32,32 @@ export default function ParentTopUpScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const studentBalanceArs = ((student?.balanceArsCents ?? 450000) / 100).toLocaleString('es-AR');
+  const { student, studentId, parent, institutionId } = resolveSessionContext(authState);
+
+  useEffect(() => {
+    if (!studentId || !institutionId) return;
+    let cancelled = false;
+    fetchStudentBalanceAction(studentId, {
+      auth: {
+        role: 'PARENT',
+        userId: parent?.id || studentId,
+        institutionId,
+      },
+    })
+      .then((balanceArsCents) => {
+        if (!cancelled) {
+          authStore.updateStudentFields(studentId, { balanceArsCents });
+        }
+      })
+      .catch(() => {
+        // Ignore passive refresh error
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, institutionId, parent?.id]);
+
+  const studentBalanceArs = ((student?.balanceArsCents ?? 0) / 100).toLocaleString('es-AR');
 
   const effectiveAmount = customAmountText.trim() ? parseInt(customAmountText.replace(/\D/g, ''), 10) || 0 : selectedAmount;
 
@@ -52,11 +80,9 @@ export default function ParentTopUpScreen() {
 
     const amountCents = effectiveAmount * 100;
 
-    const validStudentId = ensureUuid(student.id);
-
     // Validate with TopUpPreferenceRequestSchema
     const validation = TopUpPreferenceRequestSchema.safeParse({
-      studentId: validStudentId,
+      studentId: student.id,
       amountCents,
     });
 
@@ -68,10 +94,19 @@ export default function ParentTopUpScreen() {
     setIsProcessing(true);
     setErrorMessage(null);
 
-    const res = await mockApiClient.createTopUpPreference({
-      studentId: validStudentId,
-      amountCents,
-    });
+    const res = await createTopUpPreferenceAction(
+      {
+        studentId: student.id,
+        amountCents,
+      },
+      {
+        auth: {
+          role: 'PARENT',
+          userId: parent?.id || student.parentId || student.id,
+          institutionId,
+        },
+      }
+    );
 
     setIsProcessing(false);
 
@@ -93,7 +128,20 @@ export default function ParentTopUpScreen() {
     setIsProcessing(true);
     const amountCents = effectiveAmount * 100;
 
-    const res = await mockApiClient.completeTopUp(student.id, amountCents, preferenceData.preferenceId);
+    const res = await completeTopUpAction(
+      {
+        studentId: student.id,
+        amountCents,
+        preferenceId: preferenceData.preferenceId,
+      },
+      {
+        auth: {
+          role: 'PARENT',
+          userId: parent?.id || student.parentId || student.id,
+          institutionId,
+        },
+      }
+    );
     setIsProcessing(false);
 
     if (!res.success || res.newBalanceArsCents === undefined) {
@@ -101,6 +149,9 @@ export default function ParentTopUpScreen() {
       return;
     }
 
+    authStore.updateStudentFields(student.id, {
+      balanceArsCents: res.newBalanceArsCents,
+    });
     authStore.refreshCurrentStudent();
 
     setCheckoutModalVisible(false);
@@ -136,7 +187,7 @@ export default function ParentTopUpScreen() {
 
       <Text style={styles.title}>Cargar Saldo Escolar</Text>
       <Text style={styles.subtitle}>
-        Para {student?.fullName || 'Mateo Gómez'} ({student?.grade || '6° Primaria'})
+        Para {student?.fullName || 'tu hijo/a'} ({student?.grade || ''})
       </Text>
 
       {/* 1:1 Guarantee Banner */}
@@ -253,7 +304,7 @@ export default function ParentTopUpScreen() {
             Recarga Billetera Escolar: ${effectiveAmount.toLocaleString('es-AR')} ARS
           </Text>
           <Text style={styles.checkoutSub}>
-            Destinatario: {student?.fullName || 'Mateo Gómez'}
+            Destinatario: {student?.fullName || 'Alumno'}
           </Text>
           <Text style={styles.checkoutSub}>
             Preferencia: {preferenceData.preferenceId}

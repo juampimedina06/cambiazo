@@ -26,8 +26,11 @@ import {
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { FlatListItem } from '../../../src/shared/ui/FlatListItem';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient, type MockBlockedAttempt } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import {
+  fetchWeeklyParentSummaryAction,
+  type BlockedAttempt,
+} from '../../../src/core';
 
 const categoryIcons: Record<ProductCategory, React.ComponentType<{ size?: number; color?: string }>> = {
   HEALTHY_SNACK: Apple,
@@ -49,7 +52,7 @@ export default function WeeklySummaryScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
   const [summary, setSummary] = useState<WeeklyParentSummaryDto | null>(null);
-  const [blockedList, setBlockedList] = useState<MockBlockedAttempt[]>([]);
+  const [blockedList] = useState<BlockedAttempt[]>([]);
 
   useEffect(() => {
     return authStore.subscribe((state) => {
@@ -57,18 +60,26 @@ export default function WeeklySummaryScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
+  const { student, studentId, parent, institutionId } = resolveSessionContext(authState);
 
   useEffect(() => {
-    if (studentId) {
-      const data = mockApiClient.getWeeklyParentSummary(studentId);
-      // Validate schema compliance
+    if (!studentId) return;
+    let cancelled = false;
+    fetchWeeklyParentSummaryAction(studentId, {
+      auth: {
+        role: 'PARENT',
+        userId: parent?.id || studentId,
+        institutionId,
+      },
+    }).then((data) => {
+      if (cancelled) return;
       const validated = WeeklyParentSummaryDtoSchema.parse(data);
       setSummary(validated);
-      setBlockedList(mockApiClient.getBlockedAttempts(studentId));
-    }
-  }, [studentId]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, parent?.id, institutionId]);
 
   if (!summary) {
     return (
@@ -109,7 +120,7 @@ export default function WeeklySummaryScreen() {
 
       <Text style={styles.title}>Resumen Semanal</Text>
       <Text style={styles.subtitle}>
-        Seguimiento de consumos escolares de {student?.fullName || 'Mateo Gómez'}
+        Seguimiento de consumos escolares de {student?.fullName || 'tu hijo/a'}
       </Text>
       <View style={styles.dateRangeRow}>
         <Calendar size={14} color={colors.text.secondary} />

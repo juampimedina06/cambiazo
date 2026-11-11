@@ -3,7 +3,6 @@ import { View, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../../src/shared/theme/colors';
 import { DigitalConsentContent } from '../../src/features/parental-consent/ui/DigitalConsentContent';
-import { mockApiClient } from '../../src/shared/api/mock-client';
 import { authStore } from '../../src/shared/store/auth-store';
 
 export default function ConsentModalScreen() {
@@ -12,9 +11,11 @@ export default function ConsentModalScreen() {
   const state = authStore.getState();
 
   const studentId = params.studentId || state.student?.id;
-  const student = studentId ? mockApiClient.getStudent(studentId) || state.student : state.student;
+  const student = studentId
+    ? state.students.find((s) => s.id === studentId) || state.student
+    : state.student;
   const parentName = state.parent?.fullName || 'Tutor Responsable';
-  const institutionName = state.institution?.name || 'Colegio Manuel Belgrano';
+  const institutionName = state.institution?.name || 'Institución Escolar';
 
   if (!student) {
     return null;

@@ -17,6 +17,8 @@ import { StudentCounterAdapter } from '../src/modules/identity-parental/applicat
 import { CreateInstitutionUseCase } from '../src/modules/tenants/application/use-cases/create-institution.use-case.js';
 import { CreateInvitationUseCase } from '../src/modules/tenants/application/use-cases/create-invitation.use-case.js';
 import { RegisterFamilyUseCase } from '../src/modules/identity-parental/application/use-cases/register-family.use-case.js';
+import { LoginFamilyUseCase } from '../src/modules/identity-parental/application/use-cases/login-family.use-case.js';
+import { ChangeStudentPasswordUseCase } from '../src/modules/identity-parental/application/use-cases/change-student-password.use-case.js';
 import { GrantParentalConsentUseCase } from '../src/modules/identity-parental/application/use-cases/grant-parental-consent.use-case.js';
 import { RevokeParentalConsentUseCase } from '../src/modules/identity-parental/application/use-cases/revoke-parental-consent.use-case.js';
 import { CheckStudentConsentUseCase } from '../src/modules/identity-parental/application/use-cases/check-student-consent.use-case.js';
@@ -62,6 +64,13 @@ describe('Onboarding & Consent Endpoints Integration', () => {
       userRepo,
       linkRepo,
     );
+    const loginFamily = new LoginFamilyUseCase(
+      invitationRepo,
+      institutionRepo,
+      userRepo,
+      linkRepo,
+      consentRepo,
+    );
     const grantConsent = new GrantParentalConsentUseCase(
       userRepo,
       linkRepo,
@@ -82,7 +91,16 @@ describe('Onboarding & Consent Endpoints Integration', () => {
       consentRepo,
     );
 
-    onboardingController = new OnboardingController(registerFamily);
+    const changeStudentPassword = new ChangeStudentPasswordUseCase(
+      userRepo,
+      linkRepo,
+    );
+
+    onboardingController = new OnboardingController(
+      registerFamily,
+      loginFamily,
+      changeStudentPassword,
+    );
     consentsController = new ConsentsController(
       grantConsent,
       revokeConsent,
@@ -294,6 +312,231 @@ describe('Onboarding & Consent Endpoints Integration', () => {
 
       const result = pipe.transform(input, { type: 'body' });
       expect(result).toEqual(input);
+    });
+  });
+
+  describe('Family Login Flow (Parent & Student)', () => {
+    it('logs in registered parent by email and returns linked student consent status', async () => {
+      const reg = await onboardingController.registerFamily({
+        inviteCode: validInviteCode,
+        parent: {
+          fullName: 'Laura Fernandez',
+          email: 'laura.login@email.com',
+          password: 'securePassword123!',
+          dni: '22334455',
+        },
+        student: {
+          fullName: 'Sofia Fernandez',
+          dni: '44556677',
+          grade: '5to A',
+          dateOfBirth: '2014-05-10',
+        },
+      });
+
+      const loginRes = await onboardingController.login({
+        inviteCode: validInviteCode,
+        identifier: 'laura.login@email.com',
+        password: 'securePassword123!',
+      });
+
+      expect(loginRes.role).toBe('PARENT');
+      expect(loginRes.user.id).toBe(reg.parentId);
+      expect(loginRes.students).toHaveLength(1);
+      expect(loginRes.students[0]?.id).toBe(reg.studentId);
+      expect(loginRes.students[0]?.consentStatus).toBe('PENDING');
+
+      await consentsController.grantConsent(
+        {
+          studentId: reg.studentId,
+          acceptedTermsVersion: 'v1.0.0',
+          acceptedAt: new Date().toISOString(),
+          signatureIp: '127.0.0.1',
+        },
+        {
+          id: reg.parentId,
+          institutionId,
+          role: 'PARENT',
+          email: 'laura.login@email.com',
+          fullName: 'Laura Fernandez',
+        },
+        { headers: { 'user-agent': 'test-agent' }, socket: {} } as any,
+      );
+
+      const postConsentLogin = await onboardingController.login({
+        inviteCode: validInviteCode,
+        identifier: '22334455',
+        password: 'securePassword123!',
+      });
+
+      expect(postConsentLogin.students[0]?.consentStatus).toBe('GRANTED');
+      expect(postConsentLogin.students[0]?.isActive).toBe(true);
+    });
+
+    it('logs in registered student by DNI with family password and supports optional password change', async () => {
+      const reg = await onboardingController.registerFamily({
+        inviteCode: validInviteCode,
+        parent: {
+          fullName: 'Carlos Ruiz',
+          email: 'carlos.ruiz@email.com',
+          password: 'securePassword123!',
+          dni: '20998877',
+        },
+        student: {
+          fullName: 'Lucas Ruiz',
+          dni: '48998877',
+          grade: '6to B',
+          dateOfBirth: '2013-08-20',
+        },
+      });
+
+      const studentLogin = await onboardingController.login({
+        inviteCode: validInviteCode,
+        identifier: '48998877',
+        password: 'securePassword123!',
+      });
+
+      expect(studentLogin.role).toBe('STUDENT');
+      expect(studentLogin.user.id).toBe(reg.studentId);
+      expect(studentLogin.user.consentStatus).toBe('PENDING');
+
+      // Parent optionally assigns a custom password to their linked student
+      const parentActor: AuthUser = {
+        id: reg.parentId,
+        email: 'carlos.ruiz@email.com',
+        role: 'PARENT',
+        institutionId,
+        fullName: 'Carlos Ruiz',
+      };
+
+      const changeResult = await onboardingController.changeStudentPassword(
+        {
+          studentId: reg.studentId,
+          newPassword: 'LucasClave2026',
+        },
+        parentActor,
+      );
+      expect(changeResult).toEqual({
+        success: true,
+        studentId: reg.studentId,
+      });
+
+      // Student logs in with the new custom password
+      const updatedLogin = await onboardingController.login({
+        inviteCode: validInviteCode,
+        identifier: '48998877',
+        password: 'LucasClave2026',
+      });
+      expect(updatedLogin.role).toBe('STUDENT');
+      expect(updatedLogin.user.id).toBe(reg.studentId);
+
+      // Old family password no longer works for this student, while parent still uses theirs
+      await expect(
+        onboardingController.login({
+          inviteCode: validInviteCode,
+          identifier: '48998877',
+          password: 'securePassword123!',
+        }),
+      ).rejects.toThrow();
+
+      // Student can also update their own password directly
+      const studentActor: AuthUser = {
+        id: reg.studentId,
+        email: '48998877@student.cambiazo.internal',
+        role: 'STUDENT',
+        institutionId,
+        fullName: 'Lucas Ruiz',
+      };
+      await onboardingController.changeStudentPassword(
+        { newPassword: 'MiClavePropia99' },
+        studentActor,
+      );
+
+      const selfUpdatedLogin = await onboardingController.login({
+        inviteCode: validInviteCode,
+        identifier: '48998877',
+        password: 'MiClavePropia99',
+      });
+      expect(selfUpdatedLogin.user.id).toBe(reg.studentId);
+    });
+
+    it('rejects wrong password or invalid invitation code on login', async () => {
+      await onboardingController.registerFamily({
+        inviteCode: validInviteCode,
+        parent: {
+          fullName: 'Ana Lopez',
+          email: 'ana.lopez@email.com',
+          password: 'correctPassword1!',
+          dni: '21112222',
+        },
+        student: {
+          fullName: 'Martin Lopez',
+          dni: '49112222',
+          grade: '4to A',
+          dateOfBirth: '2015-03-11',
+        },
+      });
+
+      await expect(
+        onboardingController.login({
+          inviteCode: validInviteCode,
+          identifier: 'ana.lopez@email.com',
+          password: 'wrongPassword!',
+        }),
+      ).rejects.toThrow();
+
+      await expect(
+        onboardingController.login({
+          inviteCode: 'WRONG_SCHOOL_CODE',
+          identifier: 'ana.lopez@email.com',
+          password: 'correctPassword1!',
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('registers multiple siblings atomically and returns all of them on login', async () => {
+      const reg = await onboardingController.registerFamily({
+        inviteCode: validInviteCode,
+        parent: {
+          fullName: 'Marcos Silva',
+          email: 'marcos.silva@email.com',
+          password: 'securePassword123!',
+          dni: '23445566',
+        },
+        student: {
+          fullName: 'Sofia Silva',
+          dni: '48445566',
+          grade: '5to B',
+          dateOfBirth: '2014-05-12',
+        },
+        additionalStudents: [
+          {
+            fullName: 'Tomas Silva',
+            dni: '50445566',
+            grade: '2do A',
+            dateOfBirth: '2017-09-03',
+          },
+        ],
+      });
+
+      expect(reg.students).toHaveLength(2);
+      expect(reg.parent.fullName).toBe('Marcos Silva');
+      expect(reg.students.map((s) => s.fullName)).toEqual([
+        'Sofia Silva',
+        'Tomas Silva',
+      ]);
+
+      const parentLogin = await onboardingController.login({
+        inviteCode: validInviteCode,
+        identifier: 'marcos.silva@email.com',
+        password: 'securePassword123!',
+      });
+
+      expect(parentLogin.role).toBe('PARENT');
+      expect(parentLogin.students).toHaveLength(2);
+      expect(parentLogin.students.map((s) => s.fullName)).toEqual([
+        'Sofia Silva',
+        'Tomas Silva',
+      ]);
     });
   });
 });

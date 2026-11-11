@@ -14,6 +14,7 @@ import {
   BarChart3,
   LogOut,
   UserCheck,
+  KeyRound,
 } from 'lucide-react-native';
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
@@ -22,14 +23,16 @@ import { LogoPencilC } from '../../src/shared/ui/LogoPencilC';
 import { ConsentStatusBadge } from '../../src/entities/student-profile/ui/ConsentStatusBadge';
 import { ConsentRevocationModal } from '../../src/features/parental-consent/ui/ConsentRevocationModal';
 import { DigitalConsentModal } from '../../src/features/parental-consent/ui/DigitalConsentModal';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store';
-import { mockApiClient } from '../../src/shared/api/mock-client';
+import { ChangeStudentPasswordModal } from '../../src/features/parental-consent/ui/ChangeStudentPasswordModal';
+import { authStore, resolveSessionContext, type AuthState } from '../../src/shared/store/auth-store';
+import { hydrateStudentAccountAction } from '../../src/core';
 
 export default function ParentHomeScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
   const [showRevocationModal, setShowRevocationModal] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
     return authStore.subscribe((state) => {
@@ -37,15 +40,38 @@ export default function ParentHomeScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
+  const { student, studentId, parent, institution, institutionId, institutionName } =
+    resolveSessionContext(authState);
   const linkedStudents =
     authState.students && authState.students.length > 0
       ? authState.students
       : student
       ? [student]
       : [];
-  const parentName = authState.parent?.fullName || 'Carolina Gómez';
-  const institutionName = authState.institution?.name || 'Colegio Manuel Belgrano';
+  const parentName = parent?.fullName || 'Tutor';
+
+  useEffect(() => {
+    if (!student || !studentId || !institutionId) return;
+    let cancelled = false;
+    hydrateStudentAccountAction(student, {
+      role: 'PARENT',
+      userId: parent?.id || studentId,
+      institutionId,
+    }).then((hydrated) => {
+      if (!cancelled) {
+        authStore.updateStudentFields(studentId, {
+          balanceArsCents: hydrated.balanceArsCents,
+          dailyLimitCents: hydrated.dailyLimitCents,
+          dailySpentCents: hydrated.dailySpentCents,
+          consentStatus: hydrated.consentStatus,
+          communityPoints: hydrated.communityPoints,
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, institutionId, parent?.id]);
 
   const consentStatus = student?.consentStatus || 'PENDING';
 
@@ -64,7 +90,7 @@ export default function ParentHomeScreen() {
 
   const handleNavigateToStudent = () => {
     if (student) {
-      authStore.setStudentSession(student);
+      authStore.setStudentSession(student, institution);
       router.push('/(student)');
     }
   };
@@ -159,8 +185,8 @@ export default function ParentHomeScreen() {
         <View style={styles.studentHeaderRow}>
           <View>
             <Text style={styles.studentLabel}>Hijo/a Vinculado/a</Text>
-            <Text style={styles.studentName}>{student?.fullName || 'Mateo Gómez'}</Text>
-            <Text style={styles.studentGrade}>{student?.grade || '6° Primaria'}</Text>
+            <Text style={styles.studentName}>{student?.fullName || 'Sin alumno seleccionado'}</Text>
+            <Text style={styles.studentGrade}>{student?.grade || ''}</Text>
           </View>
           <ConsentStatusBadge status={consentStatus} testID="parent-consent-status-badge" />
         </View>
@@ -259,6 +285,15 @@ export default function ParentHomeScreen() {
             variant="secondary"
             testID="btn-parent-weekly-summary"
           />
+          {student && (
+            <Button
+              label={`Clave de ${student.fullName.split(' ')[0]}`}
+              icon={<KeyRound size={18} color={colors.brand.primaryDark} />}
+              onPress={() => setShowPasswordModal(true)}
+              variant="outline"
+              testID="btn-parent-student-password"
+            />
+          )}
         </View>
       </View>
 
@@ -269,7 +304,7 @@ export default function ParentHomeScreen() {
           Ingresá para verificar cómo ve la app tu hijo/a según el estado de su consentimiento.
         </Text>
         <Button
-          label={`Ingresar como Alumno (${student?.fullName.split(' ')[0] || 'Mateo'})`}
+          label={`Ingresar como Alumno (${student?.fullName.split(' ')[0] || 'Alumno'})`}
           onPress={handleNavigateToStudent}
           variant="secondary"
           testID="btn-preview-student-mode"
@@ -294,6 +329,20 @@ export default function ParentHomeScreen() {
           institutionName={institutionName}
           onConsentGranted={handleConsentGranted}
           onClose={() => setShowConsentModal(false)}
+        />
+      )}
+
+      {student && parent && institutionId && (
+        <ChangeStudentPasswordModal
+          visible={showPasswordModal}
+          studentId={student.id}
+          studentName={student.fullName}
+          auth={{
+            role: 'PARENT',
+            userId: parent.id,
+            institutionId,
+          }}
+          onClose={() => setShowPasswordModal(false)}
         />
       )}
     </ScrollView>

@@ -1,25 +1,23 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { StudentBlockedView } from '../../src/features/parental-consent/ui/StudentBlockedView';
-import { authStore } from '../../src/shared/store/auth-store';
-import { mockApiClient } from '../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext } from '../../src/shared/store/auth-store';
 
 export default function StudentBlockedScreen() {
   const router = useRouter();
   const state = authStore.getState();
 
-  const student = state.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
+  const { student, institutionName } = resolveSessionContext(state);
   const consentStatus = student?.consentStatus || 'PENDING';
-  const institutionName = state.institution?.name || 'Colegio Manuel Belgrano';
 
   return (
     <StudentBlockedView
-      studentName={student?.fullName || 'Mateo'}
+      studentName={student?.fullName || 'Alumno'}
       institutionName={institutionName}
       consentStatus={consentStatus}
-      onRefreshStatus={() => {
+      onRefreshStatus={async () => {
         if (student) {
-          authStore.refreshStudentFromClient(student.id);
+          await authStore.refreshStudentFromBackend(student.id);
           const updated = authStore.getState().student;
           if (updated?.consentStatus === 'GRANTED') {
             router.replace('/(student)');
@@ -27,7 +25,12 @@ export default function StudentBlockedScreen() {
         }
       }}
       onSwitchUser={() => {
-        router.replace('/(parent)');
+        if (state.currentRole === 'PARENT' && state.parent) {
+          router.replace('/(parent)');
+          return;
+        }
+        authStore.logout();
+        router.replace('/(auth)/school-code');
       }}
       testID="screen-student-blocked"
     />

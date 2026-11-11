@@ -25,8 +25,8 @@ import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
 import { SelectPickerField, type SelectOption } from '../../../src/shared/ui/SelectPickerField';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import { createExchangeItemAction } from '../../../src/core';
 
 const categoryOptions = ['Libros', 'Útiles', 'Tecnología', 'Accesorios', 'Arte y Música'];
 
@@ -81,10 +81,7 @@ export default function CreateExchangeItemScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const institution = authState.institution || { id: 'e28bb18a-66fe-4f8e-9092-2df283f55001', name: 'Colegio Manuel Belgrano' };
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
-  const institutionId = student?.institutionId || institution.id;
+  const { studentId, institutionId, institutionName } = resolveSessionContext(authState);
 
   const handleSubmit = async () => {
     setErrorMessage('');
@@ -104,7 +101,7 @@ export default function CreateExchangeItemScreen() {
       return;
     }
 
-    const res = await mockApiClient.createExchangeItem(studentId, institutionId, validation.data);
+    const res = await createExchangeItemAction(studentId, institutionId, validation.data);
     if (!res.success) {
       setErrorMessage(res.error || 'Ocurrió un error al publicar el útil.');
       return;
@@ -167,7 +164,7 @@ export default function CreateExchangeItemScreen() {
 
       <Text style={styles.title}>Publicar Útil Escolar</Text>
       <Text style={styles.subtitle}>
-        Compartí libros, útiles o accesorios con tus compañeros de {institution.name}
+        Compartí libros, útiles o accesorios con tus compañeros de {institutionName}
       </Text>
 
       {/* Mandatory Moderation Warning Banner */}

@@ -1,19 +1,35 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SpendingLimitsSchema } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client';
+import {
+  fetchSpendingLimitsAction,
+  updateSpendingLimitsAction,
+} from '../src/core';
+import {
+  installTestBackend,
+  TEST_STUDENT_ID,
+  type TestBackendState,
+} from './helpers/test-backend';
 
 describe('Parent Spending Limits & Controls (SpendingLimitsSchema & Pause Toggle)', () => {
-  const studentId = '22222222-2222-4222-8222-222222222222';
+  const studentId = TEST_STUDENT_ID;
+  let backendState: TestBackendState;
+  let restoreFetch: (() => void) | null = null;
 
   beforeEach(() => {
-    mockApiClient.resetToDefault();
+    const setup = installTestBackend();
+    backendState = setup.state;
+    restoreFetch = setup.restore;
+  });
+
+  afterEach(() => {
+    restoreFetch?.();
   });
 
   it('validates a complete spending limits payload with blocked categories', () => {
     const payload = {
       studentId,
-      dailyLimitCents: 200000, // $2.000
-      weeklyLimitCents: 1000000, // $10.000
+      dailyLimitCents: 200000,
+      weeklyLimitCents: 1000000,
       blockedCategories: ['CANDY', 'HOT_MEAL'] as const,
       isPaused: false,
     };
@@ -54,10 +70,10 @@ describe('Parent Spending Limits & Controls (SpendingLimitsSchema & Pause Toggle
   });
 
   it('updates daily and weekly caps and persists blocked categories', async () => {
-    const updateResult = await mockApiClient.updateSpendingLimits({
+    const updateResult = await updateSpendingLimitsAction({
       studentId,
-      dailyLimitCents: 350000, // $3.500
-      weeklyLimitCents: 1500000, // $15.000
+      dailyLimitCents: 350000,
+      weeklyLimitCents: 1500000,
       blockedCategories: ['CANDY', 'DRINK'],
       isPaused: false,
     });
@@ -67,22 +83,19 @@ describe('Parent Spending Limits & Controls (SpendingLimitsSchema & Pause Toggle
     expect(updateResult.limits?.weeklyLimitCents).toBe(1500000);
     expect(updateResult.limits?.blockedCategories).toEqual(['CANDY', 'DRINK']);
 
-    // Check retrieval
-    const currentLimits = mockApiClient.getSpendingLimits(studentId);
+    const currentLimits = await fetchSpendingLimitsAction(studentId);
     expect(currentLimits.dailyLimitCents).toBe(350000);
     expect(currentLimits.blockedCategories).toContain('CANDY');
     expect(currentLimits.blockedCategories).toContain('DRINK');
     expect(currentLimits.blockedCategories).not.toContain('STATIONERY');
 
-    // Also updates student profile dailyLimitCents
-    expect(mockApiClient.getStudent(studentId)?.dailyLimitCents).toBe(350000);
+    expect(backendState.students.get(studentId)?.dailyLimitCents).toBe(350000);
   });
 
   it('immediately pauses and unpauses student account with isPaused flag', async () => {
-    expect(mockApiClient.isAccountPaused(studentId)).toBe(false);
+    expect((await fetchSpendingLimitsAction(studentId)).isPaused).toBe(false);
 
-    // Pause account
-    const pauseResult = await mockApiClient.updateSpendingLimits({
+    const pauseResult = await updateSpendingLimitsAction({
       studentId,
       dailyLimitCents: 200000,
       weeklyLimitCents: 1000000,
@@ -92,10 +105,9 @@ describe('Parent Spending Limits & Controls (SpendingLimitsSchema & Pause Toggle
 
     expect(pauseResult.success).toBe(true);
     expect(pauseResult.limits?.isPaused).toBe(true);
-    expect(mockApiClient.isAccountPaused(studentId)).toBe(true);
+    expect((await fetchSpendingLimitsAction(studentId)).isPaused).toBe(true);
 
-    // Unpause account
-    const unpauseResult = await mockApiClient.updateSpendingLimits({
+    const unpauseResult = await updateSpendingLimitsAction({
       studentId,
       dailyLimitCents: 200000,
       weeklyLimitCents: 1000000,
@@ -105,6 +117,6 @@ describe('Parent Spending Limits & Controls (SpendingLimitsSchema & Pause Toggle
 
     expect(unpauseResult.success).toBe(true);
     expect(unpauseResult.limits?.isPaused).toBe(false);
-    expect(mockApiClient.isAccountPaused(studentId)).toBe(false);
+    expect((await fetchSpendingLimitsAction(studentId)).isPaused).toBe(false);
   });
 });

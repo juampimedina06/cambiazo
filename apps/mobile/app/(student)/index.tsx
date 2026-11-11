@@ -13,13 +13,21 @@ import {
   Utensils,
   Apple,
   Pencil,
+  KeyRound,
 } from 'lucide-react-native';
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
 import { FlatListItem } from '../../src/shared/ui/FlatListItem';
 import { StudentHeader } from '../../src/entities/student-profile/ui/StudentHeader';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store';
-import { mockApiClient } from '../../src/shared/api/mock-client';
+import { ChangeStudentPasswordModal } from '../../src/features/parental-consent/ui/ChangeStudentPasswordModal';
+import { authStore, resolveSessionContext, type AuthState } from '../../src/shared/store/auth-store';
+import {
+  fetchSpendingLimitsAction,
+  fetchStudentTransactionsAction,
+  hydrateStudentAccountAction,
+  type SpendingLimits,
+  type WalletPurchase,
+} from '../../src/core';
 
 const renderPurchaseIcon = (category?: string) => {
   switch (category) {
@@ -41,6 +49,9 @@ const renderPurchaseIcon = (category?: string) => {
 export default function StudentHomeScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
+  const [recentPurchases, setRecentPurchases] = useState<WalletPurchase[]>([]);
+  const [spendingLimits, setSpendingLimits] = useState<SpendingLimits | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
     return authStore.subscribe((state) => {
@@ -48,20 +59,54 @@ export default function StudentHomeScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const institutionName = authState.institution?.name || 'Colegio Manuel Belgrano';
+  const { student, studentId, institutionId, institutionName } =
+    resolveSessionContext(authState);
 
-  const spendingLimits = student ? mockApiClient.getSpendingLimits(student.id) : null;
+  useEffect(() => {
+    if (!student || !studentId || !institutionId) return;
+
+    let cancelled = false;
+    const studentAuth = {
+      role: 'STUDENT' as const,
+      userId: studentId,
+      institutionId,
+    };
+
+    Promise.all([
+      hydrateStudentAccountAction(student, studentAuth),
+      fetchStudentTransactionsAction(studentId, { auth: studentAuth }),
+      fetchSpendingLimitsAction(studentId, { auth: studentAuth }).catch(() => null),
+    ]).then(([hydrated, transactions, limits]) => {
+      if (cancelled) return;
+      setRecentPurchases(transactions.slice(0, 3));
+      if (limits) {
+        setSpendingLimits(limits);
+      }
+      authStore.updateStudentFields(studentId, {
+        balanceArsCents: hydrated.balanceArsCents,
+        dailyLimitCents: hydrated.dailyLimitCents,
+        dailySpentCents: hydrated.dailySpentCents,
+        consentStatus: hydrated.consentStatus,
+        communityPoints: hydrated.communityPoints,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, institutionId]);
+
   const isPaused = spendingLimits?.isPaused ?? false;
-  const dailyLimitCents = spendingLimits?.dailyLimitCents ?? (student?.dailyLimitCents ?? 200000);
+  const dailyLimitCents = spendingLimits?.dailyLimitCents ?? (student?.dailyLimitCents ?? 0);
+  const dailySpentCents = student?.dailySpentCents ?? 0;
 
   // Money formatting helper (Pesos Reales 1 a 1, ARS, NO tokens/coins)
-  const balanceArs = ((student?.balanceArsCents ?? 450000) / 100).toLocaleString('es-AR', {
+  const balanceArs = ((student?.balanceArsCents ?? 0) / 100).toLocaleString('es-AR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
 
-  const dailySpentArs = ((student?.dailySpentCents ?? 50000) / 100).toLocaleString('es-AR', {
+  const dailySpentArs = (dailySpentCents / 100).toLocaleString('es-AR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
@@ -72,9 +117,8 @@ export default function StudentHomeScreen() {
   });
 
   // Calculate daily limit progress percentage
-  const spentRatio = Math.min(1, (student?.dailySpentCents ?? 50000) / Math.max(1, dailyLimitCents));
-
-  const recentPurchases = student ? mockApiClient.getPurchases(student.id).slice(0, 3) : [];
+  const spentRatio =
+    dailyLimitCents > 0 ? Math.min(1, dailySpentCents / dailyLimitCents) : 0;
 
   const handleLogout = () => {
     authStore.logout();
@@ -90,9 +134,9 @@ export default function StudentHomeScreen() {
     >
       {/* 1. HEADER: Saludo + Badge Escuela + Píldora amarilla con Puntos */}
       <StudentHeader
-        fullName={student?.fullName || 'Mateo Gómez'}
+        fullName={student?.fullName || 'Alumno'}
         institutionName={institutionName}
-        communityPoints={student?.communityPoints ?? 120}
+        communityPoints={student?.communityPoints ?? 0}
         onLogout={handleLogout}
       />
 
@@ -202,8 +246,17 @@ export default function StudentHomeScreen() {
         </View>
       </View>
 
-      {/* 5. RETURN TO PARENT PANEL (For developer/user testing flow) */}
+      {/* 5. RETURN TO PARENT PANEL & OPTIONAL PASSWORD */}
       <View style={styles.footerNav}>
+        {student && institutionId && (
+          <Button
+            label="Cambiar Mi Clave de Ingreso"
+            icon={<KeyRound size={18} color={colors.brand.primaryDark} />}
+            onPress={() => setShowPasswordModal(true)}
+            variant="outline"
+            testID="btn-student-change-password"
+          />
+        )}
         <Button
           label="Volver al Panel Tutor"
           onPress={() => {
@@ -213,6 +266,20 @@ export default function StudentHomeScreen() {
           testID="btn-back-to-parent"
         />
       </View>
+
+      {student && institutionId && (
+        <ChangeStudentPasswordModal
+          visible={showPasswordModal}
+          studentId={student.id}
+          studentName={student.fullName}
+          auth={{
+            role: 'STUDENT',
+            userId: student.id,
+            institutionId,
+          }}
+          onClose={() => setShowPasswordModal(false)}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -351,5 +418,6 @@ const styles = StyleSheet.create({
   },
   footerNav: {
     marginTop: 32,
+    gap: 12,
   },
 });

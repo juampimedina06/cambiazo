@@ -21,12 +21,31 @@ import {
   PARENT_STUDENT_LINK_REPOSITORY,
 } from '../../domain/ports/parent-student-link.repository.port.js';
 
+export interface RegisteredStudentSummary {
+  id: string;
+  institutionId: string;
+  fullName: string;
+  dni: string;
+  grade: string;
+  dateOfBirth: string;
+  consentStatus: 'PENDING';
+}
+
 export interface RegisterFamilyResult {
   parentId: string;
   studentId: string;
   institutionId: string;
   status: 'PENDING_CONSENT';
   message: string;
+  parent: {
+    id: string;
+    institutionId: string;
+    fullName: string;
+    email: string;
+    dni: string;
+    phone?: string;
+  };
+  students: RegisteredStudentSummary[];
 }
 
 @Injectable()
@@ -82,21 +101,38 @@ export class RegisterFamilyUseCase {
       );
     }
 
-    // Check student DNI in this institution
-    const existingStudentDni = await this.userRepo.findByDniAndInstitution(
-      dto.student.dni,
-      institutionId,
-    );
-    if (existingStudentDni) {
-      throw new DomainException(
-        DOMAIN_ERROR_CODES.USER_NOT_FOUND,
-        `Student with DNI ${dto.student.dni} is already registered in this institution`,
-        HttpStatus.CONFLICT,
+    const allStudentInputs = [
+      dto.student,
+      ...(dto.additionalStudents ?? []),
+    ];
+
+    // Check duplicate DNIs across submitted children and existing institution users
+    const seenDnis = new Set<string>();
+    for (const sInput of allStudentInputs) {
+      const normalizedDni = sInput.dni.trim();
+      if (seenDnis.has(normalizedDni)) {
+        throw new DomainException(
+          DOMAIN_ERROR_CODES.USER_NOT_FOUND,
+          `Duplicate student DNI ${normalizedDni} in registration`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      seenDnis.add(normalizedDni);
+
+      const existingStudentDni = await this.userRepo.findByDniAndInstitution(
+        normalizedDni,
+        institutionId,
       );
+      if (existingStudentDni) {
+        throw new DomainException(
+          DOMAIN_ERROR_CODES.USER_NOT_FOUND,
+          `Student with DNI ${normalizedDni} is already registered in this institution`,
+          HttpStatus.CONFLICT,
+        );
+      }
     }
 
     const parentId = randomUUID();
-    const studentId = randomUUID();
     const createdAt = new Date();
 
     const parentUser: User = {
@@ -104,48 +140,73 @@ export class RegisterFamilyUseCase {
       institutionId,
       role: 'PARENT',
       email: dto.parent.email.toLowerCase(),
-      passwordHash: `hash_${dto.parent.password}`, // Mock hash for local storage
-      fullName: dto.parent.fullName,
-      dni: dto.parent.dni,
+      passwordHash: `hash_${dto.parent.password}`,
+      fullName: dto.parent.fullName.trim(),
+      dni: dto.parent.dni.trim(),
       phone: dto.parent.phone,
       isActive: true,
       createdAt,
     };
 
-    // Student account is created with isActive = false (pending Ley 25.326 consent)
-    const studentUser: User = {
-      id: studentId,
-      institutionId,
-      role: 'STUDENT',
-      email: `${dto.student.dni}@student.cambiazo.internal`,
-      passwordHash: `hash_student_${dto.student.dni}`,
-      fullName: dto.student.fullName,
-      dni: dto.student.dni,
-      grade: dto.student.grade,
-      dateOfBirth: dto.student.dateOfBirth,
-      isActive: false,
-      createdAt,
-    };
-
-    const link: ParentStudentLink = {
-      id: randomUUID(),
-      institutionId,
-      parentUserId: parentId,
-      studentUserId: studentId,
-      createdAt,
-    };
-
     await this.userRepo.create(parentUser);
-    await this.userRepo.create(studentUser);
-    await this.linkRepo.create(link);
+
+    const registeredStudents: RegisteredStudentSummary[] = [];
+
+    for (const sInput of allStudentInputs) {
+      const studentId = randomUUID();
+      const studentUser: User = {
+        id: studentId,
+        institutionId,
+        role: 'STUDENT',
+        email: `${sInput.dni.trim()}@student.cambiazo.internal`,
+        passwordHash: `hash_${dto.parent.password}`,
+        fullName: sInput.fullName.trim(),
+        dni: sInput.dni.trim(),
+        grade: sInput.grade.trim(),
+        dateOfBirth: sInput.dateOfBirth.trim(),
+        isActive: false,
+        createdAt,
+      };
+
+      const link: ParentStudentLink = {
+        id: randomUUID(),
+        institutionId,
+        parentUserId: parentId,
+        studentUserId: studentId,
+        createdAt,
+      };
+
+      await this.userRepo.create(studentUser);
+      await this.linkRepo.create(link);
+
+      registeredStudents.push({
+        id: studentId,
+        institutionId,
+        fullName: studentUser.fullName,
+        dni: studentUser.dni || '',
+        grade: studentUser.grade || '',
+        dateOfBirth: studentUser.dateOfBirth || '',
+        consentStatus: 'PENDING',
+      });
+    }
+
     await this.invitationRepo.incrementUsedCount(invitation.id);
 
     return {
       parentId,
-      studentId,
+      studentId: registeredStudents[0]!.id,
       institutionId,
       status: 'PENDING_CONSENT',
       message: 'Family successfully registered. Explicit parental consent is required before student can operate.',
+      parent: {
+        id: parentUser.id,
+        institutionId,
+        fullName: parentUser.fullName,
+        email: parentUser.email,
+        dni: parentUser.dni || '',
+        phone: parentUser.phone,
+      },
+      students: registeredStudents,
     };
   }
 }

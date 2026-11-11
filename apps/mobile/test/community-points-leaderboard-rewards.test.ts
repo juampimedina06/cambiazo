@@ -1,39 +1,51 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   LeaderboardEntryDtoSchema,
   SchoolRewardSchema,
   RedeemRewardSchema,
 } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client';
+import {
+  fetchLeaderboardAction,
+  fetchSchoolRewardsAction,
+  redeemRewardAction,
+} from '../src/core';
+import {
+  installTestBackend,
+  TEST_INSTITUTION_ID,
+  TEST_STUDENT_ID,
+  type TestBackendState,
+} from './helpers/test-backend';
 
 describe('Community Points, School Leaderboard & Rewards Catalog (WAVE-3-MOBILE-03)', () => {
-  const institutionId = 'e28bb18a-66fe-4f8e-9092-2df283f55001'; // Colegio Manuel Belgrano
-  const studentId = '22222222-2222-4222-8222-222222222222'; // Mateo Gómez
+  const institutionId = TEST_INSTITUTION_ID;
+  const studentId = TEST_STUDENT_ID;
+  let backendState: TestBackendState;
+  let restoreFetch: (() => void) | null = null;
 
   beforeEach(() => {
-    mockApiClient.resetToDefault();
+    const setup = installTestBackend();
+    backendState = setup.state;
+    restoreFetch = setup.restore;
+  });
+
+  afterEach(() => {
+    restoreFetch?.();
   });
 
   it('guarantees Community Points are non-monetary and separate from kiosk balance ($ ARS)', () => {
-    const student = mockApiClient.getStudent(studentId)!;
+    const student = backendState.students.get(studentId)!;
 
-    // Student has 120 community points
     expect(student.communityPoints).toBe(120);
-
-    // Kiosk wallet balance is $4.500 (450000 cents)
     expect(student.balanceArsCents).toBe(450000);
-
-    // They are completely different metrics and fields
     expect(typeof student.communityPoints).toBe('number');
     expect(typeof student.balanceArsCents).toBe('number');
     expect(student.communityPoints).not.toBe(student.balanceArsCents);
   });
 
   it('retrieves and validates school leaderboard with LeaderboardEntryDtoSchema', async () => {
-    const leaderboard = await mockApiClient.getLeaderboard(institutionId);
+    const leaderboard = await fetchLeaderboardAction(institutionId);
     expect(leaderboard.length).toBeGreaterThanOrEqual(5);
 
-    // Validate each entry
     leaderboard.forEach((entry) => {
       const res = LeaderboardEntryDtoSchema.safeParse(entry);
       expect(res.success).toBe(true);
@@ -41,12 +53,10 @@ describe('Community Points, School Leaderboard & Rewards Catalog (WAVE-3-MOBILE-
       expect(entry.badges.length).toBeGreaterThan(0);
     });
 
-    // Check ranks order (1, 2, 3...)
     for (let i = 0; i < leaderboard.length; i++) {
       expect(leaderboard[i]!.rank).toBe(i + 1);
     }
 
-    // Check student Mateo is present in leaderboard
     const mateo = leaderboard.find((e) => e.studentId === studentId);
     expect(mateo).toBeDefined();
     expect(mateo?.rank).toBe(2);
@@ -56,7 +66,7 @@ describe('Community Points, School Leaderboard & Rewards Catalog (WAVE-3-MOBILE-
   });
 
   it('retrieves and validates school rewards catalog with SchoolRewardSchema', async () => {
-    const rewards = await mockApiClient.getSchoolRewards(institutionId);
+    const rewards = await fetchSchoolRewardsAction(institutionId);
     expect(rewards.length).toBe(4);
 
     rewards.forEach((reward) => {
@@ -83,38 +93,34 @@ describe('Community Points, School Leaderboard & Rewards Catalog (WAVE-3-MOBILE-
   });
 
   it('redeems school reward deducting non-monetary community points and decrementing stock', async () => {
-    const student = mockApiClient.getStudent(studentId)!;
-    const initialPoints = student.communityPoints; // 120 pts
-    const initialBalanceArs = student.balanceArsCents; // $4.500
+    const student = backendState.students.get(studentId)!;
+    const initialPoints = student.communityPoints;
+    const initialBalanceArs = student.balanceArsCents;
 
-    const rewards = await mockApiClient.getSchoolRewards(institutionId);
-    const libraryPass = rewards.find((r) => r.title.includes('Biblioteca'))!; // costs 50 pts, stock 15
+    const rewards = await fetchSchoolRewardsAction(institutionId);
+    const libraryPass = rewards.find((r) => r.title.includes('Biblioteca'))!;
     const initialStock = libraryPass.stock!;
 
-    const res = await mockApiClient.redeemReward({
+    const res = await redeemRewardAction({
       rewardId: libraryPass.id,
       studentId,
     });
 
     expect(res.success).toBe(true);
-    expect(res.remainingPoints).toBe(initialPoints - 50); // 120 - 50 = 70 pts
+    expect(res.remainingPoints).toBe(initialPoints - 50);
     expect(student.communityPoints).toBe(70);
-
-    // Kiosk wallet ($ ARS) was NOT affected at all!
     expect(student.balanceArsCents).toBe(initialBalanceArs);
-
-    // Stock was decremented
-    expect(libraryPass.stock).toBe(initialStock - 1);
+    expect(backendState.rewards.get(libraryPass.id)?.stock).toBe(initialStock - 1);
   });
 
   it('rejects redeeming reward when student has insufficient community points', async () => {
-    const student = mockApiClient.getStudent(studentId)!;
-    student.communityPoints = 30; // Not enough for lunch (150 pts)
+    const student = backendState.students.get(studentId)!;
+    student.communityPoints = 30;
 
-    const rewards = await mockApiClient.getSchoolRewards(institutionId);
-    const lunchReward = rewards.find((r) => r.title.includes('Almuerzo'))!; // costs 150 pts
+    const rewards = await fetchSchoolRewardsAction(institutionId);
+    const lunchReward = rewards.find((r) => r.title.includes('Almuerzo'))!;
 
-    const res = await mockApiClient.redeemReward({
+    const res = await redeemRewardAction({
       rewardId: lunchReward.id,
       studentId,
     });
@@ -124,11 +130,11 @@ describe('Community Points, School Leaderboard & Rewards Catalog (WAVE-3-MOBILE-
   });
 
   it('rejects redeeming reward when stock is exhausted', async () => {
-    const rewards = await mockApiClient.getSchoolRewards(institutionId);
+    const rewards = await fetchSchoolRewardsAction(institutionId);
     const reward = rewards[0]!;
-    reward.stock = 0; // Exhaust stock
+    backendState.rewards.get(reward.id)!.stock = 0;
 
-    const res = await mockApiClient.redeemReward({
+    const res = await redeemRewardAction({
       rewardId: reward.id,
       studentId,
     });

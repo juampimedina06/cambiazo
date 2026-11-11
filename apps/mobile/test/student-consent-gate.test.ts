@@ -1,51 +1,70 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { mockApiClient } from '../src/shared/api/mock-client';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import {
+  evaluateStudentConsentAccess,
+  grantParentalConsentAction,
+  revokeParentalConsentAction,
+} from '../src/core';
 import { authStore } from '../src/shared/store/auth-store';
+import {
+  installTestBackend,
+  TEST_STUDENT_ID,
+  type TestBackendState,
+} from './helpers/test-backend';
 
 describe('Student Consent Gate & Access Enforcement', () => {
-  const studentId = '22222222-2222-4222-8222-222222222222';
+  const studentId = TEST_STUDENT_ID;
+  let backendState: TestBackendState;
+  let restoreFetch: (() => void) | null = null;
 
   beforeEach(() => {
-    mockApiClient.resetToDefault();
+    const setup = installTestBackend();
+    backendState = setup.state;
+    restoreFetch = setup.restore;
     authStore.logout();
   });
 
+  afterEach(() => {
+    restoreFetch?.();
+  });
+
   it('strictly blocks student access when consent status is PENDING', () => {
-    const access = mockApiClient.checkStudentAccess(studentId);
+    const student = backendState.students.get(studentId);
+    const access = evaluateStudentConsentAccess(student);
     expect(access.allowed).toBe(false);
     expect(access.status).toBe('PENDING');
-    expect(access.reason).toContain('aún no ha sido firmado');
+    expect(access.reason).toContain('consentimiento digital');
   });
 
   it('strictly blocks student access when consent status is REVOKED', async () => {
-    // Revoke
-    await mockApiClient.revokeParentalConsent({
+    await revokeParentalConsentAction({
       studentId,
       reason: 'Pausa familiar',
     });
 
-    const access = mockApiClient.checkStudentAccess(studentId);
+    const student = backendState.students.get(studentId);
+    const access = evaluateStudentConsentAccess(student);
     expect(access.allowed).toBe(false);
     expect(access.status).toBe('REVOKED');
     expect(access.reason).toContain('fue revocado por tu tutor');
   });
 
   it('permits student access ONLY when consent status is GRANTED', async () => {
-    await mockApiClient.grantParentalConsent({
+    await grantParentalConsentAction({
       studentId,
       acceptedTermsVersion: 'v1.0-ley25326',
       acceptedAt: new Date().toISOString(),
       signatureIp: '181.164.20.15',
     });
 
-    const access = mockApiClient.checkStudentAccess(studentId);
+    const student = backendState.students.get(studentId);
+    const access = evaluateStudentConsentAccess(student);
     expect(access.allowed).toBe(true);
     expect(access.status).toBe('GRANTED');
-    expect(access.student?.fullName).toBe('Mateo Gómez');
+    expect(student?.fullName).toBe('Mateo Gómez');
   });
 
   it('notifies reactive authStore subscribers when student consent changes', async () => {
-    const student = mockApiClient.getStudent(studentId)!;
+    const student = backendState.students.get(studentId)!;
     authStore.setStudentSession(student);
 
     let observedStatus = authStore.getState().student?.consentStatus;
@@ -55,11 +74,9 @@ describe('Student Consent Gate & Access Enforcement', () => {
       observedStatus = state.student?.consentStatus;
     });
 
-    // Grant
     authStore.updateStudentConsent('GRANTED');
     expect(observedStatus).toBe('GRANTED');
 
-    // Revoke
     authStore.updateStudentConsent('REVOKED');
     expect(observedStatus).toBe('REVOKED');
 

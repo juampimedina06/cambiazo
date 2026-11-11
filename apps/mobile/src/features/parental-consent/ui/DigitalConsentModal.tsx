@@ -2,11 +2,11 @@ import React from 'react';
 import { Modal, View, StyleSheet, SafeAreaView } from 'react-native';
 import { colors } from '../../../shared/theme/colors';
 import { DigitalConsentContent } from './DigitalConsentContent';
-import { type MockStudentUser } from '../../../shared/api/mock-client';
+import { type StudentProfile } from '../../../core';
 
 export interface DigitalConsentModalProps {
   visible: boolean;
-  student: MockStudentUser | null;
+  student: StudentProfile | null;
   parentName: string;
   institutionName?: string;
   onConsentGranted: (consentId: string) => void;

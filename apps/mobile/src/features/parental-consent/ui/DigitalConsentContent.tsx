@@ -5,10 +5,10 @@ import { colors } from '../../../shared/theme/colors';
 import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { useParentalConsent } from '../hooks/useParentalConsent';
-import { ensureUuid, type MockStudentUser } from '../../../shared/api/mock-client';
+import { type StudentProfile } from '../../../core';
 
 export interface DigitalConsentContentProps {
-  student: MockStudentUser;
+  student: StudentProfile;
   parentName: string;
   institutionName?: string;
   onConsentGranted: (consentId: string) => void;
@@ -34,10 +34,8 @@ export const DigitalConsentContent: React.FC<DigitalConsentContentProps> = ({
   const handleSign = async () => {
     if (!acceptedCheckbox) return;
 
-    const targetStudentId = ensureUuid(student.id);
-
     const result = await grantConsent({
-      studentId: targetStudentId,
+      studentId: student.id,
       acceptedTermsVersion: 'v1.0-ley25326',
       signatureIp: '181.164.20.15',
     });

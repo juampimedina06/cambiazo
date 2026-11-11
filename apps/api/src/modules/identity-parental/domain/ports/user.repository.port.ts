@@ -6,6 +6,7 @@ export interface UserRepositoryPort {
   findByEmail(email: string): Promise<User | null>;
   findByDniAndInstitution(dni: string, institutionId: string): Promise<User | null>;
   updateIsActive(id: string, isActive: boolean): Promise<void>;
+  updatePasswordHash(id: string, passwordHash: string): Promise<void>;
   countActiveStudentsByInstitution(institutionId: string): Promise<number>;
   findAllByInstitution(institutionId: string): Promise<User[]>;
 }

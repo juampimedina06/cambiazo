@@ -17,6 +17,7 @@ export class InMemoryInstitutionRepository implements InstitutionRepositoryPort 
   }
 
   private loadFromDisk(): void {
+    if (process.env.NODE_ENV === 'test') return;
     try {
       if (fs.existsSync(this.storageFile)) {
         const raw = fs.readFileSync(this.storageFile, 'utf-8');

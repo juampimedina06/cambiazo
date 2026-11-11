@@ -297,6 +297,56 @@ export class LedgerService {
     return { spentTodayCents, spentThisWeekCents };
   }
 
+  async getStudentTransactions(
+    studentId: string,
+    institutionId: string,
+    limit = 30,
+  ): Promise<
+    Array<{
+      id: string;
+      referenceType: string;
+      referenceId?: string;
+      direction: LedgerEntryDirection;
+      amountCents: number;
+      description: string;
+      metadata?: Record<string, unknown>;
+      createdAt: Date;
+    }>
+  > {
+    const studentAccount = await this.getStudentAccount(studentId, institutionId);
+    const entries = await this.ledgerRepo.getEntriesByAccountId(studentAccount.id);
+
+    const results: Array<{
+      id: string;
+      referenceType: string;
+      referenceId?: string;
+      direction: LedgerEntryDirection;
+      amountCents: number;
+      description: string;
+      metadata?: Record<string, unknown>;
+      createdAt: Date;
+    }> = [];
+
+    for (const entry of entries) {
+      const tx = await this.ledgerRepo.findTransactionById(entry.transactionId);
+      if (!tx) continue;
+      results.push({
+        id: tx.id,
+        referenceType: String(tx.referenceType),
+        referenceId: tx.referenceId,
+        direction: entry.direction,
+        amountCents: entry.amountCents,
+        description: tx.description,
+        metadata: tx.metadata,
+        createdAt: tx.createdAt,
+      });
+    }
+
+    return results
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
   // Immutability checks
   async attemptUpdateEntry(): Promise<never> {
     return this.ledgerRepo.updateEntry('any-id', {});

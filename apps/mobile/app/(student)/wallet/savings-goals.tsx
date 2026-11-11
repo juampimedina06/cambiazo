@@ -20,8 +20,15 @@ import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
 import { NumericStepperField } from '../../../src/shared/ui/NumericStepperField';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient, type MockSavingsGoal } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import {
+  allocateToSavingsGoalAction,
+  createSavingsGoalAction,
+  fetchSavingsGoalsAction,
+  fetchStudentBalanceAction,
+  withdrawFromSavingsGoalAction,
+  type SavingsGoal,
+} from '../../../src/core';
 
 interface GoalIconOption {
   key: string;
@@ -67,10 +74,10 @@ const renderGoalIcon = (iconKey?: string) => {
 export default function SavingsGoalsScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
-  const [goals, setGoals] = useState<MockSavingsGoal[]>([]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
-  const [selectedGoal, setSelectedGoal] = useState<MockSavingsGoal | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
 
   // Form states for creating goal
   const [newTitle, setNewTitle] = useState('');
@@ -88,19 +95,26 @@ export default function SavingsGoalsScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
+  const { student, studentId, institutionId } = resolveSessionContext(authState);
 
-  const reloadData = () => {
-    if (studentId) {
-      setGoals(mockApiClient.getSavingsGoals(studentId));
-      authStore.refreshStudentFromClient(studentId);
-    }
+  const reloadData = async () => {
+    if (!studentId) return;
+    const studentAuth = {
+      role: 'STUDENT' as const,
+      userId: studentId,
+      institutionId,
+    };
+    const [list, balanceArsCents] = await Promise.all([
+      fetchSavingsGoalsAction(studentId, { auth: studentAuth }),
+      fetchStudentBalanceAction(studentId, { auth: studentAuth }).catch(() => student?.balanceArsCents ?? 0),
+    ]);
+    setGoals(list);
+    authStore.updateStudentFields(studentId, { balanceArsCents });
   };
 
   useEffect(() => {
     reloadData();
-  }, [studentId]);
+  }, [studentId, institutionId]);
 
   const availableBalanceArs = ((student?.balanceArsCents ?? 0) / 100).toLocaleString('es-AR', {
     minimumFractionDigits: 0,
@@ -119,11 +133,21 @@ export default function SavingsGoalsScreen() {
       return;
     }
 
-    const res = await mockApiClient.createSavingsGoal(studentId, {
-      title: newTitle.trim(),
-      targetAmountCents: targetCents,
-      icon: newIcon,
-    });
+    const res = await createSavingsGoalAction(
+      {
+        studentId,
+        title: newTitle.trim(),
+        targetAmountCents: targetCents,
+        icon: newIcon,
+      },
+      {
+        auth: {
+          role: 'STUDENT',
+          userId: studentId,
+          institutionId,
+        },
+      }
+    );
 
     if (!res.success) {
       setCreateError(res.error || 'Error al crear la meta');
@@ -145,7 +169,20 @@ export default function SavingsGoalsScreen() {
       return;
     }
 
-    const res = await mockApiClient.allocateToGoal(studentId, selectedGoal.id, amountCents);
+    const res = await allocateToSavingsGoalAction(
+      {
+        studentId,
+        goalId: selectedGoal.id,
+        amountCents,
+      },
+      {
+        auth: {
+          role: 'STUDENT',
+          userId: studentId,
+          institutionId,
+        },
+      }
+    );
     if (!res.success) {
       setDepositError(res.error || 'Error al separar fondos');
       return;
@@ -157,10 +194,22 @@ export default function SavingsGoalsScreen() {
     reloadData();
   };
 
-  const handleWithdrawFromGoal = async (goal: MockSavingsGoal) => {
+  const handleWithdrawFromGoal = async (goal: SavingsGoal) => {
     // Release all saved funds back to student's prepaid balance
     if (goal.savedAmountCents <= 0) return;
-    const res = await mockApiClient.withdrawFromGoal(studentId, goal.id, goal.savedAmountCents);
+    const res = await withdrawFromSavingsGoalAction(
+      {
+        studentId,
+        goalId: goal.id,
+      },
+      {
+        auth: {
+          role: 'STUDENT',
+          userId: studentId,
+          institutionId,
+        },
+      }
+    );
     if (res.success) {
       reloadData();
     }

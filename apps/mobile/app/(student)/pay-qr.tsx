@@ -5,8 +5,8 @@ import { ArrowLeft, Zap, AlertTriangle, Clock, RefreshCw } from 'lucide-react-na
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
 import { Pill } from '../../src/shared/ui/Pill';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store';
-import { mockApiClient } from '../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../src/shared/store/auth-store';
+import { generateQrPaymentTokenAction } from '../../src/core';
 import { QrPaymentTokenSchema, type QrPaymentTokenDto } from '@cambiazo/shared';
 
 export default function PayQrScreen() {
@@ -18,8 +18,7 @@ export default function PayQrScreen() {
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
+  const { student, studentId, institutionId } = resolveSessionContext(authState);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -35,7 +34,13 @@ export default function PayQrScreen() {
     setIsExpired(false);
     setSecondsRemaining(120);
 
-    const res = await mockApiClient.generateQrPaymentToken(studentId);
+    const res = await generateQrPaymentTokenAction(studentId, {
+      auth: {
+        role: 'STUDENT',
+        userId: studentId,
+        institutionId,
+      },
+    });
     if (!res.success || !res.qrToken || !res.backupCode) {
       setErrorMessage(res.error || 'No se pudo generar el código QR.');
       return;
@@ -77,7 +82,7 @@ export default function PayQrScreen() {
 
   const formattedCode = backupCode.length === 6 ? `${backupCode.slice(0, 3)} ${backupCode.slice(3)}` : backupCode;
 
-  const balanceArs = ((student?.balanceArsCents ?? 450000) / 100).toLocaleString('es-AR');
+  const balanceArs = ((student?.balanceArsCents ?? 0) / 100).toLocaleString('es-AR');
 
   return (
     <ScrollView

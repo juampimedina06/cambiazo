@@ -16,8 +16,11 @@ import {
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import {
+  fetchSchoolRewardsAction,
+  redeemRewardAction,
+} from '../../../src/core';
 
 export default function RewardsCatalogScreen() {
   const router = useRouter();
@@ -34,25 +37,29 @@ export default function RewardsCatalogScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const institution = authState.institution || { id: 'e28bb18a-66fe-4f8e-9092-2df283f55001', name: 'Colegio Manuel Belgrano' };
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
-  const institutionId = student?.institutionId || institution.id;
+  const { student, studentId, institutionId, institutionName } = resolveSessionContext(authState);
 
   const loadRewards = async () => {
-    const list = await mockApiClient.getSchoolRewards(institutionId);
+    if (!institutionId) {
+      setRewards([]);
+      return;
+    }
+    const list = await fetchSchoolRewardsAction(institutionId, {
+      auth: {
+        role: 'STUDENT',
+        userId: studentId || undefined,
+        institutionId,
+      },
+    });
     list.forEach((r) => SchoolRewardSchema.parse(r));
     setRewards(list);
-    if (studentId) {
-      authStore.refreshStudentFromClient(studentId);
-    }
   };
 
   useEffect(() => {
     loadRewards();
   }, [institutionId, studentId]);
 
-  const pointsCount = student?.communityPoints ?? 120;
+  const pointsCount = student?.communityPoints ?? 0;
 
   const handleRedeem = async () => {
     if (!selectedReward) return;
@@ -69,10 +76,22 @@ export default function RewardsCatalogScreen() {
       return;
     }
 
-    const res = await mockApiClient.redeemReward(validation.data);
+    const res = await redeemRewardAction(validation.data, {
+      auth: {
+        role: 'STUDENT',
+        userId: studentId,
+        institutionId,
+      },
+    });
     if (!res.success) {
       setErrorMessage(res.error || 'No se pudo completar el canje.');
       return;
+    }
+
+    if (typeof res.remainingPoints === 'number' && studentId) {
+      authStore.updateStudentFields(studentId, {
+        communityPoints: res.remainingPoints,
+      });
     }
 
     setShowConfirmModal(false);
@@ -109,7 +128,7 @@ export default function RewardsCatalogScreen() {
 
       <Text style={styles.title}>Canjes Escolares</Text>
       <Text style={styles.subtitle}>
-        Utilizá tus puntos solidarios para obtener reconocimientos en {institution.name}
+        Utilizá tus puntos solidarios para obtener reconocimientos en {institutionName}
       </Text>
 
       {/* Points Balance Banner */}

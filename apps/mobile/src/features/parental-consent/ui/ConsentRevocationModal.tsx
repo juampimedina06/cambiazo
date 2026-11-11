@@ -7,7 +7,6 @@ import { Button } from '../../../shared/ui/Button';
 import { Input } from '../../../shared/ui/Input';
 import { Pill } from '../../../shared/ui/Pill';
 import { useParentalConsent } from '../hooks/useParentalConsent';
-import { ensureUuid } from '../../../shared/api/mock-client';
 
 export interface ConsentRevocationModalProps {
   visible: boolean;
@@ -32,9 +31,8 @@ export const ConsentRevocationModal: React.FC<ConsentRevocationModalProps> = ({
 
   const handleConfirmRevocation = async () => {
     const trimmed = reason.trim();
-    const validStudentId = ensureUuid(studentId);
     const validation = RevokeParentalConsentSchema.safeParse({
-      studentId: validStudentId,
+      studentId,
       reason: trimmed,
     });
 
@@ -45,7 +43,7 @@ export const ConsentRevocationModal: React.FC<ConsentRevocationModalProps> = ({
 
     setReasonError(null);
     const result = await revokeConsent({
-      studentId: validStudentId,
+      studentId,
       reason: trimmed,
     });
 

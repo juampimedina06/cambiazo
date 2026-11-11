@@ -1,23 +1,44 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ChargeQrRequestSchema } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client';
+import {
+  chargeQrPaymentAction,
+  fetchStudentBalanceAction,
+  fetchStudentTransactionsAction,
+  generateQrPaymentTokenAction,
+  grantParentalConsentAction,
+  updateSpendingLimitsAction,
+} from '../src/core';
+import {
+  installTestBackend,
+  TEST_STUDENT_ID,
+  type TestBackendState,
+} from './helpers/test-backend';
 
 describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)', () => {
-  const studentId = '22222222-2222-4222-8222-222222222222';
-  const alfajorId = '10000000-0000-4000-8000-000000000001'; // CANDY, $1.200 (120000 cents)
-  const tostadoId = '10000000-0000-4000-8000-000000000002'; // HOT_MEAL, $2.000 (200000 cents)
-  const jugoId = '10000000-0000-4000-8000-000000000003';    // DRINK, $1.000 (100000 cents)
-  const manzanaId = '10000000-0000-4000-8000-000000000004'; // HEALTHY_SNACK, $600 (60000 cents)
+  const studentId = TEST_STUDENT_ID;
+  const alfajorId = '10000000-0000-4000-8000-000000000001';
+  const tostadoId = '10000000-0000-4000-8000-000000000002';
+  const jugoId = '10000000-0000-4000-8000-000000000003';
+  const manzanaId = '10000000-0000-4000-8000-000000000004';
+
+  let backendState: TestBackendState;
+  let restoreFetch: (() => void) | null = null;
 
   beforeEach(async () => {
-    mockApiClient.resetToDefault();
-    // Grant consent so student can make purchases
-    await mockApiClient.grantParentalConsent({
+    const setup = installTestBackend();
+    backendState = setup.state;
+    restoreFetch = setup.restore;
+
+    await grantParentalConsentAction({
       studentId,
       acceptedTermsVersion: 'v1.0',
       acceptedAt: new Date().toISOString(),
       signatureIp: '181.164.20.15',
     });
+  });
+
+  afterEach(() => {
+    restoreFetch?.();
   });
 
   it('validates a correct ChargeQrRequestSchema payload with items and idempotencyKey', () => {
@@ -44,17 +65,13 @@ describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)'
   });
 
   it('executes a sub-5s charge in 3 steps and records purchase in student history', async () => {
-    // Step 1: Student generates 6-digit QR code
-    const qrResult = await mockApiClient.generateQrPaymentToken(studentId);
+    const qrResult = await generateQrPaymentTokenAction(studentId);
     expect(qrResult.success).toBe(true);
     const code = qrResult.backupCode!;
 
-    // Initial student balance is $4.500 (450000 cents)
-    const initialStudent = mockApiClient.getStudent(studentId);
-    expect(initialStudent?.balanceArsCents).toBe(450000);
+    expect(await fetchStudentBalanceAction(studentId)).toBe(450000);
 
-    // Step 2 & 3: Kiosk scans/enters code and charges Alfajor ($1.200)
-    const chargeResult = await mockApiClient.chargeQrPayment({
+    const chargeResult = await chargeQrPaymentAction({
       paymentTokenOrCode: code,
       items: [{ productId: alfajorId, quantity: 1 }],
       idempotencyKey: `pos-charge-${Date.now()}-1`,
@@ -64,43 +81,36 @@ describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)'
     expect(chargeResult.totalChargedCents).toBe(120000);
     expect(chargeResult.studentName).toBe('Mateo Gómez');
 
-    // Balance deducted: 450000 - 120000 = 330000 ($3.300)
-    expect(mockApiClient.getStudent(studentId)?.balanceArsCents).toBe(330000);
+    expect(await fetchStudentBalanceAction(studentId)).toBe(330000);
 
-    // Check purchase was recorded in purchase/notifications history
-    const purchases = mockApiClient.getPurchases(studentId);
+    const purchases = await fetchStudentTransactionsAction(studentId);
     expect(purchases[0]?.amountCents).toBe(120000);
     expect(purchases[0]?.itemsSummary).toContain('Alfajor');
   });
 
   it('enforces idempotency: duplicate charge request returns cached result without double charging', async () => {
-    const qrResult = await mockApiClient.generateQrPaymentToken(studentId);
+    const qrResult = await generateQrPaymentTokenAction(studentId);
     const code = qrResult.backupCode!;
     const idempotencyKey = 'unique-kiosk-tx-12345678';
 
     const chargePayload = {
       paymentTokenOrCode: code,
-      items: [{ productId: manzanaId, quantity: 1 }], // $600
+      items: [{ productId: manzanaId, quantity: 1 }],
       idempotencyKey,
     };
 
-    // First charge execution
-    const firstResult = await mockApiClient.chargeQrPayment(chargePayload);
+    const firstResult = await chargeQrPaymentAction(chargePayload);
     expect(firstResult.success).toBe(true);
-    expect(mockApiClient.getStudent(studentId)?.balanceArsCents).toBe(450000 - 60000);
+    expect(await fetchStudentBalanceAction(studentId)).toBe(450000 - 60000);
 
-    // Second charge execution with identical idempotencyKey
-    const secondResult = await mockApiClient.chargeQrPayment(chargePayload);
+    const secondResult = await chargeQrPaymentAction(chargePayload);
     expect(secondResult.success).toBe(true);
     expect(secondResult.chargeId).toBe(firstResult.chargeId);
-
-    // Balance must NOT be deducted again
-    expect(mockApiClient.getStudent(studentId)?.balanceArsCents).toBe(450000 - 60000);
+    expect(await fetchStudentBalanceAction(studentId)).toBe(450000 - 60000);
   });
 
   it('rejects charge when product category is blocked by parent (e.g. CANDY)', async () => {
-    // Parent blocks CANDY
-    await mockApiClient.updateSpendingLimits({
+    await updateSpendingLimitsAction({
       studentId,
       dailyLimitCents: 200000,
       weeklyLimitCents: 1000000,
@@ -108,11 +118,10 @@ describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)'
       isPaused: false,
     });
 
-    const qrResult = await mockApiClient.generateQrPaymentToken(studentId);
+    const qrResult = await generateQrPaymentTokenAction(studentId);
     const code = qrResult.backupCode!;
 
-    // Attempt to charge Alfajor (CANDY)
-    const chargeResult = await mockApiClient.chargeQrPayment({
+    const chargeResult = await chargeQrPaymentAction({
       paymentTokenOrCode: code,
       items: [{ productId: alfajorId, quantity: 1 }],
       idempotencyKey: 'pos-charge-blocked-cat-test',
@@ -120,18 +129,14 @@ describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)'
 
     expect(chargeResult.success).toBe(false);
     expect(chargeResult.error).toContain('bloqueada');
-
-    // Balance remains untouched
-    expect(mockApiClient.getStudent(studentId)?.balanceArsCents).toBe(450000);
+    expect(await fetchStudentBalanceAction(studentId)).toBe(450000);
   });
 
   it('rejects charge when account is paused by parent', async () => {
-    // Generate code before pause
-    const qrResult = await mockApiClient.generateQrPaymentToken(studentId);
+    const qrResult = await generateQrPaymentTokenAction(studentId);
     const code = qrResult.backupCode!;
 
-    // Parent pauses account
-    await mockApiClient.updateSpendingLimits({
+    await updateSpendingLimitsAction({
       studentId,
       dailyLimitCents: 200000,
       weeklyLimitCents: 1000000,
@@ -139,8 +144,7 @@ describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)'
       isPaused: true,
     });
 
-    // Attempt to charge
-    const chargeResult = await mockApiClient.chargeQrPayment({
+    const chargeResult = await chargeQrPaymentAction({
       paymentTokenOrCode: code,
       items: [{ productId: jugoId, quantity: 1 }],
       idempotencyKey: 'pos-charge-paused-account-test',
@@ -151,20 +155,18 @@ describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)'
   });
 
   it('rejects charge when total exceeds remaining daily limit', async () => {
-    // Parent sets daily limit to $1.000 (100000 cents)
-    await mockApiClient.updateSpendingLimits({
+    await updateSpendingLimitsAction({
       studentId,
-      dailyLimitCents: 100000, // $1.000 limit
+      dailyLimitCents: 100000,
       weeklyLimitCents: 500000,
       blockedCategories: [],
       isPaused: false,
     });
 
-    const qrResult = await mockApiClient.generateQrPaymentToken(studentId);
+    const qrResult = await generateQrPaymentTokenAction(studentId);
     const code = qrResult.backupCode!;
 
-    // Attempt to charge Tostado ($2.000 / 200000 cents)
-    const chargeResult = await mockApiClient.chargeQrPayment({
+    const chargeResult = await chargeQrPaymentAction({
       paymentTokenOrCode: code,
       items: [{ productId: tostadoId, quantity: 1 }],
       idempotencyKey: 'pos-charge-daily-limit-exceeded',
@@ -175,17 +177,15 @@ describe('Kiosk Mode POS Scanner (< 5s Recess Workflow & ChargeQrRequestSchema)'
   });
 
   it('rejects charge when total exceeds available student balance', async () => {
-    // Set student balance to low amount: $500 (50000 cents)
-    const student = mockApiClient.getStudent(studentId);
+    const student = backendState.students.get(studentId);
     if (student) {
       student.balanceArsCents = 50000;
     }
 
-    const qrResult = await mockApiClient.generateQrPaymentToken(studentId);
+    const qrResult = await generateQrPaymentTokenAction(studentId);
     const code = qrResult.backupCode!;
 
-    // Attempt to charge Tostado ($2.000)
-    const chargeResult = await mockApiClient.chargeQrPayment({
+    const chargeResult = await chargeQrPaymentAction({
       paymentTokenOrCode: code,
       items: [{ productId: tostadoId, quantity: 1 }],
       idempotencyKey: 'pos-charge-low-balance-test',

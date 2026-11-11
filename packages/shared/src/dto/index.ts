@@ -8,6 +8,8 @@ import {
 
 import {
   RegisterParentAndStudentSchema,
+  LoginFamilySchema,
+  ChangeStudentPasswordSchema,
   GrantParentalConsentSchema,
   RevokeParentalConsentSchema,
   SpendingLimitsSchema,
@@ -50,6 +52,8 @@ export type ValidateInviteCodeDto = z.infer<typeof ValidateInviteCodeSchema>;
 
 // Consent DTOs
 export type RegisterParentAndStudentDto = z.infer<typeof RegisterParentAndStudentSchema>;
+export type LoginFamilyDto = z.infer<typeof LoginFamilySchema>;
+export type ChangeStudentPasswordDto = z.infer<typeof ChangeStudentPasswordSchema>;
 export type GrantParentalConsentDto = z.infer<typeof GrantParentalConsentSchema>;
 export type RevokeParentalConsentDto = z.infer<typeof RevokeParentalConsentSchema>;
 export type SpendingLimitsDto = z.infer<typeof SpendingLimitsSchema>;

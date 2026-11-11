@@ -1,58 +1,76 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { mockApiClient } from '../src/shared/api/mock-client';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import {
+  allocateToSavingsGoalAction,
+  createSavingsGoalAction,
+  fetchSavingsGoalsAction,
+  withdrawFromSavingsGoalAction,
+} from '../src/core';
+import {
+  installTestBackend,
+  TEST_STUDENT_ID,
+  type TestBackendState,
+} from './helpers/test-backend';
 
 describe('Student Educational Savings Goals (WAVE-3-MOBILE-03)', () => {
-  const studentId = '22222222-2222-4222-8222-222222222222';
+  const studentId = TEST_STUDENT_ID;
+  let backendState: TestBackendState;
+  let restoreFetch: (() => void) | null = null;
 
   beforeEach(() => {
-    mockApiClient.resetToDefault();
+    const setup = installTestBackend();
+    backendState = setup.state;
+    restoreFetch = setup.restore;
   });
 
-  it('retrieves default seeded educational savings goals for student', () => {
-    const goals = mockApiClient.getSavingsGoals(studentId);
+  afterEach(() => {
+    restoreFetch?.();
+  });
+
+  it('retrieves default seeded educational savings goals for student', async () => {
+    const goals = await fetchSavingsGoalsAction(studentId);
     expect(goals.length).toBe(2);
 
     const bookGoal = goals.find((g) => g.title.includes('Libro'));
     expect(bookGoal).toBeDefined();
-    expect(bookGoal?.targetAmountCents).toBe(300000); // $3.000
-    expect(bookGoal?.savedAmountCents).toBe(180000);  // $1.800
-    expect(bookGoal?.icon).toBe('📚');
+    expect(bookGoal?.targetAmountCents).toBe(300000);
+    expect(bookGoal?.savedAmountCents).toBe(180000);
+    expect(bookGoal?.icon).toBe('book');
   });
 
   it('creates a new savings goal with valid parameters', async () => {
-    const createRes = await mockApiClient.createSavingsGoal(studentId, {
+    const createRes = await createSavingsGoalAction({
+      studentId,
       title: 'Kit de Geometría Técnico',
-      targetAmountCents: 150000, // $1.500
-      icon: '📐',
+      targetAmountCents: 150000,
+      icon: 'target',
     });
 
     expect(createRes.success).toBe(true);
     expect(createRes.goal?.title).toBe('Kit de Geometría Técnico');
     expect(createRes.goal?.targetAmountCents).toBe(150000);
     expect(createRes.goal?.savedAmountCents).toBe(0);
-    expect(createRes.goal?.icon).toBe('📐');
 
-    const updatedGoals = mockApiClient.getSavingsGoals(studentId);
+    const updatedGoals = await fetchSavingsGoalsAction(studentId);
     expect(updatedGoals.length).toBe(3);
   });
 
   it('rejects creating savings goals with invalid parameters', async () => {
-    // Empty title
-    const resEmptyTitle = await mockApiClient.createSavingsGoal(studentId, {
+    const resEmptyTitle = await createSavingsGoalAction({
+      studentId,
       title: ' ',
       targetAmountCents: 100000,
     });
     expect(resEmptyTitle.success).toBe(false);
 
-    // Negative or zero target
-    const resNegativeTarget = await mockApiClient.createSavingsGoal(studentId, {
+    const resNegativeTarget = await createSavingsGoalAction({
+      studentId,
       title: 'Almuerzo',
       targetAmountCents: -500,
     });
     expect(resNegativeTarget.success).toBe(false);
 
-    // Non-existent student
-    const resNoStudent = await mockApiClient.createSavingsGoal('00000000-0000-0000-0000-000000000000', {
+    const resNoStudent = await createSavingsGoalAction({
+      studentId: '00000000-0000-0000-0000-000000000000',
       title: 'Almuerzo',
       targetAmountCents: 50000,
     });
@@ -60,79 +78,85 @@ describe('Student Educational Savings Goals (WAVE-3-MOBILE-03)', () => {
   });
 
   it('allocates balance from student wallet to a goal within prepaid funds', async () => {
-    const student = mockApiClient.getStudent(studentId)!;
-    const initialBalance = student.balanceArsCents; // 450000 ($4.500)
+    const student = backendState.students.get(studentId)!;
+    const initialBalance = student.balanceArsCents;
 
-    const goals = mockApiClient.getSavingsGoals(studentId);
+    const goals = await fetchSavingsGoalsAction(studentId);
     const goal = goals[0]!;
-    const initialSaved = goal.savedAmountCents; // 180000 ($1.800)
+    const initialSaved = goal.savedAmountCents;
 
-    const allocateAmount = 50000; // $500
-    const res = await mockApiClient.allocateToGoal(studentId, goal.id, allocateAmount);
+    const allocateAmount = 50000;
+    const res = await allocateToSavingsGoalAction({
+      studentId,
+      goalId: goal.id,
+      amountCents: allocateAmount,
+    });
 
     expect(res.success).toBe(true);
     expect(res.goal?.savedAmountCents).toBe(initialSaved + allocateAmount);
-
-    // Student balance decreased by exactly allocateAmount
     expect(student.balanceArsCents).toBe(initialBalance - allocateAmount);
   });
 
   it('rejects allocating more balance than available in wallet', async () => {
-    const student = mockApiClient.getStudent(studentId)!;
-    const goals = mockApiClient.getSavingsGoals(studentId);
+    const student = backendState.students.get(studentId)!;
+    const goals = await fetchSavingsGoalsAction(studentId);
     const goal = goals[0]!;
 
-    const excessiveAmount = student.balanceArsCents + 100000; // exceeds balance
-    const res = await mockApiClient.allocateToGoal(studentId, goal.id, excessiveAmount);
+    const excessiveAmount = student.balanceArsCents + 100000;
+    const res = await allocateToSavingsGoalAction({
+      studentId,
+      goalId: goal.id,
+      amountCents: excessiveAmount,
+    });
 
     expect(res.success).toBe(false);
-    expect(res.error).toContain('insuficiente');
+    expect(res.error).toContain('Saldo insuficiente');
   });
 
   it('withdraws saved money from goal back to available prepaid wallet balance', async () => {
-    const student = mockApiClient.getStudent(studentId)!;
+    const student = backendState.students.get(studentId)!;
     const initialBalance = student.balanceArsCents;
 
-    const goals = mockApiClient.getSavingsGoals(studentId);
+    const goals = await fetchSavingsGoalsAction(studentId);
     const goal = goals[0]!;
     const initialSaved = goal.savedAmountCents;
 
-    const withdrawAmount = 50000; // $500
-    const res = await mockApiClient.withdrawFromGoal(studentId, goal.id, withdrawAmount);
+    const res = await withdrawFromSavingsGoalAction({
+      studentId,
+      goalId: goal.id,
+    });
 
     expect(res.success).toBe(true);
-    expect(res.goal?.savedAmountCents).toBe(initialSaved - withdrawAmount);
-
-    // Student balance restored
-    expect(student.balanceArsCents).toBe(initialBalance + withdrawAmount);
+    expect(res.goal?.savedAmountCents).toBe(0);
+    expect(student.balanceArsCents).toBe(initialBalance + initialSaved);
   });
 
-  it('rejects withdrawing more money than saved in the goal', async () => {
-    const goals = mockApiClient.getSavingsGoals(studentId);
-    const goal = goals[0]!;
+  it('strictly preserves the rule that savings remain within prepaid kiosk balance', async () => {
+    const student = backendState.students.get(studentId)!;
+    const goalsBefore = await fetchSavingsGoalsAction(studentId);
+    const totalBefore =
+      student.balanceArsCents +
+      goalsBefore.reduce((acc, g) => acc + g.savedAmountCents, 0);
 
-    const excessiveWithdraw = goal.savedAmountCents + 50000;
-    const res = await mockApiClient.withdrawFromGoal(studentId, goal.id, excessiveWithdraw);
-
-    expect(res.success).toBe(false);
-    expect(res.error).toContain('supera lo ahorrado');
-  });
-
-  it('strictly preserves the rule that savings remain within prepaid kiosk balance', () => {
-    // Total school assets = wallet balance + total in savings goals
-    const student = mockApiClient.getStudent(studentId)!;
-    const goals = mockApiClient.getSavingsGoals(studentId);
-
-    const totalBefore = student.balanceArsCents + goals.reduce((acc, g) => acc + g.savedAmountCents, 0);
-
-    // After allocating $500
-    mockApiClient.allocateToGoal(studentId, goals[0]!.id, 50000);
-    const totalAfterAllocate = student.balanceArsCents + goals.reduce((acc, g) => acc + g.savedAmountCents, 0);
+    await allocateToSavingsGoalAction({
+      studentId,
+      goalId: goalsBefore[0]!.id,
+      amountCents: 50000,
+    });
+    const goalsMid = await fetchSavingsGoalsAction(studentId);
+    const totalAfterAllocate =
+      student.balanceArsCents +
+      goalsMid.reduce((acc, g) => acc + g.savedAmountCents, 0);
     expect(totalAfterAllocate).toBe(totalBefore);
 
-    // After withdrawing $300
-    mockApiClient.withdrawFromGoal(studentId, goals[0]!.id, 30000);
-    const totalAfterWithdraw = student.balanceArsCents + goals.reduce((acc, g) => acc + g.savedAmountCents, 0);
+    await withdrawFromSavingsGoalAction({
+      studentId,
+      goalId: goalsMid[0]!.id,
+    });
+    const goalsAfter = await fetchSavingsGoalsAction(studentId);
+    const totalAfterWithdraw =
+      student.balanceArsCents +
+      goalsAfter.reduce((acc, g) => acc + g.savedAmountCents, 0);
     expect(totalAfterWithdraw).toBe(totalBefore);
   });
 });

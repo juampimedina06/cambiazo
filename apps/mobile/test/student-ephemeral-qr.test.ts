@@ -1,12 +1,22 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { QrPaymentTokenSchema } from '@cambiazo/shared';
-import { mockApiClient } from '../src/shared/api/mock-client';
+import {
+  generateQrPaymentTokenAction,
+  grantParentalConsentAction,
+  updateSpendingLimitsAction,
+} from '../src/core';
+import { installTestBackend, TEST_STUDENT_ID } from './helpers/test-backend';
 
 describe('Student Ephemeral QR Payment Token (QrPaymentTokenSchema & 120s Expiry)', () => {
-  const studentId = '22222222-2222-4222-8222-222222222222';
+  const studentId = TEST_STUDENT_ID;
+  let restoreFetch: (() => void) | null = null;
 
   beforeEach(() => {
-    mockApiClient.resetToDefault();
+    restoreFetch = installTestBackend().restore;
+  });
+
+  afterEach(() => {
+    restoreFetch?.();
   });
 
   it('validates a correct QrPaymentTokenSchema payload', () => {
@@ -31,15 +41,13 @@ describe('Student Ephemeral QR Payment Token (QrPaymentTokenSchema & 120s Expiry
   });
 
   it('rejects QR generation if student does not have parental consent GRANTED', async () => {
-    // Initial student consent status is PENDING
-    const result = await mockApiClient.generateQrPaymentToken(studentId);
+    const result = await generateQrPaymentTokenAction(studentId);
     expect(result.success).toBe(false);
     expect(result.error).toContain('consentimiento parental');
   });
 
   it('generates ephemeral QR token with large 6-digit backup code and 120s expiration when consent is GRANTED', async () => {
-    // Grant consent first
-    await mockApiClient.grantParentalConsent({
+    await grantParentalConsentAction({
       studentId,
       acceptedTermsVersion: 'v1.0',
       acceptedAt: new Date().toISOString(),
@@ -47,7 +55,7 @@ describe('Student Ephemeral QR Payment Token (QrPaymentTokenSchema & 120s Expiry
     });
 
     const beforeTime = Date.now();
-    const result = await mockApiClient.generateQrPaymentToken(studentId);
+    const result = await generateQrPaymentTokenAction(studentId);
 
     expect(result.success).toBe(true);
     expect(result.qrToken).toBeDefined();
@@ -56,11 +64,9 @@ describe('Student Ephemeral QR Payment Token (QrPaymentTokenSchema & 120s Expiry
     expect(/^\d{6}$/.test(result.backupCode!)).toBe(true);
     expect(result.expiresInSeconds).toBe(120);
 
-    // Verify QrPaymentTokenSchema compliance
     const validation = QrPaymentTokenSchema.safeParse(result.qrToken);
     expect(validation.success).toBe(true);
 
-    // Verify 120-second expiration window
     const expiresTimestamp = new Date(result.qrToken!.expiresAt).getTime();
     const diffSeconds = Math.round((expiresTimestamp - beforeTime) / 1000);
     expect(diffSeconds).toBeGreaterThanOrEqual(119);
@@ -68,16 +74,14 @@ describe('Student Ephemeral QR Payment Token (QrPaymentTokenSchema & 120s Expiry
   });
 
   it('blocks QR token generation when account is paused by tutor (isPaused: true)', async () => {
-    // Grant consent
-    await mockApiClient.grantParentalConsent({
+    await grantParentalConsentAction({
       studentId,
       acceptedTermsVersion: 'v1.0',
       acceptedAt: new Date().toISOString(),
       signatureIp: '181.164.20.15',
     });
 
-    // Pause account
-    await mockApiClient.updateSpendingLimits({
+    await updateSpendingLimitsAction({
       studentId,
       dailyLimitCents: 200000,
       weeklyLimitCents: 1000000,
@@ -85,7 +89,7 @@ describe('Student Ephemeral QR Payment Token (QrPaymentTokenSchema & 120s Expiry
       isPaused: true,
     });
 
-    const result = await mockApiClient.generateQrPaymentToken(studentId);
+    const result = await generateQrPaymentTokenAction(studentId);
     expect(result.success).toBe(false);
     expect(result.error).toContain('pausada');
   });

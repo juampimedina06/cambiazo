@@ -8,7 +8,11 @@ import { SchoolCodeForm } from '../../src/features/onboarding-institution/ui/Sch
 export default function SchoolCodeScreen() {
   const router = useRouter();
 
-  const handleSuccess = (code: string, institutionName: string) => {
+  const handleSelectLogin = (code: string, institutionName: string) => {
+    router.push(`/(auth)/login?code=${encodeURIComponent(code)}&institution=${encodeURIComponent(institutionName)}`);
+  };
+
+  const handleSelectRegister = (code: string, institutionName: string) => {
     router.push(`/(auth)/register-family?code=${encodeURIComponent(code)}&institution=${encodeURIComponent(institutionName)}`);
   };
 
@@ -23,7 +27,11 @@ export default function SchoolCodeScreen() {
         <LogoPencilC size="lg" showLabel={true} />
       </View>
 
-      <SchoolCodeForm onSuccess={handleSuccess} />
+      <SchoolCodeForm
+        onSuccess={handleSelectRegister}
+        onSelectLogin={handleSelectLogin}
+        onSelectRegister={handleSelectRegister}
+      />
     </ScrollView>
   );
 }

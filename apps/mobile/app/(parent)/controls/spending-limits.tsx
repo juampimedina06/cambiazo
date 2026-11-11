@@ -21,8 +21,11 @@ import { colors } from '../../../src/shared/theme/colors';
 import { Button } from '../../../src/shared/ui/Button';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { NumericStepperField } from '../../../src/shared/ui/NumericStepperField';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { ensureUuid, mockApiClient, type MockSpendingLimits } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import {
+  fetchSpendingLimitsAction,
+  updateSpendingLimitsAction,
+} from '../../../src/core';
 import { SpendingLimitsSchema, type ProductCategory } from '@cambiazo/shared';
 
 interface CategoryOption {
@@ -43,11 +46,10 @@ export default function SpendingLimitsScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
+  const { student, studentId, parent, institutionId } = resolveSessionContext(authState);
 
-  const [dailyLimitText, setDailyLimitText] = useState<string>('2000');
-  const [weeklyLimitText, setWeeklyLimitText] = useState<string>('10000');
+  const [dailyLimitText, setDailyLimitText] = useState<string>('0');
+  const [weeklyLimitText, setWeeklyLimitText] = useState<string>('0');
   const [blockedCategories, setBlockedCategories] = useState<ProductCategory[]>([]);
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
@@ -62,14 +64,29 @@ export default function SpendingLimitsScreen() {
   }, []);
 
   useEffect(() => {
-    if (studentId) {
-      const currentLimits = mockApiClient.getSpendingLimits(studentId);
-      setDailyLimitText((currentLimits.dailyLimitCents / 100).toString());
-      setWeeklyLimitText((currentLimits.weeklyLimitCents / 100).toString());
-      setBlockedCategories([...currentLimits.blockedCategories]);
-      setIsPaused(currentLimits.isPaused);
-    }
-  }, [studentId]);
+    if (!studentId) return;
+    let cancelled = false;
+    fetchSpendingLimitsAction(studentId, {
+      auth: {
+        role: 'PARENT',
+        userId: parent?.id || studentId,
+        institutionId,
+      },
+    })
+      .then((currentLimits) => {
+        if (cancelled) return;
+        setDailyLimitText((currentLimits.dailyLimitCents / 100).toString());
+        setWeeklyLimitText((currentLimits.weeklyLimitCents / 100).toString());
+        setBlockedCategories([...currentLimits.blockedCategories]);
+        setIsPaused(currentLimits.isPaused);
+      })
+      .catch(() => {
+        // Keep defaults on error
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, parent?.id, institutionId]);
 
   const handleToggleCategory = (catKey: ProductCategory) => {
     setBlockedCategories((prev) => {
@@ -95,7 +112,7 @@ export default function SpendingLimitsScreen() {
     const weeklyVal = parseInt(weeklyLimitText.replace(/\D/g, ''), 10) || 0;
 
     const payload = {
-      studentId: ensureUuid(studentId),
+      studentId,
       dailyLimitCents: dailyVal * 100,
       weeklyLimitCents: weeklyVal * 100,
       blockedCategories,
@@ -110,7 +127,13 @@ export default function SpendingLimitsScreen() {
     }
 
     setIsSaving(true);
-    const res = await mockApiClient.updateSpendingLimits(payload);
+    const res = await updateSpendingLimitsAction(payload, {
+      auth: {
+        role: 'PARENT',
+        userId: parent?.id || studentId,
+        institutionId,
+      },
+    });
     setIsSaving(false);
 
     if (!res.success) {
@@ -148,7 +171,7 @@ export default function SpendingLimitsScreen() {
 
       <Text style={styles.title}>Límites y Controles</Text>
       <Text style={styles.subtitle}>
-        Configurá los topes y restricciones de consumo para {student?.fullName || 'Mateo Gómez'}
+        Configurá los topes y restricciones de consumo para {student?.fullName || 'tu hijo/a'}
       </Text>
 
       {/* High-Visibility Pause Toggle */}

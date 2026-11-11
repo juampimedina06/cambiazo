@@ -5,9 +5,11 @@ import {
   type ConsentStatus,
 } from '@cambiazo/shared';
 import {
-  mockApiClient,
-  type MockConsentRecord,
-} from '../../../shared/api/mock-client';
+  evaluateStudentConsentAccess,
+  grantParentalConsentAction,
+  revokeParentalConsentAction,
+  type ConsentRecord,
+} from '../../../core';
 import { authStore } from '../../../shared/store/auth-store';
 
 export function useParentalConsent() {
@@ -19,13 +21,16 @@ export function useParentalConsent() {
       studentId: string;
       acceptedTermsVersion?: string;
       signatureIp?: string;
-    }): Promise<{ success: boolean; consentRecord?: MockConsentRecord; error?: string }> => {
+    }): Promise<{ success: boolean; consentRecord?: ConsentRecord; error?: string }> => {
       setIsLoading(true);
       setError(null);
 
-      let targetStudentId = params.studentId;
+      const targetStudentId = params.studentId;
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetStudentId)) {
-        targetStudentId = '22222222-2222-4222-8222-222222222222';
+        const msg = 'No se encontró un alumno válido para firmar el consentimiento.';
+        setError(msg);
+        setIsLoading(false);
+        return { success: false, error: msg };
       }
 
       const payload = {
@@ -44,14 +49,22 @@ export function useParentalConsent() {
       }
 
       try {
-        const result = await mockApiClient.grantParentalConsent(validation.data);
+        const state = authStore.getState();
+        const studentRecord = state.students.find((s) => s.id === targetStudentId) || state.student;
+        const result = await grantParentalConsentAction(validation.data, {
+          auth: {
+            role: 'PARENT',
+            userId: state.parent?.id || studentRecord?.parentId,
+            institutionId: studentRecord?.institutionId || state.institution?.id,
+          },
+        });
         if (!result.success || !result.consentRecord) {
           const msg = result.error || 'Error al procesar el consentimiento';
           setError(msg);
           return { success: false, error: msg };
         }
 
-        authStore.updateStudentConsent('GRANTED');
+        authStore.updateStudentConsent('GRANTED', targetStudentId);
         return { success: true, consentRecord: result.consentRecord };
       } catch {
         const msg = 'Error de conexión al firmar consentimiento.';
@@ -68,7 +81,7 @@ export function useParentalConsent() {
     async (params: {
       studentId: string;
       reason: string;
-    }): Promise<{ success: boolean; consentRecord?: MockConsentRecord; error?: string }> => {
+    }): Promise<{ success: boolean; consentRecord?: ConsentRecord; error?: string }> => {
       setIsLoading(true);
       setError(null);
 
@@ -85,14 +98,23 @@ export function useParentalConsent() {
       }
 
       try {
-        const result = await mockApiClient.revokeParentalConsent(validation.data);
+        const state = authStore.getState();
+        const studentRecord =
+          state.students.find((s) => s.id === validation.data.studentId) || state.student;
+        const result = await revokeParentalConsentAction(validation.data, {
+          auth: {
+            role: 'PARENT',
+            userId: state.parent?.id || studentRecord?.parentId,
+            institutionId: studentRecord?.institutionId || state.institution?.id,
+          },
+        });
         if (!result.success || !result.consentRecord) {
           const msg = result.error || 'Error al revocar consentimiento';
           setError(msg);
           return { success: false, error: msg };
         }
 
-        authStore.updateStudentConsent('REVOKED');
+        authStore.updateStudentConsent('REVOKED', validation.data.studentId);
         return { success: true, consentRecord: result.consentRecord };
       } catch {
         const msg = 'Error de conexión al revocar consentimiento.';
@@ -107,7 +129,10 @@ export function useParentalConsent() {
 
   const checkStudentConsent = useCallback(
     (studentId: string): { allowed: boolean; status: ConsentStatus; reason?: string } => {
-      return mockApiClient.checkStudentAccess(studentId);
+      const state = authStore.getState();
+      const target =
+        state.students.find((s) => s.id === studentId) || state.student;
+      return evaluateStudentConsentAccess(target);
     },
     []
   );

@@ -10,6 +10,8 @@ import { InMemoryParentalConsentRepository } from './infrastructure/persistence/
 import { UserProvisioningAdapter } from './application/services/user-provisioning.adapter.js';
 import { StudentCounterAdapter } from './application/services/student-counter.adapter.js';
 import { RegisterFamilyUseCase } from './application/use-cases/register-family.use-case.js';
+import { LoginFamilyUseCase } from './application/use-cases/login-family.use-case.js';
+import { ChangeStudentPasswordUseCase } from './application/use-cases/change-student-password.use-case.js';
 import { GrantParentalConsentUseCase } from './application/use-cases/grant-parental-consent.use-case.js';
 import { RevokeParentalConsentUseCase } from './application/use-cases/revoke-parental-consent.use-case.js';
 import { CheckStudentConsentUseCase } from './application/use-cases/check-student-consent.use-case.js';
@@ -59,6 +61,8 @@ import { TenantsModule } from '../tenants/tenants.module.js';
       useExisting: StudentCounterAdapter,
     },
     RegisterFamilyUseCase,
+    LoginFamilyUseCase,
+    ChangeStudentPasswordUseCase,
     GrantParentalConsentUseCase,
     RevokeParentalConsentUseCase,
     CheckStudentConsentUseCase,
@@ -82,6 +86,8 @@ import { TenantsModule } from '../tenants/tenants.module.js';
     GrantParentalConsentUseCase,
     RevokeParentalConsentUseCase,
     RegisterFamilyUseCase,
+    LoginFamilyUseCase,
+    ChangeStudentPasswordUseCase,
     GetParentalConsentAuditUseCase,
     UpdateSpendingLimitsUseCase,
     GetSpendingLimitsUseCase,

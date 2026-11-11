@@ -1,1 +1,1 @@
-export * from './mock-client';
+export * from '../../core';

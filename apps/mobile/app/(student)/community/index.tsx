@@ -20,8 +20,8 @@ import { type ExchangeMode } from '@cambiazo/shared';
 import { colors } from '../../../src/shared/theme/colors';
 import { Pill } from '../../../src/shared/ui/Pill';
 import { Button } from '../../../src/shared/ui/Button';
-import { authStore, type AuthState } from '../../../src/shared/store/auth-store';
-import { mockApiClient, type MockExchangeItem } from '../../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../../src/shared/store/auth-store';
+import { fetchExchangeItemsAction, type ExchangeItem } from '../../../src/core';
 
 type FilterTab = 'ALL' | ExchangeMode;
 
@@ -42,7 +42,7 @@ export default function CommunityFeedScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
   const [selectedFilter, setSelectedFilter] = useState<FilterTab>('ALL');
-  const [items, setItems] = useState<MockExchangeItem[]>([]);
+  const [items, setItems] = useState<ExchangeItem[]>([]);
 
   useEffect(() => {
     return authStore.subscribe((state) => {
@@ -50,13 +50,21 @@ export default function CommunityFeedScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const institution = authState.institution || { id: 'e28bb18a-66fe-4f8e-9092-2df283f55001', name: 'Colegio Manuel Belgrano' };
-  const institutionId = student?.institutionId || institution.id;
+  const { student, studentId, institutionId, institutionName } = resolveSessionContext(authState);
 
-  const loadItems = () => {
+  const loadItems = async () => {
+    if (!institutionId) {
+      setItems([]);
+      return;
+    }
     const filterArg = selectedFilter === 'ALL' ? undefined : selectedFilter;
-    const feed = mockApiClient.getExchangeItems(institutionId, filterArg);
+    const feed = await fetchExchangeItemsAction(institutionId, filterArg, {
+      auth: {
+        role: 'STUDENT',
+        userId: studentId || undefined,
+        institutionId,
+      },
+    });
     setItems(feed);
   };
 
@@ -64,7 +72,7 @@ export default function CommunityFeedScreen() {
     loadItems();
   }, [institutionId, selectedFilter]);
 
-  const pointsCount = student?.communityPoints ?? 120;
+  const pointsCount = student?.communityPoints ?? 0;
 
   const modeBadge = (mode: ExchangeMode) => {
     switch (mode) {
@@ -122,7 +130,7 @@ export default function CommunityFeedScreen() {
 
       <Text style={styles.title}>Comunidad Escolar</Text>
       <Text style={styles.subtitle}>
-        Útiles disponibles en {institution.name}
+        Útiles disponibles en {institutionName}
       </Text>
 
       {/* Moderated Pickup Notice Banner */}

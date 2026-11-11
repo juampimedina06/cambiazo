@@ -16,19 +16,19 @@ import { DatePickerField } from '../../../shared/ui/DatePickerField';
 import { SelectPickerField, type SelectOption } from '../../../shared/ui/SelectPickerField';
 import { NumericStepperField } from '../../../shared/ui/NumericStepperField';
 import {
-  mockApiClient,
-  type MockParentUser,
-  type MockStudentUser,
-} from '../../../shared/api/mock-client';
+  registerFamilyAction,
+  type ParentProfile,
+  type StudentProfile,
+} from '../../../core';
 import { authStore } from '../../../shared/store/auth-store';
 
 export interface RegisterFamilyFormProps {
   inviteCode: string;
   institutionName?: string;
   onSuccess: (
-    parent: MockParentUser,
-    student: MockStudentUser,
-    students?: MockStudentUser[]
+    parent: ParentProfile,
+    student: StudentProfile,
+    students?: StudentProfile[]
   ) => void;
   testID?: string;
 }
@@ -225,7 +225,7 @@ export const RegisterFamilyForm: React.FC<RegisterFamilyFormProps> = ({
 
     setIsSubmitting(true);
     try {
-      const result = await mockApiClient.registerFamilyWithMultipleStudents({
+      const result = await registerFamilyAction({
         inviteCode,
         parent: parentPayload,
         students: students.map((st) => ({
@@ -242,7 +242,12 @@ export const RegisterFamilyForm: React.FC<RegisterFamilyFormProps> = ({
       }
 
       const allRegisteredStudents = result.students || [result.student];
-      authStore.setParentSession(result.parent, result.student, allRegisteredStudents);
+      authStore.setParentSession(
+        result.parent,
+        result.student,
+        allRegisteredStudents,
+        result.institution
+      );
       onSuccess(result.parent, result.student, allRegisteredStudents);
     } catch {
       setGeneralError('Error de conexión al registrar. Intentalo nuevamente.');
@@ -376,6 +381,7 @@ export const RegisterFamilyForm: React.FC<RegisterFamilyFormProps> = ({
               onChangeText={setParentPassword}
               secureTextEntry
               error={errors['parent.password']}
+              helperText="También servirá como clave inicial para que tu hijo/a ingrese con su DNI (luego podrás cambiarla)."
               testID="input-parent-password"
             />
 

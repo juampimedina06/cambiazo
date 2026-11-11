@@ -17,7 +17,13 @@ import {
 import { colors } from '../../src/shared/theme/colors';
 import { Button } from '../../src/shared/ui/Button';
 import { Pill } from '../../src/shared/ui/Pill';
-import { mockApiClient, type MockCatalogProduct } from '../../src/shared/api/mock-client';
+import {
+  chargeQrPaymentAction,
+  fetchCatalogProductsAction,
+  generateQrPaymentTokenAction,
+  type CatalogProduct,
+} from '../../src/core';
+import { authStore } from '../../src/shared/store/auth-store';
 import { ChargeQrRequestSchema } from '@cambiazo/shared';
 
 const renderCatalogIcon = (category: string) => {
@@ -38,13 +44,13 @@ const renderCatalogIcon = (category: string) => {
 };
 
 interface SelectedItem {
-  product: MockCatalogProduct;
+  product: CatalogProduct;
   quantity: number;
 }
 
 export default function KioskPosScreen() {
   const router = useRouter();
-  const [catalog, setCatalog] = useState<MockCatalogProduct[]>([]);
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [cart, setCart] = useState<Map<string, SelectedItem>>(new Map());
   const [enteredCode, setEnteredCode] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -57,8 +63,16 @@ export default function KioskPosScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const products = mockApiClient.getCatalogProducts();
-    setCatalog(products);
+    const instId = authStore.getState().institution?.id;
+    let cancelled = false;
+    fetchCatalogProductsAction(instId).then((products) => {
+      if (!cancelled) {
+        setCatalog(products);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const totalCents = Array.from(cart.values()).reduce(
@@ -70,7 +84,7 @@ export default function KioskPosScreen() {
     maximumFractionDigits: 0,
   });
 
-  const handleSelectProduct = (product: MockCatalogProduct) => {
+  const handleSelectProduct = (product: CatalogProduct) => {
     setErrorMessage(null);
     setCart((prev) => {
       const next = new Map(prev);
@@ -118,12 +132,27 @@ export default function KioskPosScreen() {
   };
 
   const handleSimulateQuickScan = async () => {
-    // Quickly generate or fetch token for Mateo (studentId: 22222222-2222-4222-8222-222222222222)
-    const tokenRes = await mockApiClient.generateQrPaymentToken('22222222-2222-4222-8222-222222222222');
+    const activeState = authStore.getState();
+    const activeStudentId =
+      activeState.student?.id ||
+      (process.env.NODE_ENV === 'test'
+        ? '22222222-2222-4222-8222-222222222222'
+        : '');
+    if (!activeStudentId) {
+      setErrorMessage('Iniciá sesión como alumno o ingresá su código de 6 dígitos.');
+      return;
+    }
+    const tokenRes = await generateQrPaymentTokenAction(activeStudentId, {
+      auth: {
+        role: 'STUDENT',
+        userId: activeStudentId,
+        institutionId: activeState.student?.institutionId || activeState.institution?.id,
+      },
+    });
     if (tokenRes.success && tokenRes.backupCode) {
       setEnteredCode(tokenRes.backupCode);
     } else {
-      setErrorMessage(tokenRes.error || 'No se pudo simular el escaneo');
+      setErrorMessage(tokenRes.error || 'No se pudo generar el código QR');
     }
   };
 
@@ -141,10 +170,14 @@ export default function KioskPosScreen() {
     setIsProcessing(true);
     setErrorMessage(null);
 
-    const items = Array.from(cart.values()).map((item) => ({
+    const cartEntries = Array.from(cart.values());
+    const items = cartEntries.map((item) => ({
       productId: item.product.id,
       quantity: item.quantity,
     }));
+    const itemsSummary = cartEntries
+      .map((item) => `${item.product.name} (x${item.quantity})`)
+      .join(', ');
 
     const idempotencyKey = `pos-charge-${Date.now()}-${enteredCode}`;
 
@@ -161,11 +194,20 @@ export default function KioskPosScreen() {
       return;
     }
 
-    const res = await mockApiClient.chargeQrPayment({
-      paymentTokenOrCode: enteredCode,
-      items,
-      idempotencyKey,
-    });
+    const res = await chargeQrPaymentAction(
+      {
+        paymentTokenOrCode: enteredCode,
+        items,
+        idempotencyKey,
+      },
+      {
+        auth: {
+          role: 'KIOSK',
+          institutionId: authStore.getState().institution?.id,
+        },
+        itemsSummary,
+      }
+    );
 
     setIsProcessing(false);
 

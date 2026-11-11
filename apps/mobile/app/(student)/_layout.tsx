@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
-import { Slot, useRouter } from 'expo-router';
+import { Redirect, Slot, useRouter } from 'expo-router';
 import { colors } from '../../src/shared/theme/colors';
 import { authStore, type AuthState } from '../../src/shared/store/auth-store';
-import { mockApiClient } from '../../src/shared/api/mock-client';
 import { StudentBlockedView } from '../../src/features/parental-consent/ui/StudentBlockedView';
 
 /**
@@ -21,10 +20,14 @@ export default function StudentLayout() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const institutionName = authState.institution?.name || 'Colegio Manuel Belgrano';
+  if (!authState.student) {
+    return <Redirect href="/(auth)/school-code" />;
+  }
 
-  const consentStatus = student?.consentStatus || 'PENDING';
+  const student = authState.student;
+  const institutionName = authState.institution?.name || 'Institución Escolar';
+
+  const consentStatus = student.consentStatus || 'PENDING';
 
   // CONSENT GATE:
   // If student does not have GRANTED consent, render friendly blocked screen
@@ -32,16 +35,19 @@ export default function StudentLayout() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StudentBlockedView
-          studentName={student?.fullName || 'Mateo'}
+          studentName={student.fullName}
           institutionName={institutionName}
           consentStatus={consentStatus}
-          onRefreshStatus={() => {
-            if (student) {
-              authStore.refreshStudentFromClient(student.id);
-            }
+          onRefreshStatus={async () => {
+            await authStore.refreshStudentFromBackend(student.id);
           }}
           onSwitchUser={() => {
-            router.replace('/(parent)');
+            if (authState.currentRole === 'PARENT' && authState.parent) {
+              router.replace('/(parent)');
+              return;
+            }
+            authStore.logout();
+            router.replace('/(auth)/school-code');
           }}
           testID="gate-student-blocked"
         />

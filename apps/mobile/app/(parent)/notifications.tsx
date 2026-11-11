@@ -14,8 +14,8 @@ import {
 import { colors } from '../../src/shared/theme/colors';
 import { Pill } from '../../src/shared/ui/Pill';
 import { FlatListItem } from '../../src/shared/ui/FlatListItem';
-import { authStore, type AuthState } from '../../src/shared/store/auth-store';
-import { mockApiClient, type MockPurchase } from '../../src/shared/api/mock-client';
+import { authStore, resolveSessionContext, type AuthState } from '../../src/shared/store/auth-store';
+import { fetchStudentTransactionsAction, type WalletPurchase } from '../../src/core';
 
 const renderPurchaseIcon = (category: string) => {
   switch (category) {
@@ -37,7 +37,7 @@ const renderPurchaseIcon = (category: string) => {
 export default function ParentNotificationsScreen() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(authStore.getState());
-  const [purchases, setPurchases] = useState<MockPurchase[]>([]);
+  const [purchases, setPurchases] = useState<WalletPurchase[]>([]);
 
   useEffect(() => {
     return authStore.subscribe((state) => {
@@ -45,15 +45,26 @@ export default function ParentNotificationsScreen() {
     });
   }, []);
 
-  const student = authState.student || mockApiClient.getStudent('22222222-2222-4222-8222-222222222222');
-  const studentId = student?.id || '22222222-2222-4222-8222-222222222222';
+  const { student, studentId, parent, institutionId } = resolveSessionContext(authState);
 
   useEffect(() => {
-    if (studentId) {
-      const list = mockApiClient.getPurchases(studentId);
-      setPurchases(list);
-    }
-  }, [studentId]);
+    if (!studentId) return;
+    let cancelled = false;
+    fetchStudentTransactionsAction(studentId, {
+      auth: {
+        role: 'PARENT',
+        userId: parent?.id || studentId,
+        institutionId,
+      },
+    }).then((list) => {
+      if (!cancelled) {
+        setPurchases(list);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, parent?.id, institutionId]);
 
   return (
     <ScrollView
@@ -81,7 +92,7 @@ export default function ParentNotificationsScreen() {
 
       <Text style={styles.title}>Alertas de Compra</Text>
       <Text style={styles.subtitle}>
-        Consumos en tiempo real en el kiosco escolar de {student?.fullName || 'Mateo Gómez'}
+        Consumos en tiempo real en el kiosco escolar de {student?.fullName || 'tu hijo/a'}
       </Text>
 
       {/* Flat List of Purchases — NO CARD-IN-CARD, MAX 3 DATA POINTS */}
