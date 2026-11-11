@@ -6,6 +6,7 @@ import {
 import {
   fetchConsentStatusAction,
   grantParentalConsentAction,
+  loginWithSchoolCodeAction,
   revokeParentalConsentAction,
 } from '../src/core';
 import { installTestBackend, TEST_STUDENT_ID } from './helpers/test-backend';
@@ -123,6 +124,25 @@ describe('Digital Parental Consent Lifecycle (Ley 25.326)', () => {
       expect(result.consentRecord?.revocationReason).toBe(reason);
       expect(result.consentRecord?.revokedAt).toBeDefined();
       expect(await fetchConsentStatusAction(studentId)).toBe('REVOKED');
+    });
+
+    it('keeps GRANTED consentStatus when the student logs in after parent signature', async () => {
+      await grantParentalConsentAction({
+        studentId,
+        acceptedTermsVersion: 'v1.0-ley25326',
+        acceptedAt: new Date().toISOString(),
+        signatureIp: '181.164.20.15',
+      });
+
+      const login = await loginWithSchoolCodeAction({
+        inviteCode: 'BELGRANO2026',
+        identifier: '52345678',
+        password: 'default',
+      });
+
+      expect(login.success).toBe(true);
+      expect(login.role).toBe('STUDENT');
+      expect(login.student?.consentStatus).toBe('GRANTED');
     });
   });
 });

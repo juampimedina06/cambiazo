@@ -6,6 +6,7 @@ import {
   type RevokeParentalConsentDto,
 } from '@cambiazo/shared';
 import {
+  ApiClientError,
   cambiazoApi,
   extractApiErrorMessage,
   normalizeConsentStatus,
@@ -120,13 +121,24 @@ export async function fetchConsentStatusAction(
   options?: ConsentStatusApiOptions
 ): Promise<ConsentStatus> {
   try {
-    const response = await cambiazoApi.get<{ status?: string }>(
+    const response = await cambiazoApi.get<{
+      consentStatus?: string;
+      status?: string;
+    }>(
       `/consents/status/${encodeURIComponent(studentId)}`,
       { auth: options?.auth }
     );
-    return normalizeConsentStatus(response.status);
-  } catch {
-    return 'PENDING';
+    return normalizeConsentStatus(response.consentStatus ?? response.status);
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      if (error.code === 'PARENTAL_CONSENT_REVOKED') {
+        return 'REVOKED';
+      }
+      if (error.code === 'PARENTAL_CONSENT_REQUIRED') {
+        return 'PENDING';
+      }
+    }
+    return options?.fallbackStatus ?? 'PENDING';
   }
 }
 

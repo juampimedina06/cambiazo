@@ -397,7 +397,10 @@ export async function hydrateStudentAccountAction(
     await Promise.allSettled([
       fetchStudentBalanceAction(student.id, { auth }),
       fetchSpendingLimitsAction(student.id, { auth }),
-      fetchConsentStatusAction(student.id, { auth }),
+      fetchConsentStatusAction(student.id, {
+        auth,
+        fallbackStatus: student.consentStatus,
+      }),
       fetchStudentTransactionsAction(student.id, { auth }),
     ]);
 

@@ -35,5 +35,6 @@ export interface ConsentBackendResponse {
 
 export interface ConsentStatusApiOptions {
   auth?: ApiAuthContext;
+  fallbackStatus?: ConsentStatus;
 }
 

@@ -592,7 +592,31 @@ export function installTestBackend(): {
     if (method === 'GET' && path.startsWith('/consents/status/')) {
       const sid = path.replace('/consents/status/', '');
       const student = state.students.get(sid);
-      return jsonResponse({ status: student?.consentStatus || 'PENDING' });
+      const status = student?.consentStatus || 'PENDING';
+      if (status === 'REVOKED') {
+        return jsonResponse(
+          {
+            code: 'PARENTAL_CONSENT_REVOKED',
+            message: 'Student consent has been revoked by parent (Ley 25.326)',
+          },
+          403
+        );
+      }
+      if (status !== 'GRANTED') {
+        return jsonResponse(
+          {
+            code: 'PARENTAL_CONSENT_REQUIRED',
+            message: 'Student cannot operate without parental consent (Ley 25.326)',
+          },
+          403
+        );
+      }
+      return jsonResponse({
+        canOperate: true,
+        consentStatus: 'GRANTED',
+        studentId: sid,
+        institutionId: student?.institutionId || TEST_INSTITUTION_ID,
+      });
     }
 
     if (method === 'GET' && /^\/students\/[^/]+\/limits$/.test(path)) {
