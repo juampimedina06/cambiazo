@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import { ImmutableRecordViolationException } from '../../../../common/errors/domain.exception.js';
 import type { ParentalConsent } from '../../domain/entities/parental-consent.entity.js';
 import type { ParentalConsentRepositoryPort } from '../../domain/ports/parental-consent.repository.port.js';
+
+const STORAGE_FILE = 'parental-consents.json';
 
 @Injectable()
 export class InMemoryParentalConsentRepository
@@ -11,51 +16,30 @@ export class InMemoryParentalConsentRepository
 {
   // Ley 25.326: Append-only immutable log
   private readonly consents: ParentalConsent[] = [];
-  private readonly storageFile = path.resolve(process.cwd(), '.data', 'parental-consents.json');
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
       this.loadFromDisk();
     }
   }
 
   private loadFromDisk(): void {
-    if (process.env.NODE_ENV === 'test') return;
-    try {
-      if (fs.existsSync(this.storageFile)) {
-        const raw = fs.readFileSync(this.storageFile, 'utf-8');
-        const parsed = JSON.parse(raw) as Array<ParentalConsent & { createdAt: string }>;
-        this.consents.length = 0;
-        for (const item of parsed) {
-          this.consents.push(
-            Object.freeze({
-              ...item,
-              createdAt: new Date(item.createdAt),
-            }),
-          );
-        }
-      }
-    } catch {
-      // Ignore disk read errors in dev
+    const parsed = readJsonDataFile<ParentalConsent[]>(STORAGE_FILE);
+    if (!parsed) return;
+    this.consents.length = 0;
+    for (const item of parsed) {
+      this.consents.push(
+        Object.freeze({
+          ...item,
+          createdAt: item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt),
+        }),
+      );
     }
   }
 
   private saveToDisk(): void {
-    if (process.env.NODE_ENV === 'test') return;
-    try {
-      const dir = path.dirname(this.storageFile);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(
-        this.storageFile,
-        JSON.stringify(this.consents, null, 2),
-        'utf-8',
-      );
-    } catch {
-      // Ignore disk write errors in dev
-    }
+    writeJsonDataFile(STORAGE_FILE, this.consents);
   }
 
   public seedDefault(): void {

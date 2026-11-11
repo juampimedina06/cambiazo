@@ -1,54 +1,38 @@
 import { Injectable } from '@nestjs/common';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import type { User } from '../../domain/entities/user.entity.js';
 import type { UserRepositoryPort } from '../../domain/ports/user.repository.port.js';
+
+const STORAGE_FILE = 'users.json';
 
 @Injectable()
 export class InMemoryUserRepository implements UserRepositoryPort {
   private readonly users = new Map<string, User>();
-  private readonly storageFile = path.resolve(process.cwd(), '.data', 'users.json');
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
       this.loadFromDisk();
     }
   }
 
   private loadFromDisk(): void {
-    if (process.env.NODE_ENV === 'test') return;
-    try {
-      if (fs.existsSync(this.storageFile)) {
-        const raw = fs.readFileSync(this.storageFile, 'utf-8');
-        const parsed = JSON.parse(raw) as Array<User & { createdAt: string }>;
-        for (const item of parsed) {
-          this.users.set(item.id, {
-            ...item,
-            createdAt: new Date(item.createdAt),
-          });
-        }
-      }
-    } catch {
-      // Ignore disk read errors in dev
+    const parsed = readJsonDataFile<User[]>(STORAGE_FILE);
+    if (!parsed) return;
+    for (const item of parsed) {
+      this.users.set(item.id, {
+        ...item,
+        createdAt: item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt),
+      });
     }
   }
 
   private saveToDisk(): void {
-    if (process.env.NODE_ENV === 'test') return;
-    try {
-      const dir = path.dirname(this.storageFile);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(
-        this.storageFile,
-        JSON.stringify(Array.from(this.users.values()), null, 2),
-        'utf-8',
-      );
-    } catch {
-      // Ignore disk write errors in dev
-    }
+    writeJsonDataFile(STORAGE_FILE, Array.from(this.users.values()));
   }
 
   public seedDefault(): void {

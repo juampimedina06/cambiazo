@@ -1,54 +1,43 @@
 import { Injectable } from '@nestjs/common';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import type { InstitutionInvitation } from '../../domain/entities/invitation.entity.js';
 import type { InvitationRepositoryPort } from '../../domain/ports/invitation.repository.port.js';
+
+const STORAGE_FILE = 'invitations.json';
 
 @Injectable()
 export class InMemoryInvitationRepository implements InvitationRepositoryPort {
   private readonly invitations = new Map<string, InstitutionInvitation>();
-  private readonly storageFile = path.resolve(process.cwd(), '.data', 'invitations.json');
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
       this.loadFromDisk();
     }
   }
 
   private loadFromDisk(): void {
-    if (process.env.NODE_ENV === 'test') return;
-    try {
-      if (fs.existsSync(this.storageFile)) {
-        const raw = fs.readFileSync(this.storageFile, 'utf-8');
-        const parsed = JSON.parse(raw) as Array<
-          InstitutionInvitation & { expiresAt: string | null; createdAt: string }
-        >;
-        for (const item of parsed) {
-          this.invitations.set(item.id, {
-            ...item,
-            expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
-            createdAt: new Date(item.createdAt),
-          });
-        }
-      }
-    } catch {
-      // Ignore disk read errors in dev
+    const parsed = readJsonDataFile<InstitutionInvitation[]>(STORAGE_FILE);
+    if (!parsed) return;
+    for (const item of parsed) {
+      this.invitations.set(item.id, {
+        ...item,
+        expiresAt: item.expiresAt
+          ? item.expiresAt instanceof Date
+            ? item.expiresAt
+            : new Date(item.expiresAt)
+          : null,
+        createdAt: item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt),
+      });
     }
   }
 
   private saveToDisk(): void {
-    if (process.env.NODE_ENV === 'test') return;
-    try {
-      const dir = path.dirname(this.storageFile);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const data = Array.from(this.invitations.values());
-      fs.writeFileSync(this.storageFile, JSON.stringify(data, null, 2), 'utf-8');
-    } catch {
-      // Ignore disk write errors in dev
-    }
+    writeJsonDataFile(STORAGE_FILE, Array.from(this.invitations.values()));
   }
 
   public seedDefault(): void {

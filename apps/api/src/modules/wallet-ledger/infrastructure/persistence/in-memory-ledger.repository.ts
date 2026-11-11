@@ -2,6 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { AccountType } from '@cambiazo/shared';
 import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
+import {
   ImmutableRecordViolationException,
   AccountNotFoundException,
   InsufficientFundsException,
@@ -12,6 +17,14 @@ import type { LedgerTransaction } from '../../domain/entities/ledger-transaction
 import type { LedgerEntry } from '../../domain/entities/ledger-entry.entity.js';
 import type { LedgerRepositoryPort } from '../../domain/ports/ledger.repository.port.js';
 
+const STORAGE_FILE = 'ledger.json';
+
+interface PersistedLedgerSnapshot {
+  accounts: Account[];
+  transactions: LedgerTransaction[];
+  entries: LedgerEntry[];
+}
+
 @Injectable()
 export class InMemoryLedgerRepository implements LedgerRepositoryPort {
   private readonly accounts = new Map<string, Account>();
@@ -20,9 +33,41 @@ export class InMemoryLedgerRepository implements LedgerRepositoryPort {
   private readonly entries: LedgerEntry[] = [];
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
+      this.loadFromDisk();
     }
+  }
+
+  private loadFromDisk(): void {
+    const snapshot = readJsonDataFile<PersistedLedgerSnapshot>(STORAGE_FILE);
+    if (!snapshot) return;
+
+    if (Array.isArray(snapshot.accounts)) {
+      for (const acc of snapshot.accounts) {
+        this.accounts.set(acc.id, acc);
+      }
+    }
+    if (Array.isArray(snapshot.transactions)) {
+      for (const tx of snapshot.transactions) {
+        this.transactions.set(tx.id, tx);
+        if (tx.idempotencyKey) {
+          this.idempotencyMap.set(tx.idempotencyKey, tx);
+        }
+      }
+    }
+    if (Array.isArray(snapshot.entries)) {
+      this.entries.length = 0;
+      this.entries.push(...snapshot.entries);
+    }
+  }
+
+  private saveToDisk(): void {
+    writeJsonDataFile<PersistedLedgerSnapshot>(STORAGE_FILE, {
+      accounts: Array.from(this.accounts.values()),
+      transactions: Array.from(this.transactions.values()),
+      entries: this.entries,
+    });
   }
 
   public seedDefault(): void {
@@ -111,6 +156,7 @@ export class InMemoryLedgerRepository implements LedgerRepositoryPort {
     };
 
     this.accounts.set(newAccount.id, newAccount);
+    this.saveToDisk();
     return { ...newAccount };
   }
 
@@ -132,6 +178,7 @@ export class InMemoryLedgerRepository implements LedgerRepositoryPort {
       updatedAt: new Date(),
     };
     this.accounts.set(clearingAccount.id, clearingAccount);
+    this.saveToDisk();
     return { ...clearingAccount };
   }
 
@@ -217,6 +264,8 @@ export class InMemoryLedgerRepository implements LedgerRepositoryPort {
     for (const entry of entries) {
       this.entries.push({ ...entry });
     }
+
+    this.saveToDisk();
 
     return {
       transaction: { ...transaction },

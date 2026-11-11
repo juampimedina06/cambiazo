@@ -1,15 +1,36 @@
 import { Injectable } from '@nestjs/common';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import type { StudentSavingsGoal } from '../../domain/entities/student-savings-goal.entity.js';
 import type { SavingsGoalRepositoryPort } from '../../domain/ports/savings-goal.repository.port.js';
+
+const STORAGE_FILE = 'savings-goals.json';
 
 @Injectable()
 export class InMemorySavingsGoalRepository implements SavingsGoalRepositoryPort {
   private readonly goals = new Map<string, StudentSavingsGoal>();
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
+      this.loadFromDisk();
     }
+  }
+
+  private loadFromDisk(): void {
+    const parsed = readJsonDataFile<StudentSavingsGoal[]>(STORAGE_FILE);
+    if (!parsed) return;
+    this.goals.clear();
+    for (const g of parsed) {
+      this.goals.set(g.id, g);
+    }
+  }
+
+  private saveToDisk(): void {
+    writeJsonDataFile(STORAGE_FILE, Array.from(this.goals.values()));
   }
 
   public seedDefault(): void {
@@ -48,6 +69,7 @@ export class InMemorySavingsGoalRepository implements SavingsGoalRepositoryPort 
   async save(goal: StudentSavingsGoal): Promise<StudentSavingsGoal> {
     const copy = { ...goal };
     this.goals.set(goal.id, copy);
+    this.saveToDisk();
     return { ...copy };
   }
 
@@ -101,11 +123,13 @@ export class InMemorySavingsGoalRepository implements SavingsGoalRepositoryPort 
     };
 
     this.goals.set(id, updated);
+    this.saveToDisk();
     return { ...updated };
   }
 
   async delete(id: string): Promise<void> {
     this.goals.delete(id);
+    this.saveToDisk();
   }
 
   clear(): void {

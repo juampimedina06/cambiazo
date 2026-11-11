@@ -1,15 +1,35 @@
 import { Injectable } from '@nestjs/common';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import type { SpendingLimitsRepositoryPort } from '../../domain/ports/spending-limits.repository.port.js';
 import type { SpendingLimits } from '../../domain/entities/spending-limits.entity.js';
+
+const STORAGE_FILE = 'spending-limits.json';
 
 @Injectable()
 export class InMemorySpendingLimitsRepository implements SpendingLimitsRepositoryPort {
   private readonly limitsByStudent = new Map<string, SpendingLimits>();
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
+      this.loadFromDisk();
     }
+  }
+
+  private loadFromDisk(): void {
+    const parsed = readJsonDataFile<SpendingLimits[]>(STORAGE_FILE);
+    if (!parsed) return;
+    for (const item of parsed) {
+      this.limitsByStudent.set(item.studentId, item);
+    }
+  }
+
+  private saveToDisk(): void {
+    writeJsonDataFile(STORAGE_FILE, Array.from(this.limitsByStudent.values()));
   }
 
   public seedDefault(): void {
@@ -37,6 +57,7 @@ export class InMemorySpendingLimitsRepository implements SpendingLimitsRepositor
       updatedAt: new Date(),
     };
     this.limitsByStudent.set(limits.studentId, updated);
+    this.saveToDisk();
     return { ...updated };
   }
 

@@ -1,15 +1,36 @@
 import { Injectable } from '@nestjs/common';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import type { SchoolReward } from '../../domain/entities/school-reward.entity.js';
 import type { SchoolRewardRepositoryPort } from '../../domain/ports/school-reward.repository.port.js';
+
+const STORAGE_FILE = 'school-rewards.json';
 
 @Injectable()
 export class InMemorySchoolRewardRepository implements SchoolRewardRepositoryPort {
   private readonly rewards = new Map<string, SchoolReward>();
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
+      this.loadFromDisk();
     }
+  }
+
+  private loadFromDisk(): void {
+    const parsed = readJsonDataFile<SchoolReward[]>(STORAGE_FILE);
+    if (!parsed) return;
+    this.rewards.clear();
+    for (const r of parsed) {
+      this.rewards.set(r.id, r);
+    }
+  }
+
+  private saveToDisk(): void {
+    writeJsonDataFile(STORAGE_FILE, Array.from(this.rewards.values()));
   }
 
   public seedDefault(): void {
@@ -67,16 +88,20 @@ export class InMemorySchoolRewardRepository implements SchoolRewardRepositoryPor
     if (!current) return null;
     const updated: SchoolReward = { ...current, ...partial, id: current.id };
     this.rewards.set(id, updated);
+    this.saveToDisk();
     return { ...updated };
   }
 
   async delete(id: string): Promise<boolean> {
-    return this.rewards.delete(id);
+    const deleted = this.rewards.delete(id);
+    if (deleted) this.saveToDisk();
+    return deleted;
   }
 
   async save(reward: SchoolReward): Promise<SchoolReward> {
     const copy = { ...reward };
     this.rewards.set(reward.id, copy);
+    this.saveToDisk();
     return { ...copy };
   }
 
@@ -111,6 +136,7 @@ export class InMemorySchoolRewardRepository implements SchoolRewardRepositoryPor
         ...current,
         stock: current.stock - 1,
       });
+      this.saveToDisk();
     }
   }
 

@@ -1,18 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import type { ExchangeItem } from '../../domain/entities/exchange-item.entity.js';
 import type {
   ExchangeItemRepositoryPort,
   FindExchangeItemsFilter,
 } from '../../domain/ports/exchange-item.repository.port.js';
 
+const STORAGE_FILE = 'exchange-items.json';
+
 @Injectable()
 export class InMemoryExchangeItemRepository implements ExchangeItemRepositoryPort {
   private readonly items = new Map<string, ExchangeItem>();
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
+      this.loadFromDisk();
     }
+  }
+
+  private loadFromDisk(): void {
+    const parsed = readJsonDataFile<ExchangeItem[]>(STORAGE_FILE);
+    if (!parsed) return;
+    this.items.clear();
+    for (const item of parsed) {
+      this.items.set(item.id, item);
+    }
+  }
+
+  private saveToDisk(): void {
+    writeJsonDataFile(STORAGE_FILE, Array.from(this.items.values()));
   }
 
   private seedDefault(): void {
@@ -51,6 +72,7 @@ export class InMemoryExchangeItemRepository implements ExchangeItemRepositoryPor
   async save(item: ExchangeItem): Promise<ExchangeItem> {
     const copy = { ...item };
     this.items.set(item.id, copy);
+    this.saveToDisk();
     return { ...copy };
   }
 
@@ -97,6 +119,7 @@ export class InMemoryExchangeItemRepository implements ExchangeItemRepositoryPor
     };
 
     this.items.set(id, updated);
+    this.saveToDisk();
     return { ...updated };
   }
 

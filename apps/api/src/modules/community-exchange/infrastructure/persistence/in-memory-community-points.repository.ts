@@ -1,18 +1,37 @@
 import { Injectable } from '@nestjs/common';
+import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
 import type { CommunityPointsEntry } from '../../domain/entities/community-points-entry.entity.js';
 import type {
   CommunityPointsRepositoryPort,
   StudentPointsAggregate,
 } from '../../domain/ports/community-points.repository.port.js';
 
+const STORAGE_FILE = 'community-points.json';
+
 @Injectable()
 export class InMemoryCommunityPointsRepository implements CommunityPointsRepositoryPort {
   private readonly entries: CommunityPointsEntry[] = [];
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
+      this.loadFromDisk();
     }
+  }
+
+  private loadFromDisk(): void {
+    const parsed = readJsonDataFile<CommunityPointsEntry[]>(STORAGE_FILE);
+    if (!parsed) return;
+    this.entries.length = 0;
+    this.entries.push(...parsed);
+  }
+
+  private saveToDisk(): void {
+    writeJsonDataFile(STORAGE_FILE, this.entries);
   }
 
   public seedDefault(): void {
@@ -52,6 +71,7 @@ export class InMemoryCommunityPointsRepository implements CommunityPointsReposit
   async save(entry: CommunityPointsEntry): Promise<CommunityPointsEntry> {
     const copy = { ...entry };
     this.entries.push(copy);
+    this.saveToDisk();
     return { ...copy };
   }
 

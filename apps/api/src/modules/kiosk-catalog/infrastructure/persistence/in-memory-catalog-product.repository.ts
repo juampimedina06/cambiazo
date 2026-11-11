@@ -1,20 +1,41 @@
 import { Injectable } from '@nestjs/common';
 import type { ProductCategory } from '@cambiazo/shared';
 import {
+  isPersistenceDisabled,
+  readJsonDataFile,
+  writeJsonDataFile,
+} from '../../../../common/persistence/json-file-store.js';
+import {
   ProductNotFoundException,
   InsufficientStockException,
 } from '../../../../common/errors/domain.exception.js';
 import type { CatalogProduct } from '../../domain/entities/catalog-product.entity.js';
 import type { CatalogProductRepositoryPort } from '../../domain/ports/catalog-product.repository.port.js';
 
+const STORAGE_FILE = 'catalog-products.json';
+
 @Injectable()
 export class InMemoryCatalogProductRepository implements CatalogProductRepositoryPort {
   private readonly products = new Map<string, CatalogProduct>();
 
   constructor() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isPersistenceDisabled()) {
       this.seedDefault();
+      this.loadFromDisk();
     }
+  }
+
+  private loadFromDisk(): void {
+    const parsed = readJsonDataFile<CatalogProduct[]>(STORAGE_FILE);
+    if (!parsed) return;
+    this.products.clear();
+    for (const p of parsed) {
+      this.products.set(p.id, p);
+    }
+  }
+
+  private saveToDisk(): void {
+    writeJsonDataFile(STORAGE_FILE, Array.from(this.products.values()));
   }
 
   public seedDefault(): void {
@@ -94,11 +115,14 @@ export class InMemoryCatalogProductRepository implements CatalogProductRepositor
   }
 
   async delete(id: string): Promise<boolean> {
-    return this.products.delete(id);
+    const deleted = this.products.delete(id);
+    if (deleted) this.saveToDisk();
+    return deleted;
   }
 
   async create(product: CatalogProduct): Promise<CatalogProduct> {
     this.products.set(product.id, { ...product });
+    this.saveToDisk();
     return { ...product };
   }
 
@@ -136,6 +160,7 @@ export class InMemoryCatalogProductRepository implements CatalogProductRepositor
     };
 
     this.products.set(id, updated);
+    this.saveToDisk();
     return { ...updated };
   }
 
@@ -156,6 +181,7 @@ export class InMemoryCatalogProductRepository implements CatalogProductRepositor
     };
 
     this.products.set(id, updated);
+    this.saveToDisk();
     return { ...updated };
   }
 
